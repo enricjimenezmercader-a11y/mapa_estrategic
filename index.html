@@ -19,21 +19,22 @@
         }
 
         .map-container {
-            width: 100%;
+            width: 66.67%;
             height: 100%;
             display: flex;
             justify-content: center;
             align-items: center;
             background: #1a1a1a;
             position: relative;
+            border: 1px solid #333;
         }
 
         iframe {
             position: absolute;
-            top: -12%;
-            left: -2%;
-            width: 104%;
-            height: 124%;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
             border: none;
             z-index: 1;
             pointer-events: none;
@@ -41,10 +42,9 @@
 
         svg {
             position: relative;
-            max-width: 95%;
-            max-height: 95%;
+            width: 100%;
+            height: 100%;
             background: transparent;
-            border: 1px solid #333;
             z-index: 10;
         }
 
@@ -55,13 +55,13 @@
         .hex-red {
             fill: rgba(255, 0, 0, 0.6);
             stroke: rgba(255, 0, 0, 1);
-            stroke-width: 2;
+            stroke-width: 1.5;
         }
 
         .hex-blue {
             fill: rgba(0, 120, 255, 0.6);
             stroke: rgba(0, 120, 255, 1);
-            stroke-width: 2;
+            stroke-width: 1.5;
         }
 
         .hex-mar {
@@ -72,7 +72,7 @@
 
         .hex-label {
             fill: white;
-            font-size: 12px;
+            font-size: 10px;
             font-weight: bold;
             text-anchor: middle;
             pointer-events: none;
@@ -82,7 +82,7 @@
 </head>
 <body>
 
-<div class="map-container">
+<div class="map-container" id="mapContainer">
     <iframe src="https://drive.google.com/file/d/1pBPverbNZjYP8yOcZ6hpAkVL1UURvmr0/preview"></iframe>
     <svg id="hexGrid"></svg>
 </div>
@@ -153,54 +153,77 @@
 
         } catch (e) {
             console.error('Error loading map:', e);
-            document.querySelector('.map-container').innerHTML = `<p style="color:#ff4444;">Error loading map: ${e.message}</p>`;
+            document.getElementById('mapContainer').innerHTML = `<p style="color:#ff4444;">Error loading map: ${e.message}</p>`;
         }
     }
 
     /**
-     * Draw hexagon grid
+     * Draw hexagon grid perfectly fitted to map
+     * Hex 1 at top-left corner, Hex 50 at bottom-right corner
      */
     function draw() {
         const svg = document.getElementById('hexGrid');
-        const container = document.querySelector('.map-container');
+        const container = document.getElementById('mapContainer');
         
         svg.innerHTML = '';
 
-        // Calculate dimensions
         const containerW = container.clientWidth;
         const containerH = container.clientHeight;
-        const maxW = containerW * 0.95;
-        const maxH = containerH * 0.95;
 
-        // Hex radius based on available space
-        const hexRadius = Math.min(
-            maxW / (1.5 * (PATTERN.length - 1) + 2),
-            maxH / (5 * Math.sqrt(3))
-        );
+        // Find bounds of hex grid
+        let minCol = Math.min(...Object.values(hexData).map(h => h.c));
+        let maxCol = Math.max(...Object.values(hexData).map(h => h.c));
+        let minRow = Math.min(...Object.values(hexData).map(h => h.r));
+        let maxRow = Math.max(...Object.values(hexData).map(h => h.r));
 
-        const hexH = Math.sqrt(3) * hexRadius;
-        const totalW = (PATTERN.length - 1) * 1.5 * hexRadius + 2 * hexRadius;
-        const totalH = 5 * hexH;
+        // Calculate hex size to fit the entire grid in the container
+        // We need to account for pointy-top hex geometry
+        const hexWidth = 2; // In terms of radius
+        const hexHeight = Math.sqrt(3); // In terms of radius
+        
+        // Columns have spacing of 1.5 * radius
+        const colSpacing = 1.5;
+        // Rows have spacing of sqrt(3) * radius (with offset for even/odd cols)
+        const rowSpacing = hexHeight;
+
+        // Total width needed: (maxCol - minCol) * 1.5 * r + 2 * r
+        // Total height needed: (maxRow - minRow) * sqrt(3) * r + sqrt(3) * r (for offset rows)
+        
+        const gridWidthInRadii = (maxCol - minCol) * colSpacing + 2;
+        const gridHeightInRadii = (maxRow - minRow) * rowSpacing + rowSpacing;
+
+        // Calculate radius that fits perfectly
+        const radiusFromWidth = containerW / gridWidthInRadii;
+        const radiusFromHeight = containerH / gridHeightInRadii;
+        const hexRadius = Math.min(radiusFromWidth, radiusFromHeight);
+
+        const hexH = hexHeight * hexRadius;
+
+        // Calculate starting position (top-left of first hex should be at 0,0 relative to grid)
+        // But we want to center the grid, so we offset from the container edges
+        const totalGridWidth = gridWidthInRadii * hexRadius;
+        const totalGridHeight = gridHeightInRadii * hexRadius;
+
+        const offsetX = (containerW - totalGridWidth) / 2;
+        const offsetY = (containerH - totalGridHeight) / 2;
 
         // SVG dimensions
-        const svgW = totalW + 40;
-        const svgH = totalH + 40;
-
-        svg.setAttribute('width', svgW);
-        svg.setAttribute('height', svgH);
-        svg.setAttribute('viewBox', `0 0 ${svgW} ${svgH}`);
-
-        // Starting position (centered)
-        const startX = 20 + hexRadius;
-        const startY = 20 + hexH / 2;
+        svg.setAttribute('width', containerW);
+        svg.setAttribute('height', containerH);
+        svg.setAttribute('viewBox', `0 0 ${containerW} ${containerH}`);
 
         // Draw hexagons
         Object.keys(hexData).forEach(id => {
             const hex = hexData[id];
             const { c, r, type } = hex;
 
-            const x = c * 1.5 * hexRadius + startX;
-            const y = r * hexH + (c % 2 === 0 ? 0 : hexH / 2) + startY;
+            // Position relative to bounds
+            const relCol = c - minCol;
+            const relRow = r - minRow;
+
+            // Calculate position
+            const x = relCol * 1.5 * hexRadius + hexRadius + offsetX;
+            const y = relRow * hexH + (c % 2 === 0 ? 0 : hexH / 2) + hexRadius + offsetY;
 
             // Create hexagon points
             const points = Array.from({ length: 6 }, (_, i) => {
@@ -222,7 +245,7 @@
             // Create label
             const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
             label.setAttribute('x', x);
-            label.setAttribute('y', y + 4);
+            label.setAttribute('y', y + 3);
             label.setAttribute('class', 'hex-label');
             label.textContent = id;
 
