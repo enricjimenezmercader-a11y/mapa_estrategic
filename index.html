@@ -25,13 +25,27 @@
             justify-content: center;
             align-items: center;
             background: #1a1a1a;
+            position: relative;
+        }
+
+        iframe {
+            position: absolute;
+            top: -12%;
+            left: -2%;
+            width: 104%;
+            height: 124%;
+            border: none;
+            z-index: 1;
+            pointer-events: none;
         }
 
         svg {
+            position: relative;
             max-width: 95%;
             max-height: 95%;
-            background: #000;
+            background: transparent;
             border: 1px solid #333;
+            z-index: 10;
         }
 
         .hex {
@@ -69,6 +83,7 @@
 <body>
 
 <div class="map-container">
+    <iframe src="https://drive.google.com/file/d/1pBPverbNZjYP8yOcZ6hpAkVL1UURvmr0/preview"></iframe>
     <svg id="hexGrid"></svg>
 </div>
 
