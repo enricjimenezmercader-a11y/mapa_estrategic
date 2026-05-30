@@ -158,7 +158,7 @@
       transform-origin:center center;
     }
 
-    /* vibració curta en aparèixer */
+    /* vibració curta */
     @keyframes shake {
       0%   { transform: translate(0,0); }
       25%  { transform: translate(1px,-1px); }
@@ -170,10 +170,10 @@
       animation:shake 0.25s linear 1;
     }
 
-    /* brillantor flotant contínua */
+    /* brillantor flotant */
     @keyframes glow {
       0%   { filter: drop-shadow(0 0 0px #fff); }
-      50%  { filter: drop-shadow(0 0 10px #ffff66); }
+      50%  { filter: drop-shadow(0 0 12px #ffff66); }
       100% { filter: drop-shadow(0 0 0px #fff); }
     }
     .attack-arrow--glow{
@@ -422,13 +422,15 @@ function placeArrow(origin,target,key){
   img.src=url;
   img.className="attack-arrow attack-arrow--shake attack-arrow--glow";
 
-  const width=2*R;
-  const height=hexH;
+  const FACTOR=1.12;
 
-  img.style.width=width+"px";
-  img.style.height=height+"px";
-  img.style.left=(origin.cx-width/2)+"px";
-  img.style.top=(origin.cy-height/2)+"px";
+  const width = 2 * R * FACTOR;
+  const height = hexH * FACTOR;
+
+  img.style.width  = width + "px";
+  img.style.height = height + "px";
+  img.style.left   = (origin.cx - width/2) + "px";
+  img.style.top    = (origin.cy - height/2) + "px";
 
   map.appendChild(img);
   arrowImages[key]=img;
@@ -465,6 +467,9 @@ function addOrder(originID,targetID){
   const target=hexData.find(h=>h.id===targetID);
 
   placeArrow(origin,target,key);
+
+  /* 🔥 NOVA REGLA: el destí no ha de tenir trama */
+  target.element.classList.remove("hex-hatch");
 
   const orders=document.getElementById("orders");
 
