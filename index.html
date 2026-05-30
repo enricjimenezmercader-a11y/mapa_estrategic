@@ -1,33 +1,122 @@
 <!DOCTYPE html>
 <html lang="ca">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Imatge Centrada</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mapa amb Hexàgons</title>
 
-    <style>
-        html, body {
-            height: 100%;
-            margin: 0;
-            background: #000;
-        }
+<style>
+    body {
+        margin: 0;
+        background: #000;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+    }
 
-        body {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-        }
+    #container {
+        position: relative;
+        width: 90vw;
+        height: 90vh;
+    }
 
-        img {
-            max-width: 90vw;
-            max-height: 90vh;
-            object-fit: contain;
-        }
-    </style>
+    #mapa {
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+        position: absolute;
+        top: 0;
+        left: 0;
+        z-index: 1;
+    }
+
+    svg {
+        position: absolute;
+        top: 0;
+        left: 0;
+        z-index: 2;
+        width: 100%;
+        height: 100%;
+        pointer-events: none;
+    }
+
+    .hex {
+        fill: rgba(255,255,255,0.05);
+        stroke: rgba(255,255,255,0.2);
+        stroke-width: 1;
+        cursor: pointer;
+        pointer-events: all;
+        transition: 0.2s;
+    }
+
+    .hex.selected {
+        fill: rgba(255,255,0,0.4);
+        stroke: yellow;
+        stroke-width: 2;
+    }
+</style>
 </head>
 <body>
 
-    <img src="https://raw.githubusercontent.com/enricjimenezmercader-a11y/mapa_estrategic/8d00183e27e13a1a7c79dd4a130d632dc29c8310/map.jpg" alt="Mapa">
+<div id="container">
+    <img id="mapa" src="https://raw.githubusercontent.com/enricjimenezmercader-a11y/mapa_estrategic/8d00183e27e13a1a7c79dd4a130d632dc29c8310/map.jpg">
+    <svg id="hexgrid"></svg>
+</div>
+
+<script>
+const svg = document.getElementById("hexgrid");
+const maxSelections = 50;
+let selected = 0;
+
+// Ajusta la mida de l'hexàgon aquí
+const radius = 60;
+
+function hexPoints(cx, cy, r) {
+    const pts = [];
+    for (let i = 0; i < 6; i++) {
+        const angle = Math.PI / 3 * i + Math.PI / 6;
+        pts.push((cx + r * Math.cos(angle)) + "," + (cy + r * Math.sin(angle)));
+    }
+    return pts.join(" ");
+}
+
+function generateGrid() {
+    const width = svg.clientWidth;
+    const height = svg.clientHeight;
+
+    const hexHeight = Math.sqrt(3) * radius;
+    const hexWidth = radius * 2;
+    const vertSpacing = hexHeight * 0.75;
+    const horizSpacing = hexWidth * 0.75;
+
+    let id = 0;
+
+    for (let y = 0; y < height + hexHeight; y += vertSpacing) {
+        for (let x = 0; x < width + hexWidth; x += horizSpacing) {
+
+            const offset = (Math.floor(y / vertSpacing) % 2) ? radius * 0.75 : 0;
+            const cx = x + offset;
+            const cy = y;
+
+            const hex = document.createElementNS("http://www.w3.org/2000/svg", "polygon");
+            hex.setAttribute("points", hexPoints(cx, cy, radius));
+            hex.setAttribute("class", "hex");
+            hex.dataset.id = id++;
+
+            hex.addEventListener("click", () => {
+                if (!hex.classList.contains("selected") && selected >= maxSelections) return;
+                hex.classList.toggle("selected");
+                selected += hex.classList.contains("selected") ? 1 : -1;
+            });
+
+            svg.appendChild(hex);
+        }
+    }
+}
+
+generateGrid();
+</script>
 
 </body>
 </html>
