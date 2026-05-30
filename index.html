@@ -29,6 +29,13 @@
             border: 1px solid #333;
         }
 
+        .viewport {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+        }
+
         iframe {
             position: absolute;
             top: 0;
@@ -85,8 +92,10 @@
 <body>
 
 <div class="map-container" id="mapContainer">
-    <iframe src="https://drive.google.com/file/d/1pBPverbNZjYP8yOcZ6hpAkVL1UURvmr0/preview"></iframe>
-    <svg id="hexGrid"></svg>
+    <div class="viewport" id="viewport">
+        <iframe src="https://drive.google.com/file/d/1pBPverbNZjYP8yOcZ6hpAkVL1UURvmr0/preview"></iframe>
+        <svg id="hexGrid"></svg>
+    </div>
 </div>
 
 <script>
@@ -160,27 +169,12 @@
     }
 
     /**
-     * Calculate corner points of a hexagon
-     */
-    function getHexCorners(x, y, radius) {
-        const corners = [];
-        for (let i = 0; i < 6; i++) {
-            const angle = (Math.PI / 3) * i;
-            corners.push({
-                x: x + radius * Math.cos(angle),
-                y: y + radius * Math.sin(angle)
-            });
-        }
-        return corners;
-    }
-
-    /**
-     * Draw hexagon grid perfectly fitted to map
-     * Corner A (hex 1 top-left) fits to corner B (map top-left)
-     * Corner C (hex 50 bottom-right) fits to corner D (map bottom-right)
+     * Draw hexagon grid with fixed dimensions
+     * Map stretches to fit the hexagon grid
      */
     function draw() {
         const svg = document.getElementById('hexGrid');
+        const viewport = document.getElementById('viewport');
         const container = document.getElementById('mapContainer');
         
         svg.innerHTML = '';
@@ -188,60 +182,49 @@
         const containerW = container.clientWidth;
         const containerH = container.clientHeight;
 
-        // Pointy-top hex geometry
-        const hexHeight = Math.sqrt(3); // height in terms of radius
+        // Fixed hexagon radius (in pixels)
+        // We'll scale this based on available height
+        const targetHexRadius = containerH / 12; // Adjust divisor to scale hex size
+        const hexRadius = targetHexRadius;
+        const hexHeight = Math.sqrt(3) * hexRadius;
 
-        // Calculate radius based on container dimensions
-        // We need to fit the grid to the exact container size
-        // The grid extends from column 0 to 10 (11 columns)
-        // Row pattern: 5,4,5,4,5,4,5,4,5,4,5
-        
-        // Width calculation: (maxCol - minCol + 1) * 1.5 * radius - 0.5 * radius
-        // = 10 * 1.5 * radius - 0.5 * radius = 14.5 * radius
-        // Actually: 11 columns, so spacing is from col 0 to col 10 = 10 intervals of 1.5*radius
-        // Plus the radius on each end = 10 * 1.5 * radius + radius = 16 * radius? 
-        // Let's recalculate: if we have cols 0-10, the width between first and last hex center is 10 * 1.5 = 15 radii
-        // Plus half a radius on each side = 15.5 * radius, but we want corner to corner
-        // A pointy-top hex spans 2*radius horizontally at widest
-        // So total: 15 * radius + 2 * radius = 17 * radius? Let's be precise...
+        // Grid dimensions with fixed hex size
+        // 11 columns (0-10): width = 10 * 1.5 * hexRadius + 2 * hexRadius = 17 * hexRadius
+        // 5 rows (0-4): height = 4 * hexHeight + hexHeight = 5 * hexHeight
+        const gridWidth = 17 * hexRadius;
+        const gridHeight = 5 * hexHeight;
 
-        // For pointy-top hexagon:
-        // - Horizontal distance between adjacent hex centers = 1.5 * radius
-        // - Vertical distance between adjacent hex centers = sqrt(3) * radius (same row) or sqrt(3)/2 * radius (adjacent rows)
+        // Set viewport dimensions to grid dimensions
+        viewport.style.width = gridWidth + 'px';
+        viewport.style.height = gridHeight + 'px';
 
-        // Max column is 10, so width needed: 10 * 1.5 * radius for spacing, plus radius on each side = 16 * radius
-        // But corners: from leftmost point of hex at col 0 to rightmost point of hex at col 10
-        // Leftmost point of hex 0: x - radius
-        // Rightmost point of hex 10: x + radius
-        // So total: (10 * 1.5 * radius + radius) - (-radius) + extra = 10 * 1.5 * radius + 2 * radius = 17 * radius
+        // Center viewport in container
+        viewport.style.position = 'absolute';
+        viewport.style.left = '50%';
+        viewport.style.top = '50%';
+        viewport.style.transform = 'translate(-50%, -50%)';
 
-        // Find max row: row 4 appears multiple times, so max is 4
-        // Vertical span: 4 rows * sqrt(3) * radius + sqrt(3) * radius (for top/bottom) = 5 * sqrt(3) * radius
-        
-        const radiusW = containerW / 17; // 11 cols gives us 10 intervals of 1.5 + 2 for edges
-        const radiusH = containerH / (5 * hexHeight);
-        const radius = Math.min(radiusW, radiusH);
+        // SVG follows viewport dimensions
+        svg.setAttribute('width', gridWidth);
+        svg.setAttribute('height', gridHeight);
+        svg.setAttribute('viewBox', `0 0 ${gridWidth} ${gridHeight}`);
 
-        // Recalculate to center the grid perfectly
-        const gridW = 17 * radius;
-        const gridH = 5 * hexHeight * radius;
-        
-        const startX = (containerW - gridW) / 2 + radius;
-        const startY = (containerH - gridH) / 2 + hexHeight * radius;
+        const startX = hexRadius;
+        const startY = hexHeight;
 
         // Draw hexagons
         Object.keys(hexData).forEach(id => {
             const hex = hexData[id];
             const { c, r, type } = hex;
 
-            const x = c * 1.5 * radius + startX;
-            const y = r * hexHeight * radius + (c % 2 === 0 ? 0 : hexHeight * radius / 2) + startY;
+            const x = c * 1.5 * hexRadius + startX;
+            const y = r * hexHeight + (c % 2 === 0 ? 0 : hexHeight / 2) + startY;
 
             // Create hexagon points
             const points = Array.from({ length: 6 }, (_, i) => {
                 const angle = (Math.PI / 3) * i;
-                const px = x + radius * Math.cos(angle);
-                const py = y + radius * Math.sin(angle);
+                const px = x + hexRadius * Math.cos(angle);
+                const py = y + hexRadius * Math.sin(angle);
                 return `${px},${py}`;
             }).join(' ');
 
