@@ -249,7 +249,7 @@ async function loadCSV(){
 // ------------------------------
 // BLOQUEIG DINÀMIC PER E2
 // ------------------------------
-async function superLockCheck() {
+async function unifiedLockAndState() {
   try {
     const text = await fetchCSV();
     const lines = text.trim().split("\n");
@@ -262,28 +262,35 @@ async function superLockCheck() {
     const E2 = cols[4].trim();
     const btn = document.getElementById("confirmBtn");
 
-    // Màxima jerarquia: E2 controla absolutament el botó
-    if (E2 === "1") {
+    // --- 1) BLOQUEIG ABSOLUT PER E2 ---
+    const sheetLocked = (E2 === "1");
+
+    if (sheetLocked) {
       btn.disabled = true;
       btn.style.background = "#555";
       btn.style.color = "#999";
       btn.style.cursor = "not-allowed";
-      btn._superLocked = true;
     } else {
-      btn._superLocked = false;
       btn.disabled = false;
       btn.style.background = "#004400";
       btn.style.color = "#aaffaa";
       btn.style.cursor = "pointer";
     }
 
+    // --- 2) ACTUALITZAR ACCIONS DISPONIBLES ---
+    const H2 = parseInt(lines[1].split(",")[7]); // columna H
+    actionsAvailable = H2;
+    updateActionDisplay();
+
   } catch (err) {
-    console.error("Error superLockCheck:", err);
+    console.error("Error unifiedLockAndState:", err);
   }
 }
 
 
-setInterval(superLockCheck, 1000);
+
+setInterval(unifiedLockAndState, 1000);
+
 
 
 // ------------------------------
