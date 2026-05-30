@@ -618,7 +618,8 @@ checkLockState();
 document.getElementById("confirmBtn").addEventListener("click", async () => {
   const btn = document.getElementById("confirmBtn");
 
-  if (btn._sheetLocked || btn._tempLocked) return;
+ if (btn._sheetLocked) {
+
 
   // Eliminem el bloqueig temporal
 document.body.style.cursor = "wait";
