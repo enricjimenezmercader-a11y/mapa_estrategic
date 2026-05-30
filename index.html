@@ -541,6 +541,11 @@ function redraw(){
 
 window.addEventListener("resize",redraw);
 redraw();
+
+/* 🔊 SO EN PRÉMER "CONFIRMAR ORDRES" */
+document.getElementById("confirmBtn").addEventListener("click", () => {
+  document.getElementById("ordersSound").play();
+});
 </script>
 
 </body>
