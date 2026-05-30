@@ -51,12 +51,10 @@
       cursor:pointer;
     }
 
-    /* Colors base amb transparència 33% */
     .hex-red{ fill:rgba(255,0,0,0.33); }
     .hex-blue{ fill:rgba(0,120,255,0.33); }
     .hex-mar{ fill:rgba(120,120,120,0.33); }
 
-    /* TRAMA VERMELLA A 45º, separació 6px, gruix 3px, opacitat 50% */
     .hex-hatch{
       fill: url(#hatch-red);
     }
@@ -70,7 +68,6 @@
       stroke-width:0.8;
     }
 
-    /* Àrea de text d’ordres */
     #orders{
       width:66%;
       color:#7CFF7C;
@@ -79,15 +76,43 @@
       white-space:pre-line;
       min-height:40px;
     }
+
+    /* AVÍS D’ORDRE REPETIDA */
+    #warning{
+      position:absolute;
+      top:10px;
+      left:50%;
+      transform:translateX(-50%);
+      font-size:40px;
+      font-weight:bold;
+      color:#FF4444;
+      text-shadow:0 0 10px #000;
+      opacity:0;
+      pointer-events:none;
+      z-index:999;
+    }
+
+    .blink{
+      animation: blinkAnim 0.3s linear infinite;
+    }
+
+    @keyframes blinkAnim{
+      0%{opacity:1;}
+      50%{opacity:0;}
+      100%{opacity:1;}
+    }
   </style>
 </head>
 
 <body>
 
 <div class="map-container" id="mapContainer">
+  <div id="warning">Ordre repetida</div>
+
   <img class="map-image"
        src="https://github.com/enricjimenezmercader-a11y/mapa_estrategic/blob/481d1cc0765b31581a6f050a7f68d53400172e48/map_hex.jpg?raw=true"
        alt="Mapa estratègic">
+
   <svg id="hexGrid"></svg>
 </div>
 
@@ -103,9 +128,10 @@ const REAL_R = 41.78;
 const REAL_GRID_WIDTH = 17 * REAL_R;
 const IMAGE_RATIO = 1.4;
 
-let hexData = [];  
-let selectedRed = null;  
+let hexData = [];
+let selectedRed = null;
 let highlightedAdjacents = [];
+let ordersSet = new Set(); // <-- per evitar ordres repetides
 
 /* Llegeix CSV */
 async function loadColors(){
@@ -154,7 +180,6 @@ async function drawHexGrid(){
   selectedRed = null;
   highlightedAdjacents = [];
 
-  /* Trama vermella */
   svg.insertAdjacentHTML("afterbegin", `
     <defs>
       <pattern id="hatch-red" patternUnits="userSpaceOnUse" width="6" height="6" patternTransform="rotate(45)">
@@ -261,8 +286,29 @@ function clearHighlights(){
   selectedRed = null;
 }
 
+/* MOSTRAR AVÍS D’ORDRE REPETIDA */
+function showWarning(){
+  const w = document.getElementById("warning");
+  w.classList.add("blink");
+  w.style.opacity = 1;
+
+  setTimeout(()=>{
+    w.style.opacity = 0;
+    w.classList.remove("blink");
+  }, 2000);
+}
+
 /* AFEGIR ORDRE D’ATAC */
 function addOrder(origin, target){
+  const key = `${origin}-${target}`;
+
+  if(ordersSet.has(key)){
+    showWarning();
+    return;
+  }
+
+  ordersSet.add(key);
+
   const orders = document.getElementById("orders");
   orders.textContent += `Ordre d'atac, territori ${origin} a territori ${target}\n`;
 }
@@ -282,19 +328,16 @@ function setupClickHandler(){
     const id = parseInt(poly.dataset.id);
     const hex = hexData.find(h => h.id === id);
 
-    /* Si cliquem un vermell → seleccionar origen */
     if(hex.color === "RED"){
       highlightAdjacent(hex);
       return;
     }
 
-    /* Si cliquem un blau adjacents → ordre d’atac */
     if(selectedRed && highlightedAdjacents.some(h => h.id === id)){
       addOrder(selectedRed.id, hex.id);
       return;
     }
 
-    /* Qualsevol altra cosa → netejar */
     clearHighlights();
   });
 }
