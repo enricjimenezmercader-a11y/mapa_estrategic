@@ -3,6 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <title>Descarregar SVG d'atac</title>
+
   <style>
     body {
       background:#111;
@@ -11,6 +12,7 @@
       padding:40px;
       text-align:center;
     }
+    h1 { margin-bottom:30px; }
     button {
       padding:12px 20px;
       margin:10px;
@@ -20,6 +22,7 @@
       color:#7CFF7C;
       border:2px solid #7CFF7C;
       border-radius:6px;
+      display:inline-block;
     }
     button:hover {
       background:#7CFF7C;
@@ -31,18 +34,28 @@
 <body>
 
 <h1>Descarregar SVG d'atac</h1>
-<p>Fes clic a qualsevol botó per descarregar el fitxer SVG corresponent.</p>
+<p>Fes clic a qualsevol botó per descarregar el fitxer SVG.</p>
+
+<!-- Botons visibles -->
+<button onclick="download('AT-N.svg', svgN)">Descarregar AT‑N.svg</button>
+<button onclick="download('AT-NE.svg', svgNE)">Descarregar AT‑NE.svg</button>
+<button onclick="download('AT-SE.svg', svgSE)">Descarregar AT‑SE.svg</button>
+<button onclick="download('AT-S.svg', svgS)">Descarregar AT‑S.svg</button>
+<button onclick="download('AT-SO.svg', svgSO)">Descarregar AT‑SO.svg</button>
+<button onclick="download('AT-NO.svg', svgNO)">Descarregar AT‑NO.svg</button>
 
 <script>
-function saveSVG(name, content) {
+function download(filename, content) {
   const blob = new Blob([content], {type: "image/svg+xml"});
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = name;
+  a.download = filename;
   a.click();
   URL.revokeObjectURL(url);
 }
+
+// --- Contingut dels SVG ---
 
 const svgN = `
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 83.56 72.35">
@@ -58,4 +71,34 @@ const svgNE = `
   <polygon points="63,20 63,40 45,30" fill="white"/>
 </svg>`;
 
-const
+const svgSE = `
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 83.56 72.35">
+  <polygon points="41.78,0 83.56,18.087 83.56,54.262 41.78,72.35 0,54.262 0,18.087"
+           fill="none" stroke="white" stroke-width="3"/>
+  <polygon points="63,52 45,42 63,32" fill="white"/>
+</svg>`;
+
+const svgS = `
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 83.56 72.35">
+  <polygon points="41.78,0 83.56,18.087 83.56,54.262 41.78,72.35 0,54.262 0,18.087"
+           fill="none" stroke="white" stroke-width="3"/>
+  <polygon points="41.78,62 31.78,44 51.78,44" fill="white"/>
+</svg>`;
+
+const svgSO = `
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 83.56 72.35">
+  <polygon points="41.78,0 83.56,18.087 83.56,54.262 41.78,72.35 0,54.262 0,18.087"
+           fill="none" stroke="white" stroke-width="3"/>
+  <polygon points="20,52 38,42 20,32" fill="white"/>
+</svg>`;
+
+const svgNO = `
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 83.56 72.35">
+  <polygon points="41.78,0 83.56,18.087 83.56,54.262 41.78,72.35 0,54.262 0,18.087"
+           fill="none" stroke="white" stroke-width="3"/>
+  <polygon points="20,20 38,30 20,40" fill="white"/>
+</svg>`;
+</script>
+
+</body>
+</html>
