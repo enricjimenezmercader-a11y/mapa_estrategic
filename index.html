@@ -239,31 +239,31 @@ async function loadCSV(){
   return colors;
 }
 
-// Comprovar E2 per bloquejar el botó si cal
+// Comprovar E1 per bloquejar el botó de forma dinàmica
 async function checkLockState() {
   try {
     const res = await fetch(CSV_URL);
     const text = await res.text();
     const lines = text.trim().split("\n");
-    const cols = lines[1].split(",");
-    const E2 = cols[4].trim(); // E2 = segona fila, cinquena columna
+    const cols = lines[0].split(","); // E1 = fila 1, columna 5
+    const E1 = cols[4].trim();
 
     const btn = document.getElementById("confirmBtn");
 
-    if (E2 === "1") {
+    btn._sheetLocked = (E1 === "1");
+
+    if (btn._sheetLocked || btn._tempLocked) {
       btn.disabled = true;
       btn.style.background = "#555";
       btn.style.color = "#999";
       btn.style.cursor = "not-allowed";
     } else {
-      // Només el deixem actiu si no està en bloqueig temporal
-      if (!btn._tempLocked) {
-        btn.disabled = false;
-        btn.style.background = "#004400";
-        btn.style.color = "#aaffaa";
-        btn.style.cursor = "pointer";
-      }
+      btn.disabled = false;
+      btn.style.background = "#004400";
+      btn.style.color = "#aaffaa";
+      btn.style.cursor = "pointer";
     }
+
   } catch (err) {
     console.log("Error checkLockState:", err);
   }
@@ -543,7 +543,6 @@ function setupClickHandler(){
   const svg=document.getElementById("hexGrid");
 
   svg.addEventListener("click", e => {
-    // Bloqueig global de clics
     if (clickLocked) return;
 
     hexData.forEach(h=>h.element.classList.remove("hex-hatch"));
@@ -582,30 +581,30 @@ function redraw(){
 window.addEventListener("resize",redraw);
 redraw();
 checkLockState();
+setInterval(checkLockState, 1000);
 
 // Botó Confirmar ordres: bloqueig 5s, cursor rellotge i enviament seqüencial
 document.getElementById("confirmBtn").addEventListener("click", async () => {
   const btn = document.getElementById("confirmBtn");
 
-  if (btn.disabled) return;
+  if (btn._sheetLocked || btn._tempLocked) return;
 
-  btn.disabled = true;
   btn._tempLocked = true;
+  btn.disabled = true;
   btn.style.background = "#555";
   btn.style.color = "#999";
   btn.style.cursor = "not-allowed";
   document.body.style.cursor = "wait";
 
   setTimeout(() => {
-    document.body.style.cursor = "default";
     btn._tempLocked = false;
+    document.body.style.cursor = "default";
     checkLockState();
   }, 5000);
 
   document.getElementById("ordersSound").play();
 
   const url = "https://script.google.com/macros/s/AKfycbzMGXDTpJXy2jGjGxPT5g27kOntPOEj6aO-ap_8KIPqi1iyR-FQknxpNva-QqqTXxt_/exec";
-
   const lines = document.querySelectorAll(".order-line");
 
   for (const line of lines) {
