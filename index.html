@@ -1,36 +1,637 @@
-<!doctype html><html lang="ca"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/><title>Mapa Estratègic</title><style>*{box-sizing:border-box;margin:0;padding:0}html,body{height:100%}body{background:#000;color:#fff;font-family:Arial,Helvetica,sans-serif;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding-top:20px;gap:20px}#titleBar{font-size:28px;font-weight:700;text-align:center}#actionBar{width:66%;height:20px;background:#333;border:1px solid #666;margin-top:-10px;margin-bottom:10px;position:relative}#actionFill{height:100%;background:#0c0;width:0%;transition:width .3s}#mapContainer{position:relative;background:#1a1a1a;border:1px solid #333;overflow:hidden}#mapContainer img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;z-index:1;pointer-events:none}svg{position:absolute;inset:0;width:100%;height:100%;z-index:10}.hex{stroke:#000;stroke-width:2;cursor:pointer}.hex-red{fill:rgba(255,0,0,.33)}.hex-blue{fill:rgba(0,120,255,.33)}.hex-mar{fill:rgba(120,120,120,.33)}.hex-hatch{fill:url(#hatch-red)}.hex-label{fill:#fff;font-weight:700;text-anchor:middle;pointer-events:none;stroke:#000;stroke-width:.8}#orders{width:66%;color:#7cff7c;font-family:monospace;font-size:18px;white-space:pre-line;min-height:40px}.order-line{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}.order-btn{background:#500;color:#fff;border:1px solid #a00;padding:3px 8px;cursor:pointer;font-size:14px}#confirmBtn{margin-top:10px;padding:6px 12px;background:#040;color:#afa;border:1px solid #6f6;cursor:pointer;font-size:16px}#warning,#warningActions{position:absolute;top:10px;left:50%;transform:translateX(-50%);font-size:40px;font-weight:700;color:#f44;text-shadow:0 0 10px #000;opacity:0;pointer-events:none;z-index:999}.blink{animation:blink .3s linear infinite}@keyframes blink{0%{opacity:1}50%{opacity:0}100%{opacity:1}}.attack-arrow{position:absolute;pointer-events:none;z-index:20;transform-origin:center}@keyframes shake{0%{transform:translate(0,0)}25%{transform:translate(1px,-1px)}50%{transform:translate(-1px,1px)}75%{transform:translate(1px,1px)}100%{transform:translate(0,0)}}.attack-arrow--shake{animation:shake .25s linear 1}@keyframes glow{0%{filter:drop-shadow(0 0 0 #fff)}50%{filter:drop-shadow(0 0 12px #ff6)}100%{filter:drop-shadow(0 0 0 #fff)}}.attack-arrow--glow{animation:glow 1.4s ease-in-out infinite}</style></head><body>
+<!doctype html>
+<html lang="ca">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Mapa Estratègic — Retícula Hexagonal</title>
+
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    html,body{height:100%}
+    body{
+      background:#000;
+      color:#fff;
+      font-family:Arial,Helvetica,sans-serif;
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      justify-content:flex-start;
+      padding-top:20px;
+      gap:20px;
+    }
+
+    #titleBar{
+      font-size:28px;
+      font-weight:bold;
+      text-align:center;
+    }
+
+    #actionBar{
+      width:66%;
+      height:20px;
+      background:#333;
+      border:1px solid #666;
+      margin-top:-10px;
+      margin-bottom:10px;
+      position:relative;
+    }
+
+    #actionFill{
+      height:100%;
+      background:#00cc00;
+      width:0%;
+      transition:width 0.3s ease;
+    }
+
+    .map-container{
+      position:relative;
+      background:#1a1a1a;
+      border:1px solid #333;
+      overflow:hidden;
+    }
+
+    .map-image{
+      position:absolute;
+      inset:0;
+      width:100%;
+      height:100%;
+      object-fit:contain;
+      z-index:1;
+      pointer-events:none;
+    }
+
+    svg{
+      position:absolute;
+      inset:0;
+      width:100%;
+      height:100%;
+      z-index:10;
+    }
+
+    .hex{
+      stroke:#000;
+      stroke-width:2;
+      cursor:pointer;
+    }
+
+    .hex-red{ fill:rgba(255,0,0,0.33); }
+    .hex-blue{ fill:rgba(0,120,255,0.33); }
+    .hex-mar{ fill:rgba(120,120,120,0.33); }
+
+    .hex-hatch{
+      fill:url(#hatch-red);
+    }
+
+    .hex-label{
+      fill:#fff;
+      font-weight:bold;
+      text-anchor:middle;
+      pointer-events:none;
+      stroke:#000;
+      stroke-width:0.8;
+    }
+
+    #orders{
+      width:66%;
+      color:#7CFF7C;
+      font-family:monospace;
+      font-size:18px;
+      white-space:pre-line;
+      min-height:40px;
+    }
+
+    .order-line{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      margin-bottom:6px;
+    }
+
+    .order-btn{
+      background:#550000;
+      color:#fff;
+      border:1px solid #aa0000;
+      padding:3px 8px;
+      cursor:pointer;
+      font-size:14px;
+    }
+
+    #confirmBtn{
+      margin-top:10px;
+      padding:6px 12px;
+      background:#004400;
+      color:#aaffaa;
+      border:1px solid #66ff66;
+      cursor:pointer;
+      font-size:16px;
+      display:block;
+    }
+
+    #warning, #warningActions{
+      position:absolute;
+      top:10px;
+      left:50%;
+      transform:translateX(-50%);
+      font-size:40px;
+      font-weight:bold;
+      color:#FF4444;
+      text-shadow:0 0 10px #000;
+      opacity:0;
+      pointer-events:none;
+      z-index:999;
+    }
+
+    .blink{
+      animation: blinkAnim 0.3s linear infinite;
+    }
+
+    @keyframes blinkAnim{
+      0%{opacity:1;}
+      50%{opacity:0;}
+      100%{opacity:1;}
+    }
+
+    .attack-arrow{
+      position:absolute;
+      pointer-events:none;
+      z-index:20;
+      transform-origin:center center;
+    }
+
+    @keyframes shake {
+      0%   { transform: translate(0,0); }
+      25%  { transform: translate(1px,-1px); }
+      50%  { transform: translate(-1px,1px); }
+      75%  { transform: translate(1px,1px); }
+      100% { transform: translate(0,0); }
+    }
+    .attack-arrow--shake{
+      animation:shake 0.25s linear 1;
+    }
+
+    @keyframes glow {
+      0%   { filter: drop-shadow(0 0 0px #fff); }
+      50%  { filter: drop-shadow(0 0 12px #ffff66); }
+      100% { filter: drop-shadow(0 0 0px #fff); }
+    }
+    .attack-arrow--glow{
+      animation:glow 1.4s ease-in-out infinite;
+    }
+  </style>
+</head>
+
+<body>
+
 <audio id="moveSound" src="https://raw.githubusercontent.com/enricjimenezmercader-a11y/mapa_estrategic/main/Move.wav"></audio>
 <audio id="ordersSound" src="https://raw.githubusercontent.com/enricjimenezmercader-a11y/mapa_estrategic/main/Orders.wav"></audio>
-<div id="titleBar">Equip vermell — Accions disponibles...</div>
+
+<div id="titleBar">Equip vermell — Accions disponibles: ...</div>
 <div id="actionBar"><div id="actionFill"></div></div>
-<div id="mapContainer">
-<div id="warning">Ordre repetida</div>
-<div id="warningActions">Accions insuficients</div>
-<img src="https://github.com/enricjimenezmercader-a11y/mapa_estrategic/blob/481d1cc0765b31581a6f050a7f68d53400172e48/map_hex.jpg?raw=true">
-<svg id="hexGrid"></svg>
+
+<div class="map-container" id="mapContainer">
+  <div id="warning">Ordre repetida</div>
+  <div id="warningActions">Accions insuficients</div>
+
+  <img class="map-image"
+       src="https://github.com/enricjimenezmercader-a11y/mapa_estrategic/blob/481d1cc0765b31581a6f050a7f68d53400172e48/map_hex.jpg?raw=true"
+       alt="Mapa estratègic">
+
+  <svg id="hexGrid"></svg>
 </div>
+
 <div id="orders"></div>
 <button id="confirmBtn">Confirmar ordres</button>
+
 <script>
-const PATTERN=[5,4,5,4,5,4,5,4,5,4,5],CSV_URL="https://docs.google.com/spreadsheets/d/e/2PACX-1vS8k769FG5aF_PK-AmHLVdcfc6sgJeeIhWkL9Q8Gcrs39JW9GyJid_OtHcwhN9r3xhFvWPrc_yigZiY/pub?output=csv",REAL_R=41.78,REAL_GRID_WIDTH=17*REAL_R,IMAGE_RATIO=1.4;let hexData=[],selectedRed=null,highlightedAdjacents=[],ordersSet=new Set,actionsAvailable=0,arrowImages={},clickLocked=!1;
-async function fetchCSV(){return(await fetch(CSV_URL+"&cb="+Date.now())).text()}
-async function loadCSV(){let t=await fetchCSV(),e=t.trim().split("\n"),o={},n=0;return e.forEach(((t,e)=>{let r=t.split(",");1===e&&(n=parseInt(r[7]));let i=r[0],a=r[1];i&&(o[i.trim()]=a.trim().toUpperCase())})),actionsAvailable=n,updateActionDisplay(),o}
-async function checkLockState(){try{let t=await fetchCSV(),e=t.trim().split("\n"),o=e[1].split(",")[4].trim(),n=document.getElementById("confirmBtn");n._sheetLocked="1"===o,n.disabled=n._sheetLocked||n._tempLocked,n.style.background=n.disabled?"#555":"#040",n.style.color=n.disabled?"#999":"#afa",n.style.cursor=n.disabled?"not-allowed":"pointer"}catch(t){console.log("Error checkLockState:",t)}}
-setInterval(checkLockState,1e3);
-function updateActionDisplay(){let t=usedPoints(),e=actionsAvailable-t;document.getElementById("titleBar").textContent=`Equip vermell — Accions disponibles: ${actionsAvailable} — Gastades: ${t} — Restants: ${e}`,document.getElementById("actionFill").style.width=Math.min(100,t/actionsAvailable*100)+"%"}
-function resizeMap(){let t=document.getElementById("mapContainer"),e=window.innerWidth,o=window.innerHeight,n=.666*e,r=.666*o,i=n/IMAGE_RATIO;i>r?(i=r,n=i*IMAGE_RATIO):i; t.style.width=n+"px",t.style.height=i+"px"}
-async function drawHexGrid(){let t=document.getElementById("hexGrid"),e=document.getElementById("mapContainer");t.innerHTML="",hexData=[],selectedRed=null,highlightedAdjacents=[],arrowImages={},ordersSet=new Set,document.getElementById("orders").innerHTML="",t.insertAdjacentHTML("afterbegin","<defs><pattern id='hatch-red' patternUnits='userSpaceOnUse' width='6' height='6' patternTransform='rotate(45)'><line x1='0' y1='0' x2='0' y2='6' stroke='rgba(255,0,0,0.5)' stroke-width='3'/></pattern></defs>");let o=await loadCSV(),n=e.clientWidth,r=n/REAL_GRID_WIDTH,i=REAL_R*r,a=Math.sqrt(3)*i,l=Math.max(...PATTERN),c=(l-1)*a+a,d=17*i,s=(n-d)/2+i,u=(e.clientHeight-c)/2+a/2,g=1;PATTERN.forEach(((t,e)=>{for(let l=0;l<t;l++){let t=s+1.5*i*e,n=u+l*a+(e%2==0?0:a/2),r=[];for(let e=0;e<6;e++){let o=Math.PI/3*e;r.push([t+i*Math.cos(o),n+i*Math.sin(o)].join(","))}let a=document.createElementNS("http://www.w3.org/2000/svg","g"),c=document.createElementNS("http://www.w3.org/2000/svg","polygon");c.setAttribute("points",r.join(" "));let d=(o[g]||"").toUpperCase(),f="hex hex-mar";d.includes("RED")?f="hex hex-red":d.includes("BLUE")&&(f="hex hex-blue"),c.setAttribute("class",f),c.dataset.id=g,a.appendChild(c);let m=document.createElementNS("http://www.w3.org/2000/svg","text");m.setAttribute("x",t),m.setAttribute("y",n+4),m.setAttribute("class","hex-label"),m.textContent=g,a.appendChild(m),document.getElementById("hexGrid").appendChild(a),hexData.push({id:g,cx:t,cy:n,color:d,element:c}),g++}}))}
-function highlightAdjacent(t){clearHighlights(),selectedRed=t;let e=REAL_R*(document.getElementById("mapContainer").clientWidth/REAL_GRID_WIDTH),o=Math.sqrt(3)*e*1.01;highlightedAdjacents=[],hexData.forEach((e=>{if("BLUE"===e.color){let n=e.cx-t.cx,r=e.cy-t.cy,i=Math.sqrt(n*n+r*r);i<=o&&(e.element.classList.add("hex-hatch"),highlightedAdjacents.push(e))}}))}
-function clearHighlights(){highlightedAdjacents.forEach((t=>t.element.classList.remove("hex-hatch"))),highlightedAdjacents=[],selectedRed=null}
-function showWarning(){let t=document.getElementById("warning");t.classList.add("blink"),t.style.opacity=1,setTimeout((()=>{t.style.opacity=0,t.classList.remove("blink")}),2e3)}
-function showWarningActions(){let t=document.getElementById("warningActions");t.classList.add("blink"),t.style.opacity=1,setTimeout((()=>{t.style.opacity=0,t.classList.remove("blink")}),2e3)}
-function usedPoints(){return 10*ordersSet.size}
-function direction(t,e){let o=e.cx-t.cx,n=e.cy-t.cy;return n<0&&Math.abs(o)<Math.abs(n)?"N":n>0&&Math.abs(o)<Math.abs(n)?"S":o>0&&n<0?"NE":o>0&&n>0?"SE":o<0&&n<0?"NO":o<0&&n>0?"SO":"N"}
-function arrowURL(t){return{N:"https://raw.githubusercontent.com/enricjimenezmercader-a11y/mapa_estrategic/main/AT-N.svg",NE:"https://raw.githubusercontent.com/enricjimenezmercader-a11y/mapa_estrategic/main/AT-NE.svg",NO:"https://raw.githubusercontent.com/enricjimenezmercader-a11y/mapa_estrategic/main/AT-NO.svg",S:"https://raw.githubusercontent.com/enricjimenezmercader-a11y/mapa_estrategic/main/AT-S.svg",SE:"https://raw.githubusercontent.com/enricjimenezmercader-a11y/mapa_estrategic/main/AT-SE.svg",SO:"https://raw.githubusercontent.com/enricjimenezmercader-a11y/mapa_estrategic/main/AT-SO.svg"}[t]}
-function placeArrow(t,e,o){let n=document.getElementById("mapContainer"),r=n.clientWidth/REAL_GRID_WIDTH,i=REAL_R*r,a=Math.sqrt(3)*i,l=direction(t,e),c=arrowURL(l),d=document.createElement("img");d.src=c,d.className="attack-arrow attack-arrow--shake attack-arrow--glow";let s=1.42,u=2*i*s,g=a*s;d.style.width=u+"px",d.style.height=g+"px",d.style.left=t.cx-u/2+"px",d.style.top=t.cy-g/2+"px",n.appendChild(d),arrowImages[o]=d,setTimeout((()=>{d&&d.classList.remove("attack-arrow--shake")}),260)}
-function removeArrow(t){arrowImages[t]&&(arrowImages[t].remove(),delete arrowImages[t])}
-function addOrder(t,e){let o=`${t}-${e}`;if(ordersSet.has(o))return void showWarning();if(actionsAvailable-usedPoints()<10)return void showWarningActions();ordersSet.add(o),clickLocked=!0,document.body.style.cursor="wait",setTimeout((()=>{clickLocked=!1,document.body.style.cursor="default"}),1e3);let n=hexData.find((e=>e.id===t)),r=hexData.find((t=>t.id===e));placeArrow(n,r,o),r.element.classList.remove("hex-hatch"),document.getElementById("moveSound").play();let i=document.getElementById("orders"),a=document.createElement("div");a.className="order-line",a.dataset.key=o;let l=document.createElement("span");l.textContent=`Ordre d'atac, territori ${t} a territori ${e}`;let c=document.createElement("button");c.textContent="Suspendre ordre",c.className="order-btn",c.onclick=()=>{ordersSet.delete(o),removeArrow(o),a.remove(),updateActionDisplay()},a.appendChild(l),a.appendChild(c),i.appendChild(a),updateActionDisplay()}
-function setupClickHandler(){document.getElementById("hexGrid").addEventListener("click",(t=>{if(clickLocked)return;hexData.forEach((t=>t.element.classList.remove("hex-hatch")));let e=t.target.closest("polygon");if(!e)return void clearHighlights();let o=parseInt(e.dataset.id),n=hexData.find((t=>t.id===o));return"RED"===n.color?(highlightAdjacent(n),void 0):selectedRed&&highlightedAdjacents.some((t=>t.id===o))?(addOrder(selectedRed.id,n.id),void 0):void clearHighlights()}))}
-function redraw(){resizeMap(),drawHexGrid().then((()=>{setupClickHandler(),updateActionDisplay()}))}
-window.addEventListener("resize",redraw),redraw(),checkLockState();
-document.getElementById("confirmBtn").addEventListener("click",async()=>{let t=document.getElementById("confirmBtn");if(t._sheetLocked||t._tempLocked)return;t._tempLocked=!0,t.disabled=!0,t.style.background="#555",t.style.color="#999",t.style.cursor="not-allowed",document.body.style.cursor="wait",setTimeout(()=>{t._tempLocked=!1,document.body.style.cursor="default",checkLockState()},5e3),document.getElementById("ordersSound").play();let e="https://script.google.com/macros/s/AKfycbzMGXDTpJXy2jGjGxPT5g27kOntPOEj6aO-ap_8KIPqi1iyR-FQknxpNva-QqqTXxt_/exec",o=document.querySelectorAll(".order-line");for(let t of o){let o=t.querySelector("span").textContent;await fetch(e,{method:"POST",mode:"no-cors",headers:{"Content-Type":"application/json"},body:JSON.stringify({orderText:o})}),await new Promise((t=>setTimeout(t,150)))}});</script></body></html>
+const PATTERN=[5,4,5,4,5,4,5,4,5,4,5];
+const CSV_URL="https://docs.google.com/spreadsheets/d/e/2PACX-1vS8k769FG5aF_PK-AmHLVdcfc6sgJeeIhWkL9Q8Gcrs39JW9GyJid_OtHcwhN9r3xhFvWPrc_yigZiY/pub?output=csv";
+
+const REAL_R=41.78;
+const REAL_GRID_WIDTH=17*REAL_R;
+const IMAGE_RATIO=1.4;
+
+let hexData=[];
+let selectedRed=null;
+let highlightedAdjacents=[];
+let ordersSet=new Set();
+let actionsAvailable=0;
+let arrowImages={};
+let clickLocked=false;
+
+// ------------------------------
+// LECTURA CSV AMB CACHE-BUSTER
+// ------------------------------
+async function fetchCSV(){
+  const res = await fetch(CSV_URL + "&cb=" + Date.now());
+  return await res.text();
+}
+
+async function loadCSV(){
+  const text = await fetchCSV();
+  const lines=text.trim().split("\n");
+
+  const colors={};
+  let H2=0;
+
+  lines.forEach((line,index)=>{
+    const cols=line.split(",");
+    if(index===1) H2=parseInt(cols[7]);
+    const id=cols[0];
+    const color=cols[1];
+    if(id) colors[id.trim()]=color.trim().toUpperCase();
+  });
+
+  actionsAvailable=H2;
+  updateActionDisplay();
+  return colors;
+}
+
+// ------------------------------
+// BLOQUEIG DINÀMIC PER E1
+// ------------------------------
+async function checkLockState() {
+  try {
+    const text = await fetchCSV();
+    const lines = text.trim().split("\n");
+    const cols = lines[0].split(",");
+    const E1 = cols[4].trim();
+
+    const btn = document.getElementById("confirmBtn");
+
+    btn._sheetLocked = (E1 === "1");
+
+    if (btn._sheetLocked || btn._tempLocked) {
+      btn.disabled = true;
+      btn.style.background = "#555";
+      btn.style.color = "#999";
+      btn.style.cursor = "not-allowed";
+    } else {
+      btn.disabled = false;
+      btn.style.background = "#004400";
+      btn.style.color = "#aaffaa";
+      btn.style.cursor = "pointer";
+    }
+
+  } catch (err) {
+    console.log("Error checkLockState:", err);
+  }
+}
+
+setInterval(checkLockState, 1000);
+
+// ------------------------------
+
+function updateActionDisplay(){
+  const spent=usedPoints();
+  const remaining=actionsAvailable-spent;
+  document.getElementById("titleBar").textContent=
+    `Equip vermell — Accions disponibles: ${actionsAvailable} — Gastades: ${spent} — Restants: ${remaining}`;
+  const pct=Math.min(100,(spent/actionsAvailable)*100);
+  document.getElementById("actionFill").style.width=pct+"%";
+}
+
+function resizeMap(){
+  const map=document.getElementById("mapContainer");
+  const W=window.innerWidth;
+  const H=window.innerHeight;
+  const maxW=W*(2/3);
+  const maxH=H*(2/3);
+  let width=maxW;
+  let height=width/IMAGE_RATIO;
+  if(height>maxH){
+    height=maxH;
+    width=height*IMAGE_RATIO;
+  }
+  map.style.width=width+"px";
+  map.style.height=height+"px";
+}
+
+async function drawHexGrid(){
+  const svg=document.getElementById("hexGrid");
+  const map=document.getElementById("mapContainer");
+
+  svg.innerHTML="";
+  hexData=[];
+  selectedRed=null;
+  highlightedAdjacents=[];
+  arrowImages={};
+  ordersSet=new Set();
+  document.getElementById("orders").innerHTML="";
+
+  svg.insertAdjacentHTML("afterbegin",`
+    <defs>
+      <pattern id="hatch-red" patternUnits="userSpaceOnUse" width="6" height="6" patternTransform="rotate(45)">
+        <line x1="0" y1="0" x2="0" y2="6" stroke="rgba(255,0,0,0.5)" stroke-width="3"/>
+      </pattern>
+    </defs>
+  `);
+
+  const colors=await loadCSV();
+
+  const B=map.clientWidth;
+  const scale=B/REAL_GRID_WIDTH;
+  const R=REAL_R*scale;
+  const hexH=Math.sqrt(3)*R;
+
+  const maxRows=Math.max(...PATTERN);
+  const gridHeight=(maxRows-1)*hexH+hexH;
+  const A=17*R;
+
+  const offsetX=(B-A)/2+R;
+  const offsetY=(map.clientHeight-gridHeight)/2+hexH/2;
+
+  let id=1;
+
+  PATTERN.forEach((rowCount,col)=>{
+    for(let r=0;r<rowCount;r++){
+      const cx=offsetX+col*1.5*R;
+      const cy=offsetY+r*hexH+(col%2===0?0:hexH/2);
+
+      const pts=[];
+      for(let i=0;i<6;i++){
+        const ang=Math.PI/3*i;
+        pts.push([cx+R*Math.cos(ang),cy+R*Math.sin(ang)].join(","));
+      }
+
+      const g=document.createElementNS("http://www.w3.org/2000/svg","g");
+
+      const poly=document.createElementNS("http://www.w3.org/2000/svg","polygon");
+      poly.setAttribute("points",pts.join(" "));
+
+      const color=(colors[id]||"").toUpperCase();
+      let cls="hex hex-mar";
+      if(color.includes("RED")) cls="hex hex-red";
+      else if(color.includes("BLUE")) cls="hex hex-blue";
+
+      poly.setAttribute("class",cls);
+      poly.dataset.id=id;
+
+      g.appendChild(poly);
+
+      const label=document.createElementNS("http://www.w3.org/2000/svg","text");
+      label.setAttribute("x",cx);
+      label.setAttribute("y",cy+4);
+      label.setAttribute("class","hex-label");
+      label.textContent=id;
+      g.appendChild(label);
+
+      svg.appendChild(g);
+
+      hexData.push({id,cx,cy,color,element:poly});
+      id++;
+    }
+  });
+}
+
+function highlightAdjacent(redHex){
+  clearHighlights();
+  selectedRed=redHex;
+
+  const R=REAL_R*(document.getElementById("mapContainer").clientWidth/REAL_GRID_WIDTH);
+  const maxDist=Math.sqrt(3)*R*1.01;
+
+  highlightedAdjacents=[];
+
+  hexData.forEach(h=>{
+    if(h.color==="BLUE"){
+      const dx=h.cx-redHex.cx;
+      const dy=h.cy-redHex.cy;
+      const dist=Math.sqrt(dx*dx+dy*dy);
+      if(dist<=maxDist){
+        h.element.classList.add("hex-hatch");
+        highlightedAdjacents.push(h);
+      }
+    }
+  });
+}
+
+function clearHighlights(){
+  highlightedAdjacents.forEach(h=>h.element.classList.remove("hex-hatch"));
+  highlightedAdjacents=[];
+  selectedRed=null;
+}
+
+function showWarning(){
+  const w=document.getElementById("warning");
+  w.classList.add("blink");
+  w.style.opacity=1;
+  setTimeout(()=>{w.style.opacity=0;w.classList.remove("blink");},2000);
+}
+
+function showWarningActions(){
+  const w=document.getElementById("warningActions");
+  w.classList.add("blink");
+  w.style.opacity=1;
+  setTimeout(()=>{w.style.opacity=0;w.classList.remove("blink");},2000);
+}
+
+function usedPoints(){ return ordersSet.size*10; }
+
+function direction(origin,target){
+  const dx=target.cx-origin.cx;
+  const dy=target.cy-origin.cy;
+
+  if(dy<0 && Math.abs(dx)<Math.abs(dy)) return "N";
+  if(dy>0 && Math.abs(dx)<Math.abs(dy)) return "S";
+  if(dx>0 && dy<0) return "NE";
+  if(dx>0 && dy>0) return "SE";
+  if(dx<0 && dy<0) return "NO";
+  if(dx<0 && dy>0) return "SO";
+
+  return "N";
+}
+
+function arrowURL(dir){
+  return {
+    "N":"https://raw.githubusercontent.com/enricjimenezmercader-a11y/mapa_estrategic/main/AT-N.svg",
+    "NE":"https://raw.githubusercontent.com/enricjimenezmercader-a11y/mapa_estrategic/main/AT-NE.svg",
+    "NO":"https://raw.githubusercontent.com/enricjimenezmercader-a11y/mapa_estrategic/main/AT-NO.svg",
+    "S":"https://raw.githubusercontent.com/enricjimenezmercader-a11y/mapa_estrategic/main/AT-S.svg",
+    "SE":"https://raw.githubusercontent.com/enricjimenezmercader-a11y/mapa_estrategic/main/AT-SE.svg",
+    "SO":"https://raw.githubusercontent.com/enricjimenezmercader-a11y/mapa_estrategic/main/AT-SO.svg"
+  }[dir];
+}
+
+function placeArrow(origin,target,key){
+  const map=document.getElementById("mapContainer");
+  const B=map.clientWidth;
+  const scale=B/REAL_GRID_WIDTH;
+  const R=REAL_R*scale;
+  const hexH=Math.sqrt(3)*R;
+
+  const dir=direction(origin,target);
+  const url=arrowURL(dir);
+
+  const img=document.createElement("img");
+  img.src=url;
+  img.className="attack-arrow attack-arrow--shake attack-arrow--glow";
+
+  const FACTOR=1.42;
+
+  const width = 2 * R * FACTOR;
+  const height = hexH * FACTOR;
+
+  img.style.width  = width + "px";
+  img.style.height = height + "px";
+  img.style.left   = (origin.cx - width/2) + "px";
+  img.style.top    = (origin.cy - height/2) + "px";
+
+  map.appendChild(img);
+  arrowImages[key]=img;
+
+  setTimeout(()=>{
+    if(img) img.classList.remove("attack-arrow--shake");
+  },260);
+}
+
+function removeArrow(key){
+  if(arrowImages[key]){
+    arrowImages[key].remove();
+    delete arrowImages[key];
+  }
+}
+
+function addOrder(originID,targetID){
+  const key=`${originID}-${targetID}`;
+
+  if(ordersSet.has(key)){
+    showWarning();
+    return;
+  }
+
+  const remaining=actionsAvailable-usedPoints();
+  if(remaining<10){
+    showWarningActions();
+    return;
+  }
+
+  ordersSet.add(key);
+
+  // Bloqueig de clics 1 segon + cursor rellotge
+  clickLocked = true;
+  document.body.style.cursor = "wait";
+  setTimeout(() => {
+    clickLocked = false;
+    document.body.style.cursor = "default";
+  }, 1000);
+
+  const origin=hexData.find(h=>h.id===originID);
+  const target=hexData.find(h=>h.id===targetID);
+
+  placeArrow(origin,target,key);
+
+  target.element.classList.remove("hex-hatch");
+
+  document.getElementById("moveSound").play();
+
+  const orders=document.getElementById("orders");
+
+  const line=document.createElement("div");
+  line.className="order-line";
+  line.dataset.key=key;
+
+  const text=document.createElement("span");
+  text.textContent=`Ordre d'atac, territori ${originID} a territori ${targetID}`;
+
+  const btn=document.createElement("button");
+  btn.textContent="Suspendre ordre";
+  btn.className="order-btn";
+
+  btn.onclick=()=>{
+    ordersSet.delete(key);
+    removeArrow(key);
+    line.remove();
+    updateActionDisplay();
+  };
+
+  line.appendChild(text);
+  line.appendChild(btn);
+  orders.appendChild(line);
+
+  updateActionDisplay();
+}
+
+function setupClickHandler(){
+  const svg=document.getElementById("hexGrid");
+
+  svg.addEventListener("click", e => {
+    if (clickLocked) return;
+
+    hexData.forEach(h=>h.element.classList.remove("hex-hatch"));
+
+    const poly=e.target.closest("polygon");
+    if(!poly){
+      clearHighlights();
+      return;
+    }
+
+    const id=parseInt(poly.dataset.id);
+    const hex=hexData.find(h=>h.id===id);
+
+    if(hex.color==="RED"){
+      highlightAdjacent(hex);
+      return;
+    }
+
+    if(selectedRed && highlightedAdjacents.some(h=>h.id===id)){
+      addOrder(selectedRed.id,hex.id);
+      return;
+    }
+
+    clearHighlights();
+  });
+}
+
+function redraw(){
+  resizeMap();
+  drawHexGrid().then(()=>{
+    setupClickHandler();
+    updateActionDisplay();
+  });
+}
+
+window.addEventListener("resize",redraw);
+redraw();
+checkLockState();
+
+// Botó Confirmar ordres: bloqueig 5s, cursor rellotge i enviament seqüencial
+document.getElementById("confirmBtn").addEventListener("click", async () => {
+  const btn = document.getElementById("confirmBtn");
+
+  if (btn._sheetLocked || btn._tempLocked) return;
+
+  btn._tempLocked = true;
+  btn.disabled = true;
+  btn.style.background = "#555";
+  btn.style.color = "#999";
+  btn.style.cursor = "not-allowed";
+  document.body.style.cursor = "wait";
+
+  setTimeout(() => {
+    btn._tempLocked = false;
+    document.body.style.cursor = "default";
+    checkLockState();
+  }, 5000);
+
+  document.getElementById("ordersSound").play();
+
+  const url = "https://script.google.com/macros/s/AKfycbzMGXDTpJXy2jGjGxPT5g27kOntPOEj6aO-ap_8KIPqi1iyR-FQknxpNva-QqqTXxt_/exec";
+  const lines = document.querySelectorAll(".order-line");
+
+  for (const line of lines) {
+    const text = line.querySelector("span").textContent;
+
+    await fetch(url, {
+      method: "POST",
+      mode: "no-cors",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ orderText: text })
+    });
+
+    await new Promise(res => setTimeout(res, 150));
+  }
+});
+</script>
+
+</body>
+</html>
