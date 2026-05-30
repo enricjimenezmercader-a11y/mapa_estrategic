@@ -420,7 +420,7 @@ function placeArrow(origin,target,key){
   img.src=url;
   img.className="attack-arrow attack-arrow--shake attack-arrow--glow";
 
-  const FACTOR=1.25;
+  const FACTOR=1.35;
 
   const width = 2 * R * FACTOR;
   const height = hexH * FACTOR;
@@ -465,6 +465,8 @@ function addOrder(originID,targetID){
   const target=hexData.find(h=>h.id===targetID);
 
   placeArrow(origin,target,key);
+
+  /* 🔥 NOVA REGLA: el destí no ha de tenir trama */
   target.element.classList.remove("hex-hatch");
 
   const orders=document.getElementById("orders");
@@ -498,6 +500,9 @@ function setupClickHandler(){
   const svg=document.getElementById("hexGrid");
 
   svg.addEventListener("click",e=>{
+    /* 🔥 ESBORRAR TOTES LES TRAMES AL PRIMER CLICK */
+    hexData.forEach(h=>h.element.classList.remove("hex-hatch"));
+
     const poly=e.target.closest("polygon");
     if(!poly){
       clearHighlights();
