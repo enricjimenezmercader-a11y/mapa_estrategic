@@ -169,13 +169,12 @@
     }
 
     /**
-     * Draw hexagon grid
-     * Container size = Grid size (NOT the other way around)
+     * Draw hexagon grid with proper boundaries
+     * All hexagon corners fit within the map
      */
     function draw() {
         const svg = document.getElementById('hexGrid');
         const mapContainer = document.getElementById('mapContainer');
-        const outerContainer = document.querySelector('.outer-container');
         
         svg.innerHTML = '';
 
@@ -183,25 +182,31 @@
         const hexRadius = window.innerHeight / 14;
         const hexHeight = Math.sqrt(3) * hexRadius;
 
-        // Calculate exact grid dimensions
-        // 11 columns (0-10): spacing = 10 intervals of 1.5*radius
-        // Width = leftmost hex edge to rightmost hex edge
-        // Left edge of hex 0: -radius from center
-        // Right edge of hex 10: +radius from center
-        // So: (10 * 1.5 * hexRadius + hexRadius) - (-hexRadius) = 10 * 1.5 * hexRadius + 2 * hexRadius = 17 * hexRadius
+        // Calculate grid dimensions (center-to-center)
+        // 11 columns (0-10): 10 intervals of 1.5*radius
+        // 5 rows (0-4): 4 intervals of hexHeight
+        const gridWidthCenterToCenter = 10 * 1.5 * hexRadius;
+        const gridHeightCenterToCenter = 4 * hexHeight;
+
+        // Total dimensions including the radius from edge hexagon centers to their boundaries
+        // Left edge of hex at col 0: -radius
+        // Right edge of hex at col 10: +radius
+        // Top edge accounting for offset rows: -hexHeight/2 to +hexHeight/2
+        // Bottom edge: similar calculation
         
-        const gridWidth = 17 * hexRadius;
-        const gridHeight = 5 * hexHeight;
+        const totalGridWidth = gridWidthCenterToCenter + 2 * hexRadius;
+        const totalGridHeight = gridHeightCenterToCenter + hexHeight + hexHeight; // top and bottom margins
 
         // SET CONTAINER TO GRID SIZE
-        mapContainer.style.width = gridWidth + 'px';
-        mapContainer.style.height = gridHeight + 'px';
+        mapContainer.style.width = totalGridWidth + 'px';
+        mapContainer.style.height = totalGridHeight + 'px';
 
         // SVG matches container
-        svg.setAttribute('width', gridWidth);
-        svg.setAttribute('height', gridHeight);
-        svg.setAttribute('viewBox', `0 0 ${gridWidth} ${gridHeight}`);
+        svg.setAttribute('width', totalGridWidth);
+        svg.setAttribute('height', totalGridHeight);
+        svg.setAttribute('viewBox', `0 0 ${totalGridWidth} ${totalGridHeight}`);
 
+        // Position starting point with padding so hexagons don't get cut off
         const startX = hexRadius;
         const startY = hexHeight;
 
