@@ -218,9 +218,16 @@ let actionsAvailable=0;
 let arrowImages={};
 let clickLocked=false;
 
+// ------------------------------
+// LECTURA CSV AMB CACHE-BUSTER
+// ------------------------------
+async function fetchCSV(){
+  const res = await fetch(CSV_URL + "&cb=" + Date.now());
+  return await res.text();
+}
+
 async function loadCSV(){
-  const res=await fetch(CSV_URL);
-  const text=await res.text();
+  const text = await fetchCSV();
   const lines=text.trim().split("\n");
 
   const colors={};
@@ -239,13 +246,14 @@ async function loadCSV(){
   return colors;
 }
 
-// Comprovar E1 per bloquejar el botó de forma dinàmica
+// ------------------------------
+// BLOQUEIG DINÀMIC PER E1
+// ------------------------------
 async function checkLockState() {
   try {
-    const res = await fetch(CSV_URL);
-    const text = await res.text();
+    const text = await fetchCSV();
     const lines = text.trim().split("\n");
-    const cols = lines[0].split(","); // E1 = fila 1, columna 5
+    const cols = lines[0].split(",");
     const E1 = cols[4].trim();
 
     const btn = document.getElementById("confirmBtn");
@@ -268,6 +276,10 @@ async function checkLockState() {
     console.log("Error checkLockState:", err);
   }
 }
+
+setInterval(checkLockState, 1000);
+
+// ------------------------------
 
 function updateActionDisplay(){
   const spent=usedPoints();
@@ -581,7 +593,6 @@ function redraw(){
 window.addEventListener("resize",redraw);
 redraw();
 checkLockState();
-setInterval(checkLockState, 1000);
 
 // Botó Confirmar ordres: bloqueig 5s, cursor rellotge i enviament seqüencial
 document.getElementById("confirmBtn").addEventListener("click", async () => {
