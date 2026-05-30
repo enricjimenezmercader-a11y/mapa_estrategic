@@ -158,7 +158,6 @@
       transform-origin:center center;
     }
 
-    /* vibració curta */
     @keyframes shake {
       0%   { transform: translate(0,0); }
       25%  { transform: translate(1px,-1px); }
@@ -170,7 +169,6 @@
       animation:shake 0.25s linear 1;
     }
 
-    /* brillantor flotant */
     @keyframes glow {
       0%   { filter: drop-shadow(0 0 0px #fff); }
       50%  { filter: drop-shadow(0 0 12px #ffff66); }
@@ -422,7 +420,7 @@ function placeArrow(origin,target,key){
   img.src=url;
   img.className="attack-arrow attack-arrow--shake attack-arrow--glow";
 
-  const FACTOR=1.12;
+  const FACTOR=1.2;
 
   const width = 2 * R * FACTOR;
   const height = hexH * FACTOR;
@@ -467,8 +465,6 @@ function addOrder(originID,targetID){
   const target=hexData.find(h=>h.id===targetID);
 
   placeArrow(origin,target,key);
-
-  /* 🔥 NOVA REGLA: el destí no ha de tenir trama */
   target.element.classList.remove("hex-hatch");
 
   const orders=document.getElementById("orders");
