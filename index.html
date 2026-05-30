@@ -18,7 +18,7 @@
       padding:20px;
     }
 
-    /* PRIMER PAS: Amplada del mapa = 2/3 de la pantalla */
+    /* Amplada del mapa = 2/3 de la pantalla */
     .map-container{
       position:relative;
       width:66.666vw;
@@ -50,9 +50,6 @@
     }
 
     .hex-red{ fill:rgba(255,0,0,.6); stroke:rgba(255,0,0,1); }
-    .hex-blue{ fill:rgba(0,120,255,.6); stroke:rgba(0,120,255,1); }
-    .hex-mar{ fill:rgba(100,100,100,.4); stroke:rgba(100,100,100,.7); }
-
     .hex-label{
       fill:#fff;
       font-weight:bold;
@@ -74,32 +71,37 @@
 <script>
 /* CONFIG */
 const PATTERN = [5,4,5,4,5,4,5,4,5,4,5];  // 11 columnes
-const GRID_RATIO = 0.95;                 // A = 0.95 * B
+const SCALE_FACTOR = 75;                 // A = 75 * B
 
-/* Funció principal */
 function drawHexGrid(){
   const svg = document.getElementById("hexGrid");
   const map = document.getElementById("mapContainer");
 
   svg.innerHTML = "";
 
-  /* PRIMER PAS: amplada del mapa (ja és 2/3 via CSS) */
+  /* Amplada del mapa */
   const B = map.clientWidth;
 
-  /* SEGON PAS: amplada objectiu de la retícula */
-  const A = B * GRID_RATIO;
+  /* Amplada objectiu de la retícula */
+  const A = B * SCALE_FACTOR;
 
-  /* Càlcul del radi perquè la retícula tingui amplada A */
+  /* Fórmula del radi:
+     A = (1.5*(cols-1) + 2) * R
+  */
   const cols = PATTERN.length;
-  const R = A / (1.5 * (cols - 1) + 2);  // fórmula exacta
-  const hexH = Math.sqrt(3) * R;
+  const R_raw = A / (1.5 * (cols - 1) + 2);
+
+  /* Reducció perquè càpiga dins del mapa */
+  const R_display = R_raw / SCALE_FACTOR;
+
+  const hexH = Math.sqrt(3) * R_display;
 
   /* Alçada total de la retícula */
   const maxRows = Math.max(...PATTERN);
   const gridHeight = (maxRows - 1) * hexH + hexH;
 
   /* Centrat perfecte */
-  const offsetX = (B - A) / 2 + R;
+  const offsetX = (B - (1.5*(cols-1)+2)*R_display) / 2 + R_display;
   const offsetY = (map.clientHeight - gridHeight) / 2 + hexH/2;
 
   /* Dibuixar hexàgons */
@@ -107,15 +109,15 @@ function drawHexGrid(){
 
   PATTERN.forEach((rowCount, col) => {
     for(let r = 0; r < rowCount; r++){
-      const cx = offsetX + col * 1.5 * R;
+      const cx = offsetX + col * 1.5 * R_display;
       const cy = offsetY + r * hexH + (col % 2 === 0 ? 0 : hexH/2);
 
       const pts = [];
       for(let i=0;i<6;i++){
         const ang = Math.PI/3 * i;
         pts.push([
-          cx + R * Math.cos(ang),
-          cy + R * Math.sin(ang)
+          cx + R_display * Math.cos(ang),
+          cy + R_display * Math.sin(ang)
         ].join(","));
       }
 
@@ -138,10 +140,7 @@ function drawHexGrid(){
   });
 }
 
-/* Redibuixar quan canvia la mida */
 window.addEventListener("resize", drawHexGrid);
-
-/* Inicialitzar */
 drawHexGrid();
 </script>
 
