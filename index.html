@@ -272,8 +272,9 @@ async function checkLockState() {
 
     console.log("Valor E2:", E2);
 
-    const btn = document.getElementById("confirmBtn");
-    if (!btn) return;
+const btn = document.getElementById("confirmBtn");
+btn._tempLocked = false;
+
 
     // Bloqueig segons E2
     btn._sheetLocked = (E2 === "1");
