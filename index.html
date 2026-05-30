@@ -20,12 +20,32 @@
       gap:20px;
     }
 
+    /* Títol i barra d’accions */
     #titleBar{
       font-size:28px;
       font-weight:bold;
       color:white;
+      text-align:center;
     }
 
+    #actionBar{
+      width:66%;
+      height:20px;
+      background:#333;
+      border:1px solid #666;
+      margin-top:-10px;
+      margin-bottom:10px;
+      position:relative;
+    }
+
+    #actionFill{
+      height:100%;
+      background:#00cc00;
+      width:0%;
+      transition:width 0.3s ease;
+    }
+
+    /* Mapa */
     .map-container{
       position:relative;
       background:#1a1a1a;
@@ -74,6 +94,7 @@
       stroke-width:0.8;
     }
 
+    /* Ordres */
     #orders{
       width:66%;
       color:#7CFF7C;
@@ -110,6 +131,7 @@
       display:block;
     }
 
+    /* Avisos */
     #warning, #warningActions{
       position:absolute;
       top:10px;
@@ -139,6 +161,7 @@
 <body>
 
 <div id="titleBar">Equip vermell — Accions disponibles: ...</div>
+<div id="actionBar"><div id="actionFill"></div></div>
 
 <div class="map-container" id="mapContainer">
   <div id="warning">Ordre repetida</div>
@@ -190,10 +213,21 @@ async function loadCSV(){
   });
 
   actionsAvailable = H2;
-  document.getElementById("titleBar").textContent =
-    `Equip vermell — Accions disponibles: ${actionsAvailable}`;
+  updateActionDisplay();
 
   return colors;
+}
+
+/* Actualitza títol i barra */
+function updateActionDisplay(){
+  const spent = usedPoints();
+  const remaining = actionsAvailable - spent;
+
+  document.getElementById("titleBar").textContent =
+    `Equip vermell — Accions disponibles: ${actionsAvailable} — Gastades: ${spent} — Restants: ${remaining}`;
+
+  const pct = Math.min(100, (spent / actionsAvailable) * 100);
+  document.getElementById("actionFill").style.width = pct + "%";
 }
 
 /* ESCALAT DEL MAPA */
@@ -395,11 +429,14 @@ function addOrder(origin, target){
   btn.onclick = () => {
     ordersSet.delete(key);
     line.remove();
+    updateActionDisplay();
   };
 
   line.appendChild(text);
   line.appendChild(btn);
   orders.appendChild(line);
+
+  updateActionDisplay();
 }
 
 /* CLICK HANDLER */
@@ -434,7 +471,10 @@ function setupClickHandler(){
 /* REDIBUIXAR TOT */
 function redraw(){
   resizeMap();
-  drawHexGrid().then(setupClickHandler);
+  drawHexGrid().then(()=>{
+    setupClickHandler();
+    updateActionDisplay();
+  });
 }
 
 window.addEventListener("resize", redraw);
