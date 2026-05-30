@@ -246,31 +246,6 @@ async function loadCSV(){
   return colors;
 }
 
-
-async function updateActionsFromSheet() {
-  try {
-    const text = await fetchCSV();
-    const lines = text.trim().split("\n");
-
-    if (lines.length < 2) return;
-
-    const cols = lines[1].split(",");
-    if (cols.length < 8) return;
-
-    const H2 = parseInt(cols[7]); // columna H = index 7
-
-    if (!isNaN(H2)) {
-      actionsAvailable = H2;
-      updateActionDisplay();
-    }
-
-  } catch (err) {
-    console.error("Error updateActionsFromSheet:", err);
-  }
-}
-
-
-  
 // ------------------------------
 // BLOQUEIG DINÀMIC PER E1
 // ------------------------------
@@ -619,9 +594,6 @@ window.addEventListener("resize",redraw);
 redraw();
 checkLockState();
 
-setInterval(updateActionsFromSheet, 1000);
-
-  
 // Botó Confirmar ordres: bloqueig 5s, cursor rellotge i enviament seqüencial
 document.getElementById("confirmBtn").addEventListener("click", async () => {
   const btn = document.getElementById("confirmBtn");
