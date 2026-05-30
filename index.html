@@ -247,18 +247,18 @@ async function loadCSV(){
 }
 
 // ------------------------------
-// BLOQUEIG DINÀMIC PER E1
+// BLOQUEIG DINÀMIC PER E2
 // ------------------------------
 async function checkLockState() {
   try {
     const text = await fetchCSV();
     const lines = text.trim().split("\n");
     const cols = lines[0].split(",");
-    const E1 = cols[4].trim();
+    const E2 = cols[4].trim();
 
     const btn = document.getElementById("confirmBtn");
 
-    btn._sheetLocked = (E1 === "1");
+    btn._sheetLocked = (E2 === "1");
 
     if (btn._sheetLocked || btn._tempLocked) {
       btn.disabled = true;
