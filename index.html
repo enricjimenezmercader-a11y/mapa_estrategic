@@ -255,4 +255,191 @@ async function drawHexGrid(){
   PATTERN.forEach((rowCount, col) => {
     for(let r = 0; r < rowCount; r++){
 
-      const cx = offsetX + col *
+      const cx = offsetX + col * 1.5 * R;
+      const cy = offsetY + r * hexH + (col % 2 === 0 ? 0 : hexH/2);
+
+      const pts = [];
+      for(let i=0;i<6;i++){
+        const ang = Math.PI/3 * i;
+        pts.push([cx + R * Math.cos(ang), cy + R * Math.sin(ang)].join(","));
+      }
+
+      const g = document.createElementNS("http://www.w3.org/2000/svg","g");
+
+      const poly = document.createElementNS("http://www.w3.org/2000/svg","polygon");
+      poly.setAttribute("points", pts.join(" "));
+
+      const color = (colors[id] || "").toUpperCase();
+      let cls = "hex hex-mar";
+
+      if(color.includes("RED")) cls = "hex hex-red";
+      else if(color.includes("BLUE")) cls = "hex hex-blue";
+      else if(color.includes("MAR")) cls = "hex hex-mar";
+
+      poly.setAttribute("class", cls);
+      poly.dataset.id = id;
+
+      g.appendChild(poly);
+
+      const label = document.createElementNS("http://www.w3.org/2000/svg","text");
+      label.setAttribute("x", cx);
+      label.setAttribute("y", cy + 4);
+      label.setAttribute("class", "hex-label");
+      label.textContent = id;
+      g.appendChild(label);
+
+      svg.appendChild(g);
+
+      hexData.push({
+        id,
+        cx,
+        cy,
+        color,
+        element: poly
+      });
+
+      id++;
+    }
+  });
+}
+
+/* AFEGIR TRAMA ALS ADJACENTS */
+function highlightAdjacent(redHex){
+  clearHighlights();
+  selectedRed = redHex;
+
+  const R = REAL_R * (document.getElementById("mapContainer").clientWidth / REAL_GRID_WIDTH);
+  const maxDist = Math.sqrt(3) * R * 1.01;
+
+  highlightedAdjacents = [];
+
+  hexData.forEach(h => {
+    if(h.color === "BLUE"){
+      const dx = h.cx - redHex.cx;
+      const dy = h.cy - redHex.cy;
+      const dist = Math.sqrt(dx*dx + dy*dy);
+
+      if(dist <= maxDist){
+        h.element.classList.add("hex-hatch");
+        highlightedAdjacents.push(h);
+      }
+    }
+  });
+}
+
+/* TREURE TRAMES */
+function clearHighlights(){
+  highlightedAdjacents.forEach(h => h.element.classList.remove("hex-hatch"));
+  highlightedAdjacents = [];
+  selectedRed = null;
+}
+
+/* AVÍS D’ORDRE REPETIDA */
+function showWarning(){
+  const w = document.getElementById("warning");
+  w.classList.add("blink");
+  w.style.opacity = 1;
+
+  setTimeout(()=>{
+    w.style.opacity = 0;
+    w.classList.remove("blink");
+  }, 2000);
+}
+
+/* AVÍS D’ACCIONS INSUFICIENTS */
+function showWarningActions(){
+  const w = document.getElementById("warningActions");
+  w.classList.add("blink");
+  w.style.opacity = 1;
+
+  setTimeout(()=>{
+    w.style.opacity = 0;
+    w.classList.remove("blink");
+  }, 2000);
+}
+
+/* CALCULAR PUNTS UTILITZATS */
+function usedPoints(){
+  return ordersSet.size * 10;
+}
+
+/* AFEGIR ORDRE D’ATAC */
+function addOrder(origin, target){
+  const key = `${origin}-${target}`;
+
+  if(ordersSet.has(key)){
+    showWarning();
+    return;
+  }
+
+  if(usedPoints() + 10 > actionsAvailable - 10){
+    showWarningActions();
+    return;
+  }
+
+  ordersSet.add(key);
+
+  const orders = document.getElementById("orders");
+
+  const line = document.createElement("div");
+  line.className = "order-line";
+  line.dataset.key = key;
+
+  const text = document.createElement("span");
+  text.textContent = `Ordre d'atac, territori ${origin} a territori ${target}`;
+
+  const btn = document.createElement("button");
+  btn.textContent = "Suspendre ordre";
+  btn.className = "order-btn";
+
+  btn.onclick = () => {
+    ordersSet.delete(key);
+    line.remove();
+  };
+
+  line.appendChild(text);
+  line.appendChild(btn);
+  orders.appendChild(line);
+}
+
+/* CLICK HANDLER */
+function setupClickHandler(){
+  const svg = document.getElementById("hexGrid");
+
+  svg.addEventListener("click", e => {
+    const poly = e.target.closest("polygon");
+
+    if(!poly){
+      clearHighlights();
+      return;
+    }
+
+    const id = parseInt(poly.dataset.id);
+    const hex = hexData.find(h => h.id === id);
+
+    if(hex.color === "RED"){
+      highlightAdjacent(hex);
+      return;
+    }
+
+    if(selectedRed && highlightedAdjacents.some(h => h.id === id)){
+      addOrder(selectedRed.id, hex.id);
+      return;
+    }
+
+    clearHighlights();
+  });
+}
+
+/* REDIBUIXAR TOT */
+function redraw(){
+  resizeMap();
+  drawHexGrid().then(setupClickHandler);
+}
+
+window.addEventListener("resize", redraw);
+redraw();
+</script>
+
+</body>
+</html>
