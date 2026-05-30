@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Mapa amb Hexàgons</title>
+<title>Mapa amb 50 hexàgons numerats</title>
 
 <style>
     body {
@@ -55,22 +55,34 @@
         stroke: yellow;
         stroke-width: 2;
     }
+
+    .hex-label {
+        fill: white;
+        font-size: 18px;
+        font-family: sans-serif;
+        text-anchor: middle;
+        dominant-baseline: middle;
+        pointer-events: none;
+    }
 </style>
 </head>
 <body>
 
 <div id="container">
-    <img id="mapa" src="https://raw.githubusercontent.com/enricjimenezmercader-a11y/mapa_estrategic/8d00183e27e13a1a7c79dd4a130d632dc29c8310/map.jpg">
+    <img id="mapa" src="https://raw.githubusercontent.com/enricjimenezmercader-a11y/mapa_estrategic/8d00183e27e13a1a7c79dd4a130d632dc29c8310/map.jpg" alt="Mapa">
     <svg id="hexgrid"></svg>
 </div>
 
 <script>
 const svg = document.getElementById("hexgrid");
-const maxSelections = 50;
-let selected = 0;
 
-// Ajusta la mida de l'hexàgon aquí
+// radi de l'hexàgon
 const radius = 60;
+
+// 10 columnes, alternant 6 i 4
+const numCols = 10;
+const rowsEvenCol = 6; // columnes parells
+const rowsOddCol  = 4; // columnes senars
 
 function hexPoints(cx, cy, r) {
     const pts = [];
@@ -81,41 +93,64 @@ function hexPoints(cx, cy, r) {
     return pts.join(" ");
 }
 
-function generateGrid() {
-    const width = svg.clientWidth;
+function generateFixedGrid() {
+    const width  = svg.clientWidth;
     const height = svg.clientHeight;
 
     const hexHeight = Math.sqrt(3) * radius;
-    const hexWidth = radius * 2;
-    const vertSpacing = hexHeight * 0.75;
-    const horizSpacing = hexWidth * 0.75;
+    const hexWidth  = radius * 2;
 
-    let id = 0;
+    const colSpacing = hexWidth * 0.75;
+    const rowSpacing = hexHeight;
 
-    for (let y = 0; y < height + hexHeight; y += vertSpacing) {
-        for (let x = 0; x < width + hexWidth; x += horizSpacing) {
+    const totalWidth  = (numCols - 1) * colSpacing + hexWidth;
+    const maxRows     = rowsEvenCol;
+    const totalHeight = (maxRows - 1) * rowSpacing + hexHeight;
 
-            const offset = (Math.floor(y / vertSpacing) % 2) ? radius * 0.75 : 0;
-            const cx = x + offset;
-            const cy = y;
+    const offsetX = (width  - totalWidth)  / 2;
+    const offsetY = (height - totalHeight) / 2;
+
+    let number = 1;
+
+    for (let col = 0; col < numCols; col++) {
+        const isEvenCol = (col % 2 === 0);
+        const numRows   = isEvenCol ? rowsEvenCol : rowsOddCol;
+
+        for (let row = 0; row < numRows; row++) {
+            if (number > 50) return;
+
+            const cx = offsetX + col * colSpacing + hexWidth / 2;
+
+            const verticalOffset = isEvenCol ? 0 : hexHeight;
+            const cy = offsetY + row * rowSpacing + hexHeight / 2 + verticalOffset;
+
+            const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
 
             const hex = document.createElementNS("http://www.w3.org/2000/svg", "polygon");
             hex.setAttribute("points", hexPoints(cx, cy, radius));
             hex.setAttribute("class", "hex");
-            hex.dataset.id = id++;
 
-            hex.addEventListener("click", () => {
-                if (!hex.classList.contains("selected") && selected >= maxSelections) return;
+            const label = document.createElementNS("http://www.w3.org/2000/svg", "text");
+            label.setAttribute("x", cx);
+            label.setAttribute("y", cy);
+            label.setAttribute("class", "hex-label");
+            label.textContent = number;
+
+            g.appendChild(hex);
+            g.appendChild(label);
+
+            g.addEventListener("click", () => {
                 hex.classList.toggle("selected");
-                selected += hex.classList.contains("selected") ? 1 : -1;
             });
 
-            svg.appendChild(hex);
+            svg.appendChild(g);
+
+            number++;
         }
     }
 }
 
-generateGrid();
+generateFixedGrid();
 </script>
 
 </body>
