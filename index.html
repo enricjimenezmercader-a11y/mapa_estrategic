@@ -49,14 +49,11 @@
       z-index:10;
     }
 
-    .hex-red{ fill:rgba(255,0,0,.6); stroke:rgba(255,0,0,1); }
-    .hex-label{
-      fill:#fff;
-      font-weight:bold;
-      text-anchor:middle;
-      pointer-events:none;
+    /* Només línia negra, sense farciment */
+    .hex-outline{
+      fill:none;
       stroke:#000;
-      stroke-width:0.8;
+      stroke-width:2;
     }
   </style>
 </head>
@@ -92,50 +89,38 @@ function drawHexGrid(){
   const R_raw = A / (1.5 * (cols - 1) + 2);
 
   /* Reducció perquè càpiga dins del mapa */
-  const R_display = R_raw / SCALE_FACTOR;
+  const R = R_raw / SCALE_FACTOR;
 
-  const hexH = Math.sqrt(3) * R_display;
+  const hexH = Math.sqrt(3) * R;
 
   /* Alçada total de la retícula */
   const maxRows = Math.max(...PATTERN);
   const gridHeight = (maxRows - 1) * hexH + hexH;
 
   /* Centrat perfecte */
-  const offsetX = (B - (1.5*(cols-1)+2)*R_display) / 2 + R_display;
+  const offsetX = (B - (1.5*(cols-1)+2)*R) / 2 + R;
   const offsetY = (map.clientHeight - gridHeight) / 2 + hexH/2;
 
   /* Dibuixar hexàgons */
-  let id = 1;
-
   PATTERN.forEach((rowCount, col) => {
     for(let r = 0; r < rowCount; r++){
-      const cx = offsetX + col * 1.5 * R_display;
+      const cx = offsetX + col * 1.5 * R;
       const cy = offsetY + r * hexH + (col % 2 === 0 ? 0 : hexH/2);
 
       const pts = [];
       for(let i=0;i<6;i++){
         const ang = Math.PI/3 * i;
         pts.push([
-          cx + R_display * Math.cos(ang),
-          cy + R_display * Math.sin(ang)
+          cx + R * Math.cos(ang),
+          cy + R * Math.sin(ang)
         ].join(","));
       }
 
-      const g = document.createElementNS("http://www.w3.org/2000/svg","g");
-
       const poly = document.createElementNS("http://www.w3.org/2000/svg","polygon");
       poly.setAttribute("points", pts.join(" "));
-      poly.setAttribute("class", "hex-red");
-      g.appendChild(poly);
+      poly.setAttribute("class", "hex-outline");
 
-      const label = document.createElementNS("http://www.w3.org/2000/svg","text");
-      label.setAttribute("x", cx);
-      label.setAttribute("y", cy + 4);
-      label.setAttribute("class", "hex-label");
-      label.textContent = id++;
-      g.appendChild(label);
-
-      svg.appendChild(g);
+      svg.appendChild(poly);
     }
   });
 }
