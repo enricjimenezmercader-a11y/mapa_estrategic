@@ -204,9 +204,12 @@ async function loadCSV(){
 
   lines.forEach((line, index) => {
     const cols = line.split(",");
-    if(index === 0){
-      H2 = parseInt(cols[7]); // columna H = index 7
+
+    // 🔥 CORRECCIÓ: H2 és la SEGONA línia del CSV → index === 1
+    if(index === 1){
+      H2 = parseInt(cols[7]);
     }
+
     const id = cols[0];
     const color = cols[1];
     if(id) colors[id.trim()] = color.trim().toUpperCase();
