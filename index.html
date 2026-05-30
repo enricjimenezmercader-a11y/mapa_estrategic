@@ -48,14 +48,14 @@
       cursor:pointer;
     }
 
-    /* Colors amb transparència del 33% */
+    /* Colors base amb transparència 33% */
     .hex-red{ fill:rgba(255,0,0,0.33); }
     .hex-blue{ fill:rgba(0,120,255,0.33); }
     .hex-mar{ fill:rgba(120,120,120,0.33); }
 
-    /* Ressaltat groc */
-    .hex-highlight{
-      fill:rgba(255,255,0,0.66) !important;
+    /* TRAMA VERMELLA A 45º */
+    .hex-hatch{
+      fill: url(#hatch-red);
     }
 
     .hex-label{
@@ -90,7 +90,7 @@ const IMAGE_RATIO = 1.4;
 
 let hexData = [];  // {id, cx, cy, color, element}
 
-/* Llegeix CSV i retorna {1:"RED", 2:"BLUE", ...} */
+/* Llegeix CSV */
 async function loadColors(){
   const res = await fetch(CSV_URL);
   const text = await res.text();
@@ -105,7 +105,7 @@ async function loadColors(){
   return colors;
 }
 
-/* ESCALAT DEL MAPA SEGONS LA REGLA DELS 2/3 */
+/* ESCALAT DEL MAPA */
 function resizeMap(){
   const map = document.getElementById("mapContainer");
 
@@ -134,6 +134,15 @@ async function drawHexGrid(){
 
   svg.innerHTML = "";
   hexData = [];
+
+  /* Afegim la trama vermella */
+  svg.insertAdjacentHTML("afterbegin", `
+    <defs>
+      <pattern id="hatch-red" patternUnits="userSpaceOnUse" width="3" height="3" patternTransform="rotate(45)">
+        <line x1="0" y1="0" x2="0" y2="3" stroke="rgba(255,0,0,0.5)" stroke-width="1"/>
+      </pattern>
+    </defs>
+  `);
 
   const colors = await loadColors();
 
@@ -202,7 +211,7 @@ async function drawHexGrid(){
   });
 }
 
-/* RESSALTAR ADJACENTS */
+/* AFEGIR TRAMA ALS ADJACENTS */
 function highlightAdjacent(redHex){
   clearHighlights();
 
@@ -216,15 +225,15 @@ function highlightAdjacent(redHex){
       const dist = Math.sqrt(dx*dx + dy*dy);
 
       if(dist <= maxDist){
-        h.element.classList.add("hex-highlight");
+        h.element.classList.add("hex-hatch");
       }
     }
   });
 }
 
-/* TREU RESSALTATS */
+/* TREURE TRAMES */
 function clearHighlights(){
-  hexData.forEach(h => h.element.classList.remove("hex-highlight"));
+  hexData.forEach(h => h.element.classList.remove("hex-hatch"));
 }
 
 /* CLICK HANDLER */
