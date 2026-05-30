@@ -253,31 +253,12 @@ async function checkLockState() {
   try {
     const text = await fetchCSV();
     const lines = text.trim().split("\n");
+    const cols = lines[0].split(",");
+    const E1 = cols[4].trim();
 
-    // E2 = fila 2 del full → línia 1 del CSV
-    if (lines.length < 2) {
-      console.warn("CSV massa curt per llegir E2.");
-      return;
-    }
+    const btn = document.getElementById("confirmBtn");
 
-    const cols = lines[1].split(",");
-
-    // Columna E = index 4 (A=0, B=1, C=2, D=3, E=4)
-    if (cols.length < 5) {
-      console.warn("La línia 2 no té columna E.");
-      return;
-    }
-
-    const E2 = cols[4].trim();
-
-    console.log("Valor E2:", E2);
-
-const btn = document.getElementById("confirmBtn");
-btn._tempLocked = false;
-
-
-    // Bloqueig segons E2
-    btn._sheetLocked = (E2 === "1");
+    btn._sheetLocked = (E1 === "1");
 
     if (btn._sheetLocked || btn._tempLocked) {
       btn.disabled = true;
@@ -292,10 +273,9 @@ btn._tempLocked = false;
     }
 
   } catch (err) {
-    console.error("Error checkLockState:", err);
+    console.log("Error checkLockState:", err);
   }
 }
-
 
 setInterval(checkLockState, 1000);
 
@@ -618,15 +598,20 @@ checkLockState();
 document.getElementById("confirmBtn").addEventListener("click", async () => {
   const btn = document.getElementById("confirmBtn");
 
- if (btn._sheetLocked) {
+  if (btn._sheetLocked || btn._tempLocked) return;
 
+  btn._tempLocked = true;
+  btn.disabled = true;
+  btn.style.background = "#555";
+  btn.style.color = "#999";
+  btn.style.cursor = "not-allowed";
+  document.body.style.cursor = "wait";
 
-  // Eliminem el bloqueig temporal
-document.body.style.cursor = "wait";
-setTimeout(() => {
-  document.body.style.cursor = "default";
-}, 5000);
-
+  setTimeout(() => {
+    btn._tempLocked = false;
+    document.body.style.cursor = "default";
+    checkLockState();
+  }, 5000);
 
   document.getElementById("ordersSound").play();
 
