@@ -247,25 +247,20 @@ async function loadCSV(){
 }
 
 // ------------------------------
-// BLOQUEIG DINÀMIC PER E2
+// BLOQUEIG DINÀMIC PER E1
 // ------------------------------
-async function unifiedLockAndState() {
+async function checkLockState() {
   try {
     const text = await fetchCSV();
     const lines = text.trim().split("\n");
+    const cols = lines[0].split(",");
+    const E1 = cols[4].trim();
 
-    // E2 = línia 1, columna 4
-    if (lines.length < 2) return;
-    const cols = lines[1].split(",");
-    if (cols.length < 5) return;
-
-    const E2 = cols[4].trim();
     const btn = document.getElementById("confirmBtn");
 
-    // --- 1) BLOQUEIG ABSOLUT PER E2 ---
-    const sheetLocked = (E2 === "1");
+    btn._sheetLocked = (E1 === "1");
 
-    if (sheetLocked) {
+    if (btn._sheetLocked || btn._tempLocked) {
       btn.disabled = true;
       btn.style.background = "#555";
       btn.style.color = "#999";
@@ -277,21 +272,12 @@ async function unifiedLockAndState() {
       btn.style.cursor = "pointer";
     }
 
-    // --- 2) ACTUALITZAR ACCIONS DISPONIBLES ---
-    const H2 = parseInt(lines[1].split(",")[7]); // columna H
-    actionsAvailable = H2;
-    updateActionDisplay();
-
   } catch (err) {
-    console.error("Error unifiedLockAndState:", err);
+    console.log("Error checkLockState:", err);
   }
 }
 
-
-
-setInterval(unifiedLockAndState, 1000);
-
-
+setInterval(checkLockState, 1000);
 
 // ------------------------------
 
@@ -612,9 +598,10 @@ checkLockState();
 document.getElementById("confirmBtn").addEventListener("click", async () => {
   const btn = document.getElementById("confirmBtn");
 
- 
+  if (btn._sheetLocked || btn._tempLocked) return;
 
-   btn.disabled = true;
+  btn._tempLocked = true;
+  btn.disabled = true;
   btn.style.background = "#555";
   btn.style.color = "#999";
   btn.style.cursor = "not-allowed";
