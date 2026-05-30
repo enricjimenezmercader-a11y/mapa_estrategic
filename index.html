@@ -238,6 +238,29 @@ async function loadCSV(){
   return colors;
 }
 
+// Comprovar E2 per bloquejar el botó si cal
+async function checkLockState() {
+  try {
+    const res = await fetch(CSV_URL);
+    const text = await res.text();
+    const lines = text.trim().split("\n");
+    const cols = lines[1].split(",");
+    const E2 = cols[4].trim(); // E2 = segona fila, cinquena columna
+
+    const btn = document.getElementById("confirmBtn");
+
+    if (E2 === "1") {
+      btn.disabled = true;
+      btn.style.background = "#555";
+      btn.style.color = "#999";
+      btn.style.cursor = "not-allowed";
+    }
+  } catch (err) {
+    // Si falla la lectura, no bloquegem res
+    console.log("Error checkLockState:", err);
+  }
+}
+
 function updateActionDisplay(){
   const spent=usedPoints();
   const remaining=actionsAvailable-spent;
@@ -539,10 +562,43 @@ function redraw(){
 
 window.addEventListener("resize",redraw);
 redraw();
+checkLockState();
 
+// Botó Confirmar ordres: bloqueig 5s i enviament
 document.getElementById("confirmBtn").addEventListener("click", () => {
+  const btn = document.getElementById("confirmBtn");
+
+  // Si està desactivat (per E2=1 o pel bloqueig temporal), no fem res
+  if (btn.disabled) return;
+
+  // Bloquejar botó 5 segons
+  btn.disabled = true;
+  btn.style.background = "#555";
+  btn.style.color = "#999";
+  btn.style.cursor = "not-allowed";
+
+  setTimeout(() => {
+    // Només el tornem a activar si no està bloquejat per E2=1
+    checkLockState().then(() => {
+      if (!btn.disabled) {
+        // ja reactivat dins checkLockState si cal; però si E2!=1:
+        btn.style.background = "#004400";
+        btn.style.color = "#aaffaa";
+        btn.style.cursor = "pointer";
+      }
+    }).catch(() => {
+      // Si hi ha error a checkLockState, el deixem actiu
+      btn.disabled = false;
+      btn.style.background = "#004400";
+      btn.style.color = "#aaffaa";
+      btn.style.cursor = "pointer";
+    });
+  }, 5000);
+
+  // So de confirmació
   document.getElementById("ordersSound").play();
 
+  // Enviar ordres al WebApp
   const url = "https://script.google.com/macros/s/AKfycbzMGXDTpJXy2jGjGxPT5g27kOntPOEj6aO-ap_8KIPqi1iyR-FQknxpNva-QqqTXxt_/exec";
 
   document.querySelectorAll(".order-line").forEach(line => {
