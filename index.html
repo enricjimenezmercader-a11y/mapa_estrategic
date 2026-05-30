@@ -158,6 +158,7 @@
       transform-origin:center center;
     }
 
+    /* vibració curta en aparèixer */
     @keyframes shake {
       0%   { transform: translate(0,0); }
       25%  { transform: translate(1px,-1px); }
@@ -165,9 +166,18 @@
       75%  { transform: translate(1px,1px); }
       100% { transform: translate(0,0); }
     }
-
     .attack-arrow--shake{
       animation:shake 0.25s linear 1;
+    }
+
+    /* brillantor flotant contínua */
+    @keyframes glow {
+      0%   { filter: drop-shadow(0 0 0px #fff); }
+      50%  { filter: drop-shadow(0 0 10px #ffff66); }
+      100% { filter: drop-shadow(0 0 0px #fff); }
+    }
+    .attack-arrow--glow{
+      animation:glow 1.4s ease-in-out infinite;
     }
   </style>
 </head>
@@ -403,26 +413,29 @@ function placeArrow(origin,target,key){
   const B=map.clientWidth;
   const scale=B/REAL_GRID_WIDTH;
   const R=REAL_R*scale;
+  const hexH=Math.sqrt(3)*R;
 
   const dir=direction(origin,target);
   const url=arrowURL(dir);
 
   const img=document.createElement("img");
   img.src=url;
-  img.className="attack-arrow attack-arrow--shake";
+  img.className="attack-arrow attack-arrow--shake attack-arrow--glow";
 
-  const size=R*2;
-  img.style.width=size+"px";
-  img.style.height=size+"px";
-  img.style.left=(origin.cx-size/2)+"px";
-  img.style.top=(origin.cy-size/2)+"px";
+  const width=2*R;
+  const height=hexH;
+
+  img.style.width=width+"px";
+  img.style.height=height+"px";
+  img.style.left=(origin.cx-width/2)+"px";
+  img.style.top=(origin.cy-height/2)+"px";
 
   map.appendChild(img);
   arrowImages[key]=img;
 
   setTimeout(()=>{
     if(img) img.classList.remove("attack-arrow--shake");
-  }, 260);
+  },260);
 }
 
 function removeArrow(key){
