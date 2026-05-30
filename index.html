@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Mapa amb 50 hexàgons numerats</title>
+<title>Mapa amb malla hexagonal</title>
 
 <style>
     body {
@@ -43,17 +43,10 @@
 
     .hex {
         fill: rgba(255,255,255,0.05);
-        stroke: rgba(255,255,255,0.2);
+        stroke: rgba(255,255,255,0.3);
         stroke-width: 1;
         cursor: pointer;
         pointer-events: all;
-        transition: 0.2s;
-    }
-
-    .hex.selected {
-        fill: rgba(255,255,0,0.4);
-        stroke: yellow;
-        stroke-width: 2;
     }
 
     .hex-label {
@@ -69,88 +62,87 @@
 <body>
 
 <div id="container">
-    <img id="mapa" src="https://raw.githubusercontent.com/enricjimenezmercader-a11y/mapa_estrategic/8d00183e27e13a1a7c79dd4a130d632dc29c8310/map.jpg" alt="Mapa">
+    <img id="mapa" src="https://raw.githubusercontent.com/enricjimenezmercader-a11y/mapa_estrategic/8d00183e27e13a1a7c79dd4a130d632dc29c8310/map.jpg">
     <svg id="hexgrid"></svg>
 </div>
 
 <script>
 const svg = document.getElementById("hexgrid");
 
-// radi de l'hexàgon
-const radius = 60;
+// Radi de l'hexàgon
+const r = 60;
 
-// 10 columnes, alternant 6 i 4
+// Dimensions geomètriques
+const hexWidth  = 2 * r;
+const hexHeight = Math.sqrt(3) * r;
+
+// Separació real en una malla hexagonal
+const colStep = 1.5 * r;
+const rowStep = hexHeight;
+
+// Configuració: 10 columnes alternant 6 i 4
 const numCols = 10;
-const rowsEvenCol = 6; // columnes parells
-const rowsOddCol  = 4; // columnes senars
+const rowsEven = 6;
+const rowsOdd  = 4;
 
-function hexPoints(cx, cy, r) {
+function hexPoints(cx, cy) {
     const pts = [];
     for (let i = 0; i < 6; i++) {
-        const angle = Math.PI / 3 * i + Math.PI / 6;
+        const angle = Math.PI/3 * i + Math.PI/6;
         pts.push((cx + r * Math.cos(angle)) + "," + (cy + r * Math.sin(angle)));
     }
     return pts.join(" ");
 }
 
-function generateFixedGrid() {
+function generateGrid() {
     const width  = svg.clientWidth;
     const height = svg.clientHeight;
 
-    const hexHeight = Math.sqrt(3) * radius;
-    const hexWidth  = radius * 2;
+    // Calcular amplada i alçada totals de la malla
+    const totalWidth = (numCols - 1) * colStep + hexWidth;
+    const maxRows = rowsEven;
+    const totalHeight = (maxRows - 1) * rowStep + hexHeight;
 
-    const colSpacing = hexWidth * 0.75;
-    const rowSpacing = hexHeight;
-
-    const totalWidth  = (numCols - 1) * colSpacing + hexWidth;
-    const maxRows     = rowsEvenCol;
-    const totalHeight = (maxRows - 1) * rowSpacing + hexHeight;
-
+    // Centrat
     const offsetX = (width  - totalWidth)  / 2;
     const offsetY = (height - totalHeight) / 2;
 
-    let number = 1;
+    let num = 1;
 
     for (let col = 0; col < numCols; col++) {
-        const isEvenCol = (col % 2 === 0);
-        const numRows   = isEvenCol ? rowsEvenCol : rowsOddCol;
+        const isEven = (col % 2 === 0);
+        const numRows = isEven ? rowsEven : rowsOdd;
 
         for (let row = 0; row < numRows; row++) {
-            if (number > 50) return;
+            if (num > 50) return;
 
-            const cx = offsetX + col * colSpacing + hexWidth / 2;
+            // Coordenades del centre
+            const cx = offsetX + col * colStep + r;
+            const cy = offsetY + row * rowStep + hexHeight/2 + (isEven ? 0 : hexHeight/2);
 
-            const verticalOffset = isEvenCol ? 0 : hexHeight;
-            const cy = offsetY + row * rowSpacing + hexHeight / 2 + verticalOffset;
-
+            // Grup SVG
             const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
 
             const hex = document.createElementNS("http://www.w3.org/2000/svg", "polygon");
-            hex.setAttribute("points", hexPoints(cx, cy, radius));
+            hex.setAttribute("points", hexPoints(cx, cy));
             hex.setAttribute("class", "hex");
 
             const label = document.createElementNS("http://www.w3.org/2000/svg", "text");
             label.setAttribute("x", cx);
             label.setAttribute("y", cy);
             label.setAttribute("class", "hex-label");
-            label.textContent = number;
+            label.textContent = num;
 
             g.appendChild(hex);
             g.appendChild(label);
-
-            g.addEventListener("click", () => {
-                hex.classList.toggle("selected");
-            });
-
             svg.appendChild(g);
 
-            number++;
+            num++;
         }
     }
 }
 
-generateFixedGrid();
+generateGrid();
 </script>
 
 </body>
