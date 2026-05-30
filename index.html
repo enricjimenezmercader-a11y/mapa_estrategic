@@ -26,12 +26,9 @@
       background:#1a1a1a;
       border:1px solid #333;
       overflow:hidden;
-      display:flex;
-      align-items:center;
-      justify-content:center;
     }
 
-    /* Nova imatge del mapa */
+    /* Imatge del mapa */
     .map-image{
       position:absolute;
       inset:0;
@@ -50,7 +47,7 @@
       z-index:10;
     }
 
-    /* Només línia negra, sense farciment */
+    /* Només línia negra */
     .hex-outline{
       fill:none;
       stroke:#000;
@@ -63,7 +60,7 @@
 
 <div class="map-container" id="mapContainer">
 
-  <!-- NOVA IMATGE -->
+  <!-- Imatge del mapa -->
   <img class="map-image"
        src="https://github.com/enricjimenezmercader-a11y/mapa_estrategic/blob/481d1cc0765b31581a6f050a7f68d53400172e48/map_hex.jpg?raw=true"
        alt="Mapa estratègic">
@@ -74,7 +71,10 @@
 <script>
 /* CONFIG */
 const PATTERN = [5,4,5,4,5,4,5,4,5,4,5];  // 11 columnes
-const SCALE_FACTOR = 75;                 // A = 75 * B
+
+/* MESURES REALS DE LA IMATGE (ajustades al píxel) */
+const REAL_R = 41.78;          // radi real dels hexàgons impresos
+const REAL_GRID_WIDTH = 17 * REAL_R;  // amplada real de la retícula impresa
 
 function drawHexGrid(){
   const svg = document.getElementById("hexGrid");
@@ -85,17 +85,9 @@ function drawHexGrid(){
   /* Amplada del mapa */
   const B = map.clientWidth;
 
-  /* Amplada objectiu de la retícula */
-  const A = B * SCALE_FACTOR;
-
-  /* Fórmula del radi:
-     A = (1.5*(cols-1) + 2) * R
-  */
-  const cols = PATTERN.length;
-  const R_raw = A / (1.5 * (cols - 1) + 2);
-
-  /* Reducció perquè càpiga dins del mapa */
-  const R = R_raw / SCALE_FACTOR;
+  /* Escala necessària perquè la retícula coincideixi amb la imatge */
+  const scale = B / (REAL_GRID_WIDTH / 0.8692);  
+  const R = REAL_R * scale;
 
   const hexH = Math.sqrt(3) * R;
 
@@ -104,7 +96,8 @@ function drawHexGrid(){
   const gridHeight = (maxRows - 1) * hexH + hexH;
 
   /* Centrat perfecte */
-  const offsetX = (B - (1.5*(cols-1)+2)*R) / 2 + R;
+  const A = 17 * R;
+  const offsetX = (B - A) / 2 + R;
   const offsetY = (map.clientHeight - gridHeight) / 2 + hexH/2;
 
   /* Dibuixar hexàgons */
