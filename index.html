@@ -253,9 +253,7 @@ async function checkLockState() {
   try {
     const text = await fetchCSV();
     const lines = text.trim().split("\n");
-
-    // E1 és a la fila 2 del full → línia 1 del CSV
-    const cols = lines[1].split(",");
+    const cols = lines[0].split(",");
     const E1 = cols[4].trim();
 
     const btn = document.getElementById("confirmBtn");
@@ -278,7 +276,6 @@ async function checkLockState() {
     console.log("Error checkLockState:", err);
   }
 }
-
 
 setInterval(checkLockState, 1000);
 
