@@ -18,22 +18,22 @@
             overflow: hidden;
         }
 
-        .map-container {
-            width: 66.67%;
+        .outer-container {
+            width: 100%;
             height: 100%;
             display: flex;
             justify-content: center;
             align-items: center;
-            background: #1a1a1a;
-            position: relative;
-            border: 1px solid #333;
+            background: #000;
         }
 
-        .viewport {
+        .map-container {
             position: relative;
-            width: 100%;
-            height: 100%;
-            overflow: hidden;
+            background: #1a1a1a;
+            border: 1px solid #333;
+            display: flex;
+            justify-content: center;
+            align-items: center;
         }
 
         iframe {
@@ -91,8 +91,8 @@
 </head>
 <body>
 
-<div class="map-container" id="mapContainer">
-    <div class="viewport" id="viewport">
+<div class="outer-container">
+    <div class="map-container" id="mapContainer">
         <iframe src="https://drive.google.com/file/d/1pBPverbNZjYP8yOcZ6hpAkVL1UURvmr0/preview"></iframe>
         <svg id="hexGrid"></svg>
     </div>
@@ -169,42 +169,35 @@
     }
 
     /**
-     * Draw hexagon grid with fixed dimensions
-     * Map stretches to fit the hexagon grid
+     * Draw hexagon grid
+     * Container size = Grid size (NOT the other way around)
      */
     function draw() {
         const svg = document.getElementById('hexGrid');
-        const viewport = document.getElementById('viewport');
-        const container = document.getElementById('mapContainer');
+        const mapContainer = document.getElementById('mapContainer');
+        const outerContainer = document.querySelector('.outer-container');
         
         svg.innerHTML = '';
 
-        const containerW = container.clientWidth;
-        const containerH = container.clientHeight;
-
-        // Fixed hexagon radius (in pixels)
-        // We'll scale this based on available height
-        const targetHexRadius = containerH / 12; // Adjust divisor to scale hex size
-        const hexRadius = targetHexRadius;
+        // Fixed hex radius - scale based on screen height
+        const hexRadius = window.innerHeight / 14;
         const hexHeight = Math.sqrt(3) * hexRadius;
 
-        // Grid dimensions with fixed hex size
-        // 11 columns (0-10): width = 10 * 1.5 * hexRadius + 2 * hexRadius = 17 * hexRadius
-        // 5 rows (0-4): height = 4 * hexHeight + hexHeight = 5 * hexHeight
+        // Calculate exact grid dimensions
+        // 11 columns (0-10): spacing = 10 intervals of 1.5*radius
+        // Width = leftmost hex edge to rightmost hex edge
+        // Left edge of hex 0: -radius from center
+        // Right edge of hex 10: +radius from center
+        // So: (10 * 1.5 * hexRadius + hexRadius) - (-hexRadius) = 10 * 1.5 * hexRadius + 2 * hexRadius = 17 * hexRadius
+        
         const gridWidth = 17 * hexRadius;
         const gridHeight = 5 * hexHeight;
 
-        // Set viewport dimensions to grid dimensions
-        viewport.style.width = gridWidth + 'px';
-        viewport.style.height = gridHeight + 'px';
+        // SET CONTAINER TO GRID SIZE
+        mapContainer.style.width = gridWidth + 'px';
+        mapContainer.style.height = gridHeight + 'px';
 
-        // Center viewport in container
-        viewport.style.position = 'absolute';
-        viewport.style.left = '50%';
-        viewport.style.top = '50%';
-        viewport.style.transform = 'translate(-50%, -50%)';
-
-        // SVG follows viewport dimensions
+        // SVG matches container
         svg.setAttribute('width', gridWidth);
         svg.setAttribute('height', gridHeight);
         svg.setAttribute('viewBox', `0 0 ${gridWidth} ${gridHeight}`);
