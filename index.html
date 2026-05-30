@@ -216,6 +216,7 @@ let highlightedAdjacents=[];
 let ordersSet=new Set();
 let actionsAvailable=0;
 let arrowImages={};
+let clickLocked=false;
 
 async function loadCSV(){
   const res=await fetch(CSV_URL);
@@ -254,9 +255,16 @@ async function checkLockState() {
       btn.style.background = "#555";
       btn.style.color = "#999";
       btn.style.cursor = "not-allowed";
+    } else {
+      // Només el deixem actiu si no està en bloqueig temporal
+      if (!btn._tempLocked) {
+        btn.disabled = false;
+        btn.style.background = "#004400";
+        btn.style.color = "#aaffaa";
+        btn.style.cursor = "pointer";
+      }
     }
   } catch (err) {
-    // Si falla la lectura, no bloquegem res
     console.log("Error checkLockState:", err);
   }
 }
@@ -487,6 +495,14 @@ function addOrder(originID,targetID){
 
   ordersSet.add(key);
 
+  // Bloqueig de clics 1 segon + cursor rellotge
+  clickLocked = true;
+  document.body.style.cursor = "wait";
+  setTimeout(() => {
+    clickLocked = false;
+    document.body.style.cursor = "default";
+  }, 1000);
+
   const origin=hexData.find(h=>h.id===originID);
   const target=hexData.find(h=>h.id===targetID);
 
@@ -526,7 +542,10 @@ function addOrder(originID,targetID){
 function setupClickHandler(){
   const svg=document.getElementById("hexGrid");
 
-  svg.addEventListener("click",e=>{
+  svg.addEventListener("click", e => {
+    // Bloqueig global de clics
+    if (clickLocked) return;
+
     hexData.forEach(h=>h.element.classList.remove("hex-hatch"));
 
     const poly=e.target.closest("polygon");
@@ -564,53 +583,43 @@ window.addEventListener("resize",redraw);
 redraw();
 checkLockState();
 
-// Botó Confirmar ordres: bloqueig 5s i enviament
-document.getElementById("confirmBtn").addEventListener("click", () => {
+// Botó Confirmar ordres: bloqueig 5s, cursor rellotge i enviament seqüencial
+document.getElementById("confirmBtn").addEventListener("click", async () => {
   const btn = document.getElementById("confirmBtn");
 
-  // Si està desactivat (per E2=1 o pel bloqueig temporal), no fem res
   if (btn.disabled) return;
 
-  // Bloquejar botó 5 segons
   btn.disabled = true;
+  btn._tempLocked = true;
   btn.style.background = "#555";
   btn.style.color = "#999";
   btn.style.cursor = "not-allowed";
+  document.body.style.cursor = "wait";
 
   setTimeout(() => {
-    // Només el tornem a activar si no està bloquejat per E2=1
-    checkLockState().then(() => {
-      if (!btn.disabled) {
-        // ja reactivat dins checkLockState si cal; però si E2!=1:
-        btn.style.background = "#004400";
-        btn.style.color = "#aaffaa";
-        btn.style.cursor = "pointer";
-      }
-    }).catch(() => {
-      // Si hi ha error a checkLockState, el deixem actiu
-      btn.disabled = false;
-      btn.style.background = "#004400";
-      btn.style.color = "#aaffaa";
-      btn.style.cursor = "pointer";
-    });
+    document.body.style.cursor = "default";
+    btn._tempLocked = false;
+    checkLockState();
   }, 5000);
 
-  // So de confirmació
   document.getElementById("ordersSound").play();
 
-  // Enviar ordres al WebApp
   const url = "https://script.google.com/macros/s/AKfycbzMGXDTpJXy2jGjGxPT5g27kOntPOEj6aO-ap_8KIPqi1iyR-FQknxpNva-QqqTXxt_/exec";
 
-  document.querySelectorAll(".order-line").forEach(line => {
+  const lines = document.querySelectorAll(".order-line");
+
+  for (const line of lines) {
     const text = line.querySelector("span").textContent;
 
-    fetch(url, {
+    await fetch(url, {
       method: "POST",
       mode: "no-cors",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ orderText: text })
     });
-  });
+
+    await new Promise(res => setTimeout(res, 150));
+  }
 });
 </script>
 
