@@ -13,8 +13,11 @@
       color:#fff;
       font-family:Arial,Helvetica,sans-serif;
       display:flex;
+      flex-direction:column;
       align-items:center;
-      justify-content:center;
+      justify-content:flex-start;
+      padding-top:20px;
+      gap:20px;
     }
 
     .map-container{
@@ -66,6 +69,16 @@
       stroke:#000;
       stroke-width:0.8;
     }
+
+    /* Àrea de text d’ordres */
+    #orders{
+      width:66%;
+      color:#7CFF7C;
+      font-family:monospace;
+      font-size:18px;
+      white-space:pre-line;
+      min-height:40px;
+    }
   </style>
 </head>
 
@@ -78,6 +91,8 @@
   <svg id="hexGrid"></svg>
 </div>
 
+<div id="orders"></div>
+
 <script>
 /* CONFIGURACIÓ */
 const PATTERN = [5,4,5,4,5,4,5,4,5,4,5];
@@ -88,7 +103,9 @@ const REAL_R = 41.78;
 const REAL_GRID_WIDTH = 17 * REAL_R;
 const IMAGE_RATIO = 1.4;
 
-let hexData = [];  // {id, cx, cy, color, element}
+let hexData = [];  
+let selectedRed = null;  
+let highlightedAdjacents = [];
 
 /* Llegeix CSV */
 async function loadColors(){
@@ -134,8 +151,10 @@ async function drawHexGrid(){
 
   svg.innerHTML = "";
   hexData = [];
+  selectedRed = null;
+  highlightedAdjacents = [];
 
-  /* Afegim la trama vermella actualitzada */
+  /* Trama vermella */
   svg.insertAdjacentHTML("afterbegin", `
     <defs>
       <pattern id="hatch-red" patternUnits="userSpaceOnUse" width="6" height="6" patternTransform="rotate(45)">
@@ -214,9 +233,12 @@ async function drawHexGrid(){
 /* AFEGIR TRAMA ALS ADJACENTS */
 function highlightAdjacent(redHex){
   clearHighlights();
+  selectedRed = redHex;
 
   const R = REAL_R * (document.getElementById("mapContainer").clientWidth / REAL_GRID_WIDTH);
   const maxDist = Math.sqrt(3) * R * 1.01;
+
+  highlightedAdjacents = [];
 
   hexData.forEach(h => {
     if(h.color === "BLUE"){
@@ -226,6 +248,7 @@ function highlightAdjacent(redHex){
 
       if(dist <= maxDist){
         h.element.classList.add("hex-hatch");
+        highlightedAdjacents.push(h);
       }
     }
   });
@@ -233,7 +256,15 @@ function highlightAdjacent(redHex){
 
 /* TREURE TRAMES */
 function clearHighlights(){
-  hexData.forEach(h => h.element.classList.remove("hex-hatch"));
+  highlightedAdjacents.forEach(h => h.element.classList.remove("hex-hatch"));
+  highlightedAdjacents = [];
+  selectedRed = null;
+}
+
+/* AFEGIR ORDRE D’ATAC */
+function addOrder(origin, target){
+  const orders = document.getElementById("orders");
+  orders.textContent += `Ordre d'atac, territori ${origin} a territori ${target}\n`;
 }
 
 /* CLICK HANDLER */
@@ -251,11 +282,20 @@ function setupClickHandler(){
     const id = parseInt(poly.dataset.id);
     const hex = hexData.find(h => h.id === id);
 
+    /* Si cliquem un vermell → seleccionar origen */
     if(hex.color === "RED"){
       highlightAdjacent(hex);
-    } else {
-      clearHighlights();
+      return;
     }
+
+    /* Si cliquem un blau adjacents → ordre d’atac */
+    if(selectedRed && highlightedAdjacents.some(h => h.id === id)){
+      addOrder(selectedRed.id, hex.id);
+      return;
+    }
+
+    /* Qualsevol altra cosa → netejar */
+    clearHighlights();
   });
 }
 
