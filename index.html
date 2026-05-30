@@ -155,6 +155,19 @@
       position:absolute;
       pointer-events:none;
       z-index:20;
+      transform-origin:center center;
+    }
+
+    @keyframes shake {
+      0%   { transform: translate(0,0); }
+      25%  { transform: translate(1px,-1px); }
+      50%  { transform: translate(-1px,1px); }
+      75%  { transform: translate(1px,1px); }
+      100% { transform: translate(0,0); }
+    }
+
+    .attack-arrow--shake{
+      animation:shake 0.25s linear 1;
     }
   </style>
 </head>
@@ -186,8 +199,9 @@ const REAL_R=41.78;
 const REAL_GRID_WIDTH=17*REAL_R;
 const IMAGE_RATIO=1.4;
 
-// factor per compensar el marge transparent de les imatges de fletxa
-const HEX_ARROW_SCALE=1.20;
+// si els hexàgons de les imatges són regulars i ocupen el canvas,
+// el diàmetre visual de l’hexàgon = amplada de la imatge → factor 1.0
+const HEX_ARROW_SCALE=1.0;
 
 let hexData=[];
 let selectedRed=null;
@@ -379,12 +393,12 @@ function direction(origin,target){
 
 function arrowURL(dir){
   return {
-    "N":"https://github.com/enricjimenezmercader-a11y/mapa_estrategic/blob/ade2ba12874372f6c155c1cbb5221ab8e08a1130/AT-N.png?raw=true",
-    "NE":"https://github.com/enricjimenezmercader-a11y/mapa_estrategic/blob/ade2ba12874372f6c155c1cbb5221ab8e08a1130/AT-NE.png?raw=true",
-    "SE":"https://github.com/enricjimenezmercader-a11y/mapa_estrategic/blob/ade2ba12874372f6c155c1cbb5221ab8e08a1130/AT-SE.png?raw=true",
-    "S":"https://github.com/enricjimenezmercader-a11y/mapa_estrategic/blob/ade2ba12874372f6c155c1cbb5221ab8e08a1130/AT-S.png?raw=true",
-    "SO":"https://github.com/enricjimenezmercader-a11y/mapa_estrategic/blob/ade2ba12874372f6c155c1cbb5221ab8e08a1130/AT-SO.png?raw=true",
-    "NO":"https://github.com/enricjimenezmercader-a11y/mapa_estrategic/blob/ade2ba12874372f6c155c1cbb5221ab8e08a1130/AT-NO.png?raw=true"
+    "N":"https://github.com/enricjimenezmercader-a11y/mapa_estrategic/blob/main/AT-N.png?raw=true",
+    "NE":"https://github.com/enricjimenezmercader-a11y/mapa_estrategic/blob/main/AT-NE.png?raw=true",
+    "SE":"https://github.com/enricjimenezmercader-a11y/mapa_estrategic/blob/main/AT-SE.png?raw=true",
+    "S":"https://github.com/enricjimenezmercader-a11y/mapa_estrategic/blob/main/AT-S.png?raw=true",
+    "SO":"https://github.com/enricjimenezmercader-a11y/mapa_estrategic/blob/main/AT-SO.png?raw=true",
+    "NO":"https://github.com/enricjimenezmercader-a11y/mapa_estrategic/blob/main/AT-NO.png?raw=true"
   }[dir];
 }
 
@@ -399,7 +413,7 @@ function placeArrow(origin,target,key){
 
   const img=document.createElement("img");
   img.src=url;
-  img.className="attack-arrow";
+  img.className="attack-arrow attack-arrow--shake";
 
   const size=R*2*HEX_ARROW_SCALE;
   img.style.width=size+"px";
@@ -409,6 +423,11 @@ function placeArrow(origin,target,key){
 
   map.appendChild(img);
   arrowImages[key]=img;
+
+  // treu la vibració després d’un cicle
+  setTimeout(()=>{
+    if(img) img.classList.remove("attack-arrow--shake");
+  }, 260);
 }
 
 function removeArrow(key){
