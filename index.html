@@ -31,12 +31,13 @@
       justify-content:center;
     }
 
-    iframe{
+    /* Nova imatge del mapa */
+    .map-image{
       position:absolute;
       inset:0;
       width:100%;
       height:100%;
-      border:0;
+      object-fit:cover;
       z-index:1;
       pointer-events:none;
     }
@@ -61,7 +62,12 @@
 <body>
 
 <div class="map-container" id="mapContainer">
-  <iframe src="https://drive.google.com/file/d/1pBPverbNZjYP8yOcZ6hpAkVL1UURvmr0/preview"></iframe>
+
+  <!-- NOVA IMATGE -->
+  <img class="map-image"
+       src="https://github.com/enricjimenezmercader-a11y/mapa_estrategic/blob/481d1cc0765b31581a6f050a7f68d53400172e48/map_hex.jpg?raw=true"
+       alt="Mapa estratègic">
+
   <svg id="hexGrid"></svg>
 </div>
 
