@@ -20,7 +20,6 @@
       gap:20px;
     }
 
-    /* Títol i barra d’accions */
     #titleBar{
       font-size:28px;
       font-weight:bold;
@@ -45,7 +44,6 @@
       transition:width 0.3s ease;
     }
 
-    /* Mapa */
     .map-container{
       position:relative;
       background:#1a1a1a;
@@ -94,7 +92,6 @@
       stroke-width:0.8;
     }
 
-    /* Ordres */
     #orders{
       width:66%;
       color:#7CFF7C;
@@ -131,7 +128,6 @@
       display:block;
     }
 
-    /* Avisos */
     #warning, #warningActions{
       position:absolute;
       top:10px;
@@ -178,7 +174,6 @@
 <button id="confirmBtn">Confirmar ordres</button>
 
 <script>
-/* CONFIGURACIÓ */
 const PATTERN = [5,4,5,4,5,4,5,4,5,4,5];
 const CSV_URL =
   "https://docs.google.com/spreadsheets/d/e/2PACX-1vS8k769FG5aF_PK-AmHLVdcfc6sgJeeIhWkL9Q8Gcrs39JW9GyJid_OtHcwhN9r3xhFvWPrc_yigZiY/pub?output=csv";
@@ -193,7 +188,6 @@ let highlightedAdjacents = [];
 let ordersSet = new Set();
 let actionsAvailable = 0;
 
-/* Llegeix CSV i extreu colors + accions disponibles */
 async function loadCSV(){
   const res = await fetch(CSV_URL);
   const text = await res.text();
@@ -205,7 +199,6 @@ async function loadCSV(){
   lines.forEach((line, index) => {
     const cols = line.split(",");
 
-    // 🔥 CORRECCIÓ: H2 és la SEGONA línia del CSV → index === 1
     if(index === 1){
       H2 = parseInt(cols[7]);
     }
@@ -221,7 +214,6 @@ async function loadCSV(){
   return colors;
 }
 
-/* Actualitza títol i barra */
 function updateActionDisplay(){
   const spent = usedPoints();
   const remaining = actionsAvailable - spent;
@@ -233,7 +225,6 @@ function updateActionDisplay(){
   document.getElementById("actionFill").style.width = pct + "%";
 }
 
-/* ESCALAT DEL MAPA */
 function resizeMap(){
   const map = document.getElementById("mapContainer");
 
@@ -255,7 +246,6 @@ function resizeMap(){
   map.style.height = height + "px";
 }
 
-/* DIBUIXAR LA RETÍCULA */
 async function drawHexGrid(){
   const svg = document.getElementById("hexGrid");
   const map = document.getElementById("mapContainer");
@@ -340,7 +330,6 @@ async function drawHexGrid(){
   });
 }
 
-/* AFEGIR TRAMA ALS ADJACENTS */
 function highlightAdjacent(redHex){
   clearHighlights();
   selectedRed = redHex;
@@ -364,14 +353,12 @@ function highlightAdjacent(redHex){
   });
 }
 
-/* TREURE TRAMES */
 function clearHighlights(){
   highlightedAdjacents.forEach(h => h.element.classList.remove("hex-hatch"));
   highlightedAdjacents = [];
   selectedRed = null;
 }
 
-/* AVÍS D’ORDRE REPETIDA */
 function showWarning(){
   const w = document.getElementById("warning");
   w.classList.add("blink");
@@ -383,7 +370,6 @@ function showWarning(){
   }, 2000);
 }
 
-/* AVÍS D’ACCIONS INSUFICIENTS */
 function showWarningActions(){
   const w = document.getElementById("warningActions");
   w.classList.add("blink");
@@ -395,12 +381,10 @@ function showWarningActions(){
   }, 2000);
 }
 
-/* CALCULAR PUNTS UTILITZATS */
 function usedPoints(){
   return ordersSet.size * 10;
 }
 
-/* AFEGIR ORDRE D’ATAC */
 function addOrder(origin, target){
   const key = `${origin}-${target}`;
 
@@ -409,7 +393,9 @@ function addOrder(origin, target){
     return;
   }
 
-  if(usedPoints() + 10 > actionsAvailable - 10){
+  const remaining = actionsAvailable - usedPoints();
+
+  if(remaining < 10){
     showWarningActions();
     return;
   }
@@ -442,7 +428,6 @@ function addOrder(origin, target){
   updateActionDisplay();
 }
 
-/* CLICK HANDLER */
 function setupClickHandler(){
   const svg = document.getElementById("hexGrid");
 
@@ -471,7 +456,6 @@ function setupClickHandler(){
   });
 }
 
-/* REDIBUIXAR TOT */
 function redraw(){
   resizeMap();
   drawHexGrid().then(()=>{
