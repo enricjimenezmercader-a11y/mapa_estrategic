@@ -249,23 +249,28 @@ async function loadCSV(){
 // ------------------------------
 // BLOQUEIG DINÀMIC PER E2
 // ------------------------------
-async function checkLockState() {
+async function superLockCheck() {
   try {
     const text = await fetchCSV();
     const lines = text.trim().split("\n");
-    const cols = lines[0].split(",");
-    const E2 = cols[4].trim();
 
+    // E2 = línia 1, columna 4
+    if (lines.length < 2) return;
+    const cols = lines[1].split(",");
+    if (cols.length < 5) return;
+
+    const E2 = cols[4].trim();
     const btn = document.getElementById("confirmBtn");
 
-    btn._sheetLocked = (E2 === "1");
-
-    if (btn._sheetLocked || btn._tempLocked) {
+    // Màxima jerarquia: E2 controla absolutament el botó
+    if (E2 === "1") {
       btn.disabled = true;
       btn.style.background = "#555";
       btn.style.color = "#999";
       btn.style.cursor = "not-allowed";
+      btn._superLocked = true;
     } else {
+      btn._superLocked = false;
       btn.disabled = false;
       btn.style.background = "#004400";
       btn.style.color = "#aaffaa";
@@ -273,11 +278,13 @@ async function checkLockState() {
     }
 
   } catch (err) {
-    console.log("Error checkLockState:", err);
+    console.error("Error superLockCheck:", err);
   }
 }
 
-setInterval(checkLockState, 1000);
+
+setInterval(superLockCheck, 1000);
+
 
 // ------------------------------
 
@@ -598,10 +605,9 @@ checkLockState();
 document.getElementById("confirmBtn").addEventListener("click", async () => {
   const btn = document.getElementById("confirmBtn");
 
-  if (btn._sheetLocked || btn._tempLocked) return;
+ 
 
-  btn._tempLocked = true;
-  btn.disabled = true;
+   btn.disabled = true;
   btn.style.background = "#555";
   btn.style.color = "#999";
   btn.style.cursor = "not-allowed";
