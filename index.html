@@ -5,114 +5,21 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Mapa Estratègic</title>
   <style>
-    :root{
-      --bg:#000;
-      --panel:#1a1a1a;
-      --panel-border:#333;
-      --label-color:#fff;
-    }
     *{box-sizing:border-box;margin:0;padding:0}
     html,body{height:100%}
-    body{
-      min-height:100vh;
-      background:var(--bg);
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      font-family:Arial,Helvetica,sans-serif;
-      color:var(--label-color);
-    }
-
-    .outer-container{
-      width:100%;
-      height:100%;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      padding:20px;
-    }
-
-    .map-container{
-      position:relative;
-      background:var(--panel);
-      border:1px solid var(--panel-border);
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      max-width:calc(100vw - 40px);
-      max-height:calc(100vh - 40px);
-      overflow:hidden;
-    }
-
-    /* iframe sits under the SVG */
-    iframe{
-      position:absolute;
-      inset:0;
-      width:100%;
-      height:100%;
-      border:0;
-      z-index:1;
-      transition:box-shadow .15s ease;
-    }
-
-    /* control to enable iframe interaction */
-    .iframe-toggle{
-      position:absolute;
-      right:10px;
-      top:10px;
-      z-index:30;
-      background:rgba(0,0,0,0.6);
-      color:#fff;
-      border:1px solid rgba(255,255,255,0.08);
-      padding:6px 8px;
-      font-size:13px;
-      cursor:pointer;
-      border-radius:4px;
-      backdrop-filter:blur(4px);
-    }
-
-    svg{
-      position:relative;
-      z-index:10;
-      width:100%;
-      height:100%;
-      display:block;
-      background:transparent;
-    }
-
-    .hex{ transition:opacity .18s ease, transform .12s ease; }
-    .hex-red{ fill:rgba(255,0,0,.6); stroke:rgba(255,0,0,1); stroke-width:1.2; }
-    .hex-blue{ fill:rgba(0,120,255,.6); stroke:rgba(0,120,255,1); stroke-width:1.2; }
-    .hex-mar{ fill:rgba(100,100,100,.4); stroke:rgba(100,100,100,.6); stroke-width:1; }
-
-    .hex-label{
-      fill:var(--label-color);
-      font-weight:700;
-      text-anchor:middle;
-      pointer-events:none;
-      paint-order:stroke;
-      stroke:rgba(0,0,0,0.6);
-      stroke-width:1;
-    }
-
-    /* overlay error message */
-    .overlay{
-      position:absolute;
-      inset:0;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      z-index:40;
-      pointer-events:none;
-    }
-    .overlay .msg{
-      background:rgba(0,0,0,0.7);
-      color:#ffdddd;
-      padding:12px 16px;
-      border-radius:6px;
-      pointer-events:auto;
-      font-size:14px;
-    }
+    body{display:flex;align-items:center;justify-content:center;background:#000;color:#fff;font-family:Arial,Helvetica,sans-serif}
+    .outer-container{width:100%;height:100%;display:flex;align-items:center;justify-content:center;padding:20px}
+    .map-container{position:relative;background:#1a1a1a;border:1px solid #333;overflow:hidden}
+    iframe{position:absolute;inset:0;width:100%;height:100%;border:0;z-index:1;pointer-events:none}
+    svg{position:relative;display:block;z-index:10}
+    .iframe-toggle{position:absolute;right:10px;top:10px;z-index:30;background:rgba(0,0,0,0.6);color:#fff;border:1px solid rgba(255,255,255,0.08);padding:6px 8px;font-size:13px;cursor:pointer;border-radius:4px}
+    .hex{transition:opacity .18s ease, transform .12s ease}
+    .hex-red{fill:rgba(255,0,0,.6);stroke:rgba(255,0,0,1);stroke-width:1.2}
+    .hex-blue{fill:rgba(0,120,255,.6);stroke:rgba(0,120,255,1);stroke-width:1.2}
+    .hex-mar{fill:rgba(100,100,100,.4);stroke:rgba(100,100,100,.6);stroke-width:1}
+    .hex-label{fill:#fff;font-weight:700;text-anchor:middle;pointer-events:none;stroke:rgba(0,0,0,0.6);stroke-width:1}
+    .overlay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;z-index:40;pointer-events:none}
+    .overlay .msg{background:rgba(0,0,0,0.7);color:#ffdddd;padding:12px 16px;border-radius:6px;pointer-events:auto;font-size:14px}
   </style>
 </head>
 <body>
@@ -123,9 +30,7 @@
       <svg id="hexGrid" role="img" aria-label="Mapa estratègic en forma de graella hexagonal">
         <title>Mapa estratègic</title>
       </svg>
-      <div class="overlay" id="overlay" hidden>
-        <div class="msg" id="overlayMsg"></div>
-      </div>
+      <div class="overlay" id="overlay" hidden><div class="msg" id="overlayMsg"></div></div>
     </div>
   </div>
 
@@ -142,32 +47,19 @@
     const iframe = document.getElementById('previewFrame');
     const toggleBtn = document.getElementById('toggleIframe');
 
-    // Debounce helper
-    function debounce(fn, wait=120){
-      let t;
-      return (...args)=>{ clearTimeout(t); t = setTimeout(()=>fn(...args), wait); };
-    }
+    function debounce(fn, wait=120){ let t; return (...a)=>{ clearTimeout(t); t=setTimeout(()=>fn(...a), wait); }; }
 
     async function fetchWithTimeout(url, timeout = 8000){
       const controller = new AbortController();
       const id = setTimeout(()=>controller.abort(), timeout);
-      try{
-        const res = await fetch(url, { signal: controller.signal });
-        clearTimeout(id);
-        if(!res.ok) throw new Error('HTTP ' + res.status);
-        return res;
-      } catch(e){
-        clearTimeout(id);
-        throw e;
-      }
+      try{ const res = await fetch(url, { signal: controller.signal }); clearTimeout(id); if(!res.ok) throw new Error('HTTP ' + res.status); return res; }
+      catch(e){ clearTimeout(id); throw e; }
     }
 
-    // Robust CSV parse for simple two-column mapping id,color
     function parseCsv(text){
-      const rows = text.split(/\r?\n/).map(r => r.trim()).filter(r => r.length);
+      const rows = text.split(/\r?\n/).map(r=>r.trim()).filter(r=>r.length);
       const out = {};
       for(const row of rows){
-        // split on first comma to allow commas in second column if any
         const idx = row.indexOf(',');
         if(idx === -1) continue;
         const a = row.slice(0, idx).trim().replace(/^"|"$/g,'');
@@ -184,13 +76,11 @@
         const text = await res.text();
         colors = parseCsv(text);
       } catch(e){
-        // show non-destructive overlay message
         overlayMsg.textContent = 'No s’han pogut carregar els colors del mapa. S’utilitzaran valors per defecte.';
         overlay.hidden = false;
-        colors = {}; // fallback to defaults
+        colors = {};
         console.warn('CSV load failed', e);
       }
-
       buildHexData();
       draw();
       window.addEventListener('resize', debounce(draw, 120));
@@ -200,7 +90,7 @@
       hexData = {};
       let count = 1;
       PATTERN.forEach((rowCount, colIdx) => {
-        for(let r=0; r<rowCount; r++){
+        for(let r=0;r<rowCount;r++){
           const id = String(count);
           const typeVal = (colors[id] || '').toUpperCase();
           let hexType = 'RED';
@@ -213,68 +103,78 @@
     }
 
     function draw(){
-      // compute container available size
-      const maxW = Math.max(200, Math.min(window.innerWidth - 40, 1400));
-      const maxH = Math.max(200, Math.min(window.innerHeight - 40, 1000));
-
-      // derive grid geometry from pattern
-      const cols = PATTERN.length;
-      const maxRows = Math.max(...PATTERN);
-
-      // We need to find the largest hexRadius such that the whole grid fits inside maxW x maxH
-      // center-to-center horizontal span = (cols - 1) * 1.5 * r + 2*r (left/right radius)
-      // center-to-center vertical span = (maxRows - 1) * (sqrt(3)*r) + sqrt(3)*r (top/bottom margins)
-      // but offset columns add half hexHeight for odd columns; we account by adding hexHeight/2 margin top/bottom
-
-      // Solve for r from width constraint:
-      // width = (cols - 1) * 1.5 * r + 2*r = r * (1.5*(cols-1) + 2)
-      // height = (maxRows - 1) * hexH + hexH + hexH/2 = hexH * (maxRows + 0.5)
-      // where hexH = sqrt(3) * r
-
-      const widthFactor = 1.5 * (cols - 1) + 2;
-      const rFromWidth = maxW / widthFactor;
-      const rFromHeight = maxH / (Math.sqrt(3) * (maxRows + 0.5));
-      const hexRadius = Math.floor(Math.min(rFromWidth, rFromHeight, 120)); // cap radius for readability
-
+      // Choose a candidate radius based on viewport but we'll compute exact extents later
+      const maxCandidate = Math.min(Math.max(12, Math.floor(window.innerWidth / 60)), 140);
+      const hexRadius = Math.min(120, Math.max(10, Math.floor(maxCandidate)));
       const hexH = Math.sqrt(3) * hexRadius;
 
-      // compute final grid pixel dimensions
-      const totalGridWidth = Math.ceil(widthFactor * hexRadius);
-      const totalGridHeight = Math.ceil(Math.sqrt(3) * hexRadius * (maxRows + 0.5));
+      // Compute centers and polygon points first, collect bounding box
+      const centers = {};
+      const allPoints = []; // {x,y,id}
+      const startX = 0; // we'll shift later
+      const startY = 0;
 
-      // set container size
-      mapContainer.style.width = totalGridWidth + 'px';
-      mapContainer.style.height = totalGridHeight + 'px';
+      Object.keys(hexData).forEach(id => {
+        const { c, r } = hexData[id];
+        const cx = c * 1.5 * hexRadius + startX;
+        const cy = r * hexH + (c % 2 === 0 ? 0 : hexH / 2) + startY;
+        centers[id] = { x: cx, y: cy };
+        for(let i=0;i<6;i++){
+          const angle = Math.PI / 3 * i;
+          const px = cx + hexRadius * Math.cos(angle);
+          const py = cy + hexRadius * Math.sin(angle);
+          allPoints.push({ x: px, y: py, id });
+        }
+      });
 
-      // set svg attributes
-      svg.setAttribute('width', totalGridWidth);
-      svg.setAttribute('height', totalGridHeight);
-      svg.setAttribute('viewBox', `0 0 ${totalGridWidth} ${totalGridHeight}`);
+      if(allPoints.length === 0){
+        console.warn('No hex points to draw');
+        return;
+      }
 
-      // clear
+      // bounding box of all polygon points
+      let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+      allPoints.forEach(p => {
+        if(p.x < minX) minX = p.x;
+        if(p.y < minY) minY = p.y;
+        if(p.x > maxX) maxX = p.x;
+        if(p.y > maxY) maxY = p.y;
+      });
+
+      // padding so strokes and labels are not clipped
+      const pad = Math.max(8, Math.round(hexRadius * 0.25));
+
+      const width = Math.ceil(maxX - minX + pad * 2);
+      const height = Math.ceil(maxY - minY + pad * 2);
+
+      // set container size to match grid extents
+      mapContainer.style.width = width + 'px';
+      mapContainer.style.height = height + 'px';
+
+      // set svg viewBox and size
+      svg.setAttribute('width', width);
+      svg.setAttribute('height', height);
+      svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
+
+      // clear svg
       while(svg.firstChild) svg.removeChild(svg.firstChild);
 
-      // add title element for accessibility (keeps existing <title> if present)
+      // accessibility title
       const title = document.createElementNS('http://www.w3.org/2000/svg','title');
       title.textContent = 'Mapa estratègic';
       svg.appendChild(title);
 
-      // starting offsets so hexes don't get clipped
-      const startX = hexRadius;
-      const startY = hexH / 2;
-
-      // draw hexes
+      // draw each hex shifted so minX maps to pad
       Object.keys(hexData).forEach(id => {
-        const { c, r, type } = hexData[id];
-        const x = c * 1.5 * hexRadius + startX;
-        const y = r * hexH + (c % 2 === 0 ? 0 : hexH / 2) + startY;
+        const { type } = hexData[id];
+        const c = centers[id].x - minX + pad;
+        const r = centers[id].y - minY + pad;
 
-        // polygon points
         const pts = [];
         for(let i=0;i<6;i++){
           const angle = Math.PI / 3 * i;
-          const px = x + hexRadius * Math.cos(angle);
-          const py = y + hexRadius * Math.sin(angle);
+          const px = c + hexRadius * Math.cos(angle);
+          const py = r + hexRadius * Math.sin(angle);
           pts.push(`${px},${py}`);
         }
 
@@ -286,11 +186,9 @@
         poly.setAttribute('data-id', id);
         poly.setAttribute('role','presentation');
 
-        // label
         const label = document.createElementNS('http://www.w3.org/2000/svg','text');
-        label.setAttribute('x', x);
-        // vertical offset scales with radius so it looks centered
-        label.setAttribute('y', y + Math.max(2, Math.round(hexRadius * 0.12)));
+        label.setAttribute('x', c);
+        label.setAttribute('y', r + Math.max(2, Math.round(hexRadius * 0.12)));
         label.setAttribute('class', 'hex-label');
         label.setAttribute('font-size', Math.max(10, Math.round(hexRadius * 0.28)));
         label.setAttribute('aria-hidden','true');
@@ -302,7 +200,7 @@
       });
     }
 
-    // toggle iframe pointer events so user can interact when needed
+    // toggle iframe pointer events
     toggleBtn.addEventListener('click', ()=>{
       const enabled = iframe.style.pointerEvents !== 'auto';
       iframe.style.pointerEvents = enabled ? 'auto' : 'none';
@@ -311,10 +209,7 @@
       toggleBtn.setAttribute('aria-pressed', String(enabled));
     });
 
-    // initial state: iframe not interactive
     iframe.style.pointerEvents = 'none';
-
-    // start
     init();
   </script>
 </body>
