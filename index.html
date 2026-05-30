@@ -79,7 +79,7 @@
     .hex-mar{ fill:rgba(120,120,120,0.33); }
 
     .hex-hatch{
-      fill: url(#hatch-red);
+      fill:url(#hatch-red);
     }
 
     .hex-label{
@@ -153,8 +153,6 @@
 
     .attack-arrow{
       position:absolute;
-      width:0;
-      height:0;
       pointer-events:none;
       z-index:20;
     }
@@ -249,6 +247,9 @@ async function drawHexGrid(){
   hexData=[];
   selectedRed=null;
   highlightedAdjacents=[];
+  arrowImages={};
+  ordersSet=new Set();
+  document.getElementById("orders").innerHTML="";
 
   svg.insertAdjacentHTML("afterbegin",`
     <defs>
@@ -362,14 +363,15 @@ function usedPoints(){ return ordersSet.size*10; }
 function direction(origin,target){
   const dx=target.cx-origin.cx;
   const dy=target.cy-origin.cy;
-  const angle=Math.atan2(dy,dx)*(180/Math.PI);
 
-  if(angle>-150 && angle<-90) return "N";
-  if(angle>=-90 && angle<-30) return "NE";
-  if(angle>=-30 && angle<30) return "SE";
-  if(angle>=30 && angle<90) return "S";
-  if(angle>=90 && angle<150) return "SO";
-  return "NO";
+  if(dy<0 && Math.abs(dx)<Math.abs(dy)) return "N";
+  if(dy>0 && Math.abs(dx)<Math.abs(dy)) return "S";
+  if(dx>0 && dy<0) return "NE";
+  if(dx>0 && dy>0) return "SE";
+  if(dx<0 && dy<0) return "NO";
+  if(dx<0 && dy>0) return "SO";
+
+  return "N";
 }
 
 function arrowURL(dir){
@@ -388,6 +390,7 @@ function placeArrow(origin,target,key){
   const B=map.clientWidth;
   const scale=B/REAL_GRID_WIDTH;
   const R=REAL_R*scale;
+  const scaleFix=0.92;
 
   const dir=direction(origin,target);
   const url=arrowURL(dir);
@@ -396,10 +399,11 @@ function placeArrow(origin,target,key){
   img.src=url;
   img.className="attack-arrow";
 
-  img.style.width=(R*2)+"px";
-  img.style.height=(R*2)+"px";
-  img.style.left=(origin.cx-R)+"px";
-  img.style.top=(origin.cy-R)+"px";
+  const size=R*2*scaleFix;
+  img.style.width=size+"px";
+  img.style.height=size+"px";
+  img.style.left=(origin.cx-size/2)+"px";
+  img.style.top=(origin.cy-size/2)+"px";
 
   map.appendChild(img);
   arrowImages[key]=img;
