@@ -182,7 +182,6 @@
 
 <body>
 
-<!-- 🔊 SONS -->
 <audio id="moveSound" src="https://raw.githubusercontent.com/enricjimenezmercader-a11y/mapa_estrategic/main/Move.wav"></audio>
 <audio id="ordersSound" src="https://raw.githubusercontent.com/enricjimenezmercader-a11y/mapa_estrategic/main/Orders.wav"></audio>
 
@@ -472,7 +471,6 @@ function addOrder(originID,targetID){
 
   target.element.classList.remove("hex-hatch");
 
-  /* 🔊 SO D’ORDRE */
   document.getElementById("moveSound").play();
 
   const orders=document.getElementById("orders");
@@ -542,9 +540,21 @@ function redraw(){
 window.addEventListener("resize",redraw);
 redraw();
 
-/* 🔊 SO EN PRÉMER "CONFIRMAR ORDRES" */
 document.getElementById("confirmBtn").addEventListener("click", () => {
   document.getElementById("ordersSound").play();
+
+  const url = "https://script.google.com/macros/s/AKfycbxfyYzfLDedl5PN33H752TUxhb-kmJ3knJy1n1_qzKNCz0C_cQdk2x8uUhChdzM7NT5/exec";
+
+  document.querySelectorAll(".order-line").forEach(line => {
+    const text = line.querySelector("span").textContent;
+
+    fetch(url, {
+      method: "POST",
+      mode: "no-cors",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ orderText: text })
+    });
+  });
 });
 </script>
 
