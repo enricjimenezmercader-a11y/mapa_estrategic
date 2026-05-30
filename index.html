@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Mapa amb malla hexagonal</title>
+<title>Malla hexagonal compacta</title>
 
 <style>
     body {
@@ -73,12 +73,12 @@ const svg = document.getElementById("hexgrid");
 const r = 60;
 
 // Dimensions geomètriques
-const hexWidth  = 2 * r;
-const hexHeight = Math.sqrt(3) * r;
+const W = 2 * r;
+const H = Math.sqrt(3) * r;
 
-// Separació real en una malla hexagonal
-const colStep = 1.5 * r;
-const rowStep = hexHeight;
+// Separació real
+const dx = 1.5 * r;
+const dy = (Math.sqrt(3) / 2) * r;
 
 // Configuració: 10 columnes alternant 6 i 4
 const numCols = 10;
@@ -98,10 +98,11 @@ function generateGrid() {
     const width  = svg.clientWidth;
     const height = svg.clientHeight;
 
-    // Calcular amplada i alçada totals de la malla
-    const totalWidth = (numCols - 1) * colStep + hexWidth;
-    const maxRows = rowsEven;
-    const totalHeight = (maxRows - 1) * rowStep + hexHeight;
+    // Amplada total
+    const totalWidth = (numCols - 1) * dx + W;
+
+    // Alçada màxima (columna de 6)
+    const totalHeight = (rowsEven - 1) * dy + H;
 
     // Centrat
     const offsetX = (width  - totalWidth)  / 2;
@@ -117,10 +118,9 @@ function generateGrid() {
             if (num > 50) return;
 
             // Coordenades del centre
-            const cx = offsetX + col * colStep + r;
-            const cy = offsetY + row * rowStep + hexHeight/2 + (isEven ? 0 : hexHeight/2);
+            const cx = offsetX + col * dx + r;
+            const cy = offsetY + row * dy + H/2 + (isEven ? 0 : dy/2);
 
-            // Grup SVG
             const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
 
             const hex = document.createElementNS("http://www.w3.org/2000/svg", "polygon");
