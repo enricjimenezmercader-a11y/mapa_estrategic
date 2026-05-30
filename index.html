@@ -186,6 +186,9 @@ const REAL_R=41.78;
 const REAL_GRID_WIDTH=17*REAL_R;
 const IMAGE_RATIO=1.4;
 
+// factor per compensar el marge transparent de les imatges de fletxa
+const HEX_ARROW_SCALE=1.20;
+
 let hexData=[];
 let selectedRed=null;
 let highlightedAdjacents=[];
@@ -390,7 +393,6 @@ function placeArrow(origin,target,key){
   const B=map.clientWidth;
   const scale=B/REAL_GRID_WIDTH;
   const R=REAL_R*scale;
-  const scaleFix=0.92;
 
   const dir=direction(origin,target);
   const url=arrowURL(dir);
@@ -399,7 +401,7 @@ function placeArrow(origin,target,key){
   img.src=url;
   img.className="attack-arrow";
 
-  const size=R*2*scaleFix;
+  const size=R*2*HEX_ARROW_SCALE;
   img.style.width=size+"px";
   img.style.height=size+"px";
   img.style.left=(origin.cx-size/2)+"px";
