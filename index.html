@@ -182,6 +182,9 @@
 
 <body>
 
+<!-- 🔊 SO D’ORDRE -->
+<audio id="moveSound" src="https://raw.githubusercontent.com/enricjimenezmercader-a11y/mapa_estrategic/main/Move.mp3"></audio>
+
 <div id="titleBar">Equip vermell — Accions disponibles: ...</div>
 <div id="actionBar"><div id="actionFill"></div></div>
 
@@ -467,6 +470,9 @@ function addOrder(originID,targetID){
   placeArrow(origin,target,key);
 
   target.element.classList.remove("hex-hatch");
+
+  /* 🔊 SO D’ORDRE */
+  document.getElementById("moveSound").play();
 
   const orders=document.getElementById("orders");
 
