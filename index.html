@@ -17,7 +17,7 @@
       justify-content:center;
     }
 
-    /* El contenidor NO té mida fixa: la mida es calcula via JS */
+    /* El contenidor s’escalarà via JS segons la regla dels 2/3 */
     .map-container{
       position:relative;
       background:#1a1a1a;
@@ -25,12 +25,13 @@
       overflow:hidden;
     }
 
+    /* Imatge del mapa: mai es talla */
     .map-image{
       position:absolute;
       inset:0;
       width:100%;
       height:100%;
-      object-fit:contain; /* IMPORTANT: no es talla mai */
+      object-fit:contain;
       z-index:1;
       pointer-events:none;
     }
@@ -44,6 +45,7 @@
       pointer-events:none;
     }
 
+    /* Només contorn negre */
     .hex-outline{
       fill:none;
       stroke:#000;
@@ -62,13 +64,13 @@
 </div>
 
 <script>
-/* CONFIG */
+/* CONFIGURACIÓ */
 const PATTERN = [5,4,5,4,5,4,5,4,5,4,5];  // 11 columnes
 
-/* MESURES REALS DE LA RETÍCULA IMPRESA */
-const REAL_R = 41.78;                     // radi real mesurat
+/* MESURES REALS DE LA RETÍCULA IMPRESA (mesurades al píxel) */
+const REAL_R = 41.78;                     // radi real
 const REAL_GRID_WIDTH = 17 * REAL_R;      // amplada real de la retícula
-const IMAGE_RATIO = 1.4;                  // proporció de la imatge (ample/alt)
+const IMAGE_RATIO = 1.4;                  // proporció ample/alt de la imatge
 
 /* ESCALAT DEL MAPA SEGONS LA REGLA DELS 2/3 */
 function resizeMap(){
