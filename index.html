@@ -77,7 +77,34 @@
       min-height:40px;
     }
 
-    /* AVÍS D’ORDRE REPETIDA */
+    .order-line{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      margin-bottom:6px;
+    }
+
+    .order-btn{
+      background:#550000;
+      color:#fff;
+      border:1px solid #aa0000;
+      padding:3px 8px;
+      cursor:pointer;
+      font-size:14px;
+    }
+
+    /* Ara el botó sempre és visible */
+    #confirmBtn{
+      margin-top:10px;
+      padding:6px 12px;
+      background:#004400;
+      color:#aaffaa;
+      border:1px solid #66ff66;
+      cursor:pointer;
+      font-size:16px;
+      display:block;
+    }
+
     #warning{
       position:absolute;
       top:10px;
@@ -117,6 +144,7 @@
 </div>
 
 <div id="orders"></div>
+<button id="confirmBtn">Confirmar ordres</button>
 
 <script>
 /* CONFIGURACIÓ */
@@ -131,7 +159,7 @@ const IMAGE_RATIO = 1.4;
 let hexData = [];
 let selectedRed = null;
 let highlightedAdjacents = [];
-let ordersSet = new Set(); // <-- per evitar ordres repetides
+let ordersSet = new Set();
 
 /* Llegeix CSV */
 async function loadColors(){
@@ -310,7 +338,26 @@ function addOrder(origin, target){
   ordersSet.add(key);
 
   const orders = document.getElementById("orders");
-  orders.textContent += `Ordre d'atac, territori ${origin} a territori ${target}\n`;
+
+  const line = document.createElement("div");
+  line.className = "order-line";
+  line.dataset.key = key;
+
+  const text = document.createElement("span");
+  text.textContent = `Ordre d'atac, territori ${origin} a territori ${target}`;
+
+  const btn = document.createElement("button");
+  btn.textContent = "Suspendre ordre";
+  btn.className = "order-btn";
+
+  btn.onclick = () => {
+    ordersSet.delete(key);
+    line.remove();
+  };
+
+  line.appendChild(text);
+  line.appendChild(btn);
+  orders.appendChild(line);
 }
 
 /* CLICK HANDLER */
