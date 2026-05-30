@@ -17,7 +17,6 @@
       justify-content:center;
     }
 
-    /* El contenidor s’escalarà via JS segons la regla dels 2/3 */
     .map-container{
       position:relative;
       background:#1a1a1a;
@@ -25,7 +24,6 @@
       overflow:hidden;
     }
 
-    /* Imatge del mapa: mai es talla */
     .map-image{
       position:absolute;
       inset:0;
@@ -45,11 +43,22 @@
       pointer-events:none;
     }
 
-    /* Només contorn negre */
-    .hex-outline{
-      fill:none;
+    .hex{
       stroke:#000;
       stroke-width:2;
+    }
+
+    .hex-red{ fill:rgba(255,0,0,0.66); }
+    .hex-blue{ fill:rgba(0,120,255,0.66); }
+    .hex-mar{ fill:rgba(120,120,120,0.66); }
+
+    .hex-label{
+      fill:#fff;
+      font-weight:bold;
+      text-anchor:middle;
+      pointer-events:none;
+      stroke:#000;
+      stroke-width:0.8;
     }
   </style>
 </head>
@@ -66,11 +75,30 @@
 <script>
 /* CONFIGURACIÓ */
 const PATTERN = [5,4,5,4,5,4,5,4,5,4,5];  // 11 columnes
+const CSV_URL =
+  "https://docs.google.com/spreadsheets/d/e/2PACX-1vS8k769FG5aF_PK-AmHLVdcfc6sgJeeIhWkL9Q8Gcrs39JW9GyJid_OtHcwhN9r3xhFvWPrc_yigZiY/pub?output=csv";
 
-/* MESURES REALS DE LA RETÍCULA IMPRESA (mesurades al píxel) */
-const REAL_R = 41.78;                     // radi real
-const REAL_GRID_WIDTH = 17 * REAL_R;      // amplada real de la retícula
-const IMAGE_RATIO = 1.4;                  // proporció ample/alt de la imatge
+/* MESURES REALS DE LA RETÍCULA IMPRESA */
+const REAL_R = 41.78;
+const REAL_GRID_WIDTH = 17 * REAL_R;
+const IMAGE_RATIO = 1.4;
+
+/* Llegeix CSV i retorna {1:"RED", 2:"BLUE", ...} */
+async function loadColors(){
+  const res = await fetch(CSV_URL);
+  const text = await res.text();
+  const lines = text.trim().split("\n");
+
+  const colors = {};
+
+  for(const line of lines){
+    const [id, color] = line.split(",");
+    if(!id) continue;
+    colors[id.trim()] = color.trim().toUpperCase();
+  }
+
+  return colors;
+}
 
 /* ESCALAT DEL MAPA SEGONS LA REGLA DELS 2/3 */
 function resizeMap(){
@@ -79,11 +107,9 @@ function resizeMap(){
   const W = window.innerWidth;
   const H = window.innerHeight;
 
-  /* límits segons la regla dels 2/3 */
   const maxW = W * (2/3);
   const maxH = H * (2/3);
 
-  /* escalar mantenint proporció */
   let width = maxW;
   let height = width / IMAGE_RATIO;
 
@@ -97,15 +123,16 @@ function resizeMap(){
 }
 
 /* DIBUIXAR LA RETÍCULA */
-function drawHexGrid(){
+async function drawHexGrid(){
   const svg = document.getElementById("hexGrid");
   const map = document.getElementById("mapContainer");
 
   svg.innerHTML = "";
 
+  const colors = await loadColors();
+
   const B = map.clientWidth;
 
-  /* Escala necessària perquè la retícula coincideixi amb la imatge */
   const scale = B / REAL_GRID_WIDTH;
   const R = REAL_R * scale;
 
@@ -118,6 +145,8 @@ function drawHexGrid(){
 
   const offsetX = (B - A) / 2 + R;
   const offsetY = (map.clientHeight - gridHeight) / 2 + hexH/2;
+
+  let id = 1;
 
   PATTERN.forEach((rowCount, col) => {
     for(let r = 0; r < rowCount; r++){
@@ -133,11 +162,31 @@ function drawHexGrid(){
         ].join(","));
       }
 
+      const g = document.createElementNS("http://www.w3.org/2000/svg","g");
+
       const poly = document.createElementNS("http://www.w3.org/2000/svg","polygon");
       poly.setAttribute("points", pts.join(" "));
-      poly.setAttribute("class", "hex-outline");
 
-      svg.appendChild(poly);
+      const color = (colors[id] || "").toUpperCase();
+      let cls = "hex hex-mar";
+
+      if(color.includes("RED")) cls = "hex hex-red";
+      else if(color.includes("BLUE")) cls = "hex hex-blue";
+      else if(color.includes("MAR")) cls = "hex hex-mar";
+
+      poly.setAttribute("class", cls);
+      g.appendChild(poly);
+
+      const label = document.createElementNS("http://www.w3.org/2000/svg","text");
+      label.setAttribute("x", cx);
+      label.setAttribute("y", cy + 4);
+      label.setAttribute("class", "hex-label");
+      label.textContent = id;
+      g.appendChild(label);
+
+      svg.appendChild(g);
+
+      id++;
     }
   });
 }
