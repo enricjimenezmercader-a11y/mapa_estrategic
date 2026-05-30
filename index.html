@@ -203,6 +203,9 @@
 <button id="confirmBtn">Confirmar ordres</button>
 
 <script>
+/* ---------------------------------------------------------
+   CONFIGURACIÓ
+--------------------------------------------------------- */
 const PATTERN=[5,4,5,4,5,4,5,4,5,4,5];
 const CSV_URL="https://docs.google.com/spreadsheets/d/e/2PACX-1vS8k769FG5aF_PK-AmHLVdcfc6sgJeeIhWkL9Q8Gcrs39JW9GyJid_OtHcwhN9r3xhFvWPrc_yigZiY/pub?output=csv";
 
@@ -218,9 +221,9 @@ let actionsAvailable=0;
 let arrowImages={};
 let clickLocked=false;
 
-// ------------------------------
-// LECTURA CSV AMB CACHE-BUSTER
-// ------------------------------
+/* ---------------------------------------------------------
+   LECTURA CSV AMB CACHE-BUSTER
+--------------------------------------------------------- */
 async function fetchCSV(){
   const res = await fetch(CSV_URL + "&cb=" + Date.now());
   return await res.text();
@@ -245,136 +248,6 @@ async function loadCSV(){
   updateActionDisplay();
   return colors;
 }
-
-// ------------------------------
-// BLOQUEIG DINÀMIC PER E1
-// ------------------------------
-async function checkLockState() {
-  try {
-    const text = await fetchCSV();
-    const lines = text.trim().split("\n");
-    const cols = lines[0].split(",");
-    const E1 = cols[4].trim();
-
-    const btn = document.getElementById("confirmBtn");
-
-    btn._sheetLocked = (E1 === "1");
-
-    if (btn._sheetLocked || btn._tempLocked) {
-      btn.disabled = true;
-      btn.style.background = "#555";
-      btn.style.color = "#999";
-      btn.style.cursor = "not-allowed";
-    } else {
-      btn.disabled = false;
-      btn.style.background = "#004400";
-      btn.style.color = "#aaffaa";
-      btn.style.cursor = "pointer";
-    }
-
-  } catch (err) {
-    console.log("Error checkLockState:", err);
-  }
-}
-
-setInterval(checkLockState, 1000);
-
-// ------------------------------
-
-function updateActionDisplay(){
-  const spent=usedPoints();
-  const remaining=actionsAvailable-spent;
-  document.getElementById("titleBar").textContent=
-    `Equip vermell — Accions disponibles: ${actionsAvailable} — Gastades: ${spent} — Restants: ${remaining}`;
-  const pct=Math.min(100,(spent/actionsAvailable)*100);
-  document.getElementById("actionFill").style.width=pct+"%";
-}
-
-function resizeMap(){
-  const map=document.getElementById("mapContainer");
-  const W=window.innerWidth;
-  const H=window.innerHeight;
-  const maxW=W*(2/3);
-  const maxH=H*(2/3);
-  let width=maxW;
-  let height=width/IMAGE_RATIO;
-  if(height>maxH){
-    height=maxH;
-    width=height*IMAGE_RATIO;
-  }
-  map.style.width=width+"px";
-  map.style.height=height+"px";
-}
-
-async function drawHexGrid(){
-  const svg=document.getElementById("hexGrid");
-  const map=document.getElementById("mapContainer");
-
-  svg.innerHTML="";
-  hexData=[];
-  selectedRed=null;
-  highlightedAdjacents=[];
-  arrowImages={};
-  ordersSet=new Set();
-  document.getElementById("orders").innerHTML="";
-
-  svg.insertAdjacentHTML("afterbegin",`
-    <defs>
-      <pattern id="hatch-red" patternUnits="userSpaceOnUse" width="6" height="6" patternTransform="rotate(45)">
-        <line x1="0" y1="0" x2="0" y2="6" stroke="rgba(255,0,0,0.5)" stroke-width="3"/>
-      </pattern>
-    </defs>
-  `);
-
-  const colors=await loadCSV();
-
-  const B=map.clientWidth;
-  const scale=B/REAL_GRID_WIDTH;
-  const R=REAL_R*scale;
-  const hexH=Math.sqrt(3)*R;
-
-  const maxRows=Math.max(...PATTERN);
-  const gridHeight=(maxRows-1)*hexH+hexH;
-  const A=17*R;
-
-  const offsetX=(B-A)/2+R;
-  const offsetY=(map.clientHeight-gridHeight)/2+hexH/2;
-
-  let id=1;
-
-  PATTERN.forEach((rowCount,col)=>{
-    for(let r=0;r<rowCount;r++){
-      const cx=offsetX+col*1.5*R;
-      const cy=offsetY+r*hexH+(col%2===0?0:hexH/2);
-
-      const pts=[];
-      for(let i=0;i<6;i++){
-        const ang=Math.PI/3*i;
-        pts.push([cx+R*Math.cos(ang),cy+R*Math.sin(ang)].join(","));
-      }
-
-      const g=document.createElementNS("http://www.w3.org/2000/svg","g");
-
-      const poly=document.createElementNS("http://www.w3.org/2000/svg","polygon");
-      poly.setAttribute("points",pts.join(" "));
-
-      const color=(colors[id]||"").toUpperCase();
-      let cls="hex hex-mar";
-      if(color.includes("RED")) cls="hex hex-red";
-      else if(color.includes("BLUE")) cls="hex hex-blue";
-
-      poly.setAttribute("class",cls);
-      poly.dataset.id=id;
-
-      g.appendChild(poly);
-
-      const label=document.createElementNS("http://www.w3.org/2000/svg","text");
-      label.setAttribute("x",cx);
-      label.setAttribute("y",cy+4);
-      label.setAttribute("class","hex-label");
-      label.textContent=id;
-      g.appendChild(label);
-
       svg.appendChild(g);
 
       hexData.push({id,cx,cy,color,element:poly});
@@ -593,7 +466,6 @@ function redraw(){
 window.addEventListener("resize",redraw);
 redraw();
 checkLockState();
-
 // Botó Confirmar ordres: bloqueig 5s, cursor rellotge i enviament seqüencial
 document.getElementById("confirmBtn").addEventListener("click", async () => {
   const btn = document.getElementById("confirmBtn");
