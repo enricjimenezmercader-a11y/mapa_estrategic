@@ -116,4 +116,34 @@ function drawHexGrid(){
         pts.push([
           cx + R * Math.cos(ang),
           cy + R * Math.sin(ang)
-        ].join
+        ].join(","));
+      }
+
+      const g = document.createElementNS("http://www.w3.org/2000/svg","g");
+
+      const poly = document.createElementNS("http://www.w3.org/2000/svg","polygon");
+      poly.setAttribute("points", pts.join(" "));
+      poly.setAttribute("class", "hex-red");
+      g.appendChild(poly);
+
+      const label = document.createElementNS("http://www.w3.org/2000/svg","text");
+      label.setAttribute("x", cx);
+      label.setAttribute("y", cy + 4);
+      label.setAttribute("class", "hex-label");
+      label.textContent = id++;
+      g.appendChild(label);
+
+      svg.appendChild(g);
+    }
+  });
+}
+
+/* Redibuixar quan canvia la mida */
+window.addEventListener("resize", drawHexGrid);
+
+/* Inicialitzar */
+drawHexGrid();
+</script>
+
+</body>
+</html>
