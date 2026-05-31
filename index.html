@@ -221,10 +221,12 @@ let clickLocked=false;
 // ------------------------------
 // LECTURA CSV AMB CACHE-BUSTER
 // ------------------------------
-async function fetchCSV(){
-  const res = await fetch(CSV_URL + "&cb=" + Date.now());
+async function fetchCSV() {
+  const url = CSV_URL + "&cb=" + Date.now();  // ← evita cache de Google
+  const res = await fetch(url, { cache: "no-store" }); // ← evita cache del navegador
   return await res.text();
 }
+
 
 async function loadCSV(){
   const text = await fetchCSV();
