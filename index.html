@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <title>Mapa Estratègic — Retícula Hexagonal</title>
     <style>
-        /* Estils originals exactes de les teves fonts [1] */
+        /* ESTILS ORIGINALS INTACTES */
         *{box-sizing:border-box;margin:0;padding:0}
         html,body{height:100%}
         body{ background:#000; color:#fff; font-family:Arial,Helvetica,sans-serif; display:flex; flex-direction:column; align-items:center; justify-content:flex-start; padding-top:20px; gap:20px; }
@@ -35,22 +35,26 @@
     </style>
 </head>
 <body>
+
     <div id="titleBar">Equip vermell — Accions disponibles: ...</div>
     <div id="actionBar"><div id="actionFill"></div></div>
+
     <div class="map-container" id="mapContainer">
         <img src="https://raw.githubusercontent.com/enricjimenezmercader-a11y/mapa_estrategic/main/mapa_fons.png" class="map-image">
         <svg id="hexGrid"></svg>
         <div id="warning">Ordre repetida</div>
         <div id="warningActions">Accions insuficients</div>
     </div>
+
     <div id="orders"></div>
     <button id="confirmBtn">Confirmar ordres</button>
+
     <audio id="moveSound" src="https://raw.githubusercontent.com/enricjimenezmercader-a11y/mapa_estrategic/main/mov.mp3"></audio>
     <audio id="ordersSound" src="https://raw.githubusercontent.com/enricjimenezmercader-a11y/mapa_estrategic/main/orders.mp3"></audio>
 
 <script>
-    // Constants de les teves fonts [1, 2]
-    const PATTERN=[9, 10];
+    // --- VARIABLES I CONFIGURACIÓ ORIGINALS [2, 3] ---
+    const PATTERN=[1, 6];
     const CSV_URL="https://docs.google.com/spreadsheets/d/e/2PACX-1vS8k769FG5aF_PK-AmHLVdcfc6sgJeeIhWkL9Q8Gcrs39JW9GyJid_OtHcwhN9r3xhFvWPrc_yigZiY/pub?output=csv";
     const REAL_R=41.78;
     const REAL_GRID_WIDTH=17 * REAL_R;
@@ -63,226 +67,214 @@
     let actionsAvailable=0;
     let arrowImages={};
     let clickLocked=false;
-    let lastCSVData = null; // Variable per detectar canvis reals
+    
+    // VARIABLE NOVA PER CONTROLAR CANVIS [3]
+    let lastCSVText = null;
 
-    // Funció unificada de lectura CSV sense cache [2]
-    async function fetchCSV() {
+    // --- LECTURA CSV AMB CACHE-BUSTER I NO-STORE [3] ---
+    async function fetchCSV(){
+        // Canvi imprescindible: Afegim cache: "no-store" per forçar la càrrega real
         const res = await fetch(CSV_URL + "&cb=" + Date.now(), { cache: "no-store" });
         return await res.text();
     }
 
-    // Sistema de sincronització que depura si hi ha canvis [2]
-    async function syncSystem() {
-        try {
-            const currentText = await fetchCSV();
-            const lines = currentText.trim().split("\n");
-            
-            // Gestió de bloqueig E1 (Fila 1, Columna E/index 4) [2]
-            const firstLineCols = lines.split(",");
-            const E1 = firstLineCols[10] ? firstLineCols[10].trim() : "0";
-            updateConfirmButton(E1);
-
-            // Només redibuixem si les dades (colors o accions) han canviat [2]
-            if (currentText === lastCSVData) return;
-            
-            console.log("Canvi detectat. Actualitzant mapa...");
-            lastCSVData = currentText;
-            
-            // Re-executem el dibuix del mapa
-            await redraw();
-            
-        } catch (err) {
-            console.error("Error en la sincronització:", err);
-        }
-    }
-
-    function updateConfirmButton(E1) {
-        const btn = document.getElementById("confirmBtn");
-        btn._sheetLocked = (E1 === "1");
-        if (btn._sheetLocked || btn._tempLocked) {
-            btn.disabled = true;
-            btn.style.background = "#555"; btn.style.color = "#999"; btn.style.cursor = "not-allowed";
-        } else {
-            btn.disabled = false;
-            btn.style.background = "#004400"; btn.style.color = "#aaffaa"; btn.style.cursor = "pointer";
-        }
-    }
-
-    // Funcions de geometria i càrrega de dades exactes del teu codi [2, 3]
-    async function loadCSVData() {
-        const lines = lastCSVData.trim().split("\n");
-        const colors = {};
-        lines.forEach((line, index) => {
-            const cols = line.split(",");
-            if (index === 1) actionsAvailable = parseInt(cols[2]) || 0; // Columna H [2]
-            const id = cols;
-            const color = cols[11];
-            if (id) colors[id.trim()] = (color || "").trim().toUpperCase();
+    async function loadCSV(){
+        const text = lastCSVText || await fetchCSV();
+        const lines=text.trim().split("\n");
+        const colors={};
+        let H2=0;
+        lines.forEach((line,index)=>{
+            const cols=line.split(",");
+            if(index===1) H2=parseInt(cols[3]);
+            const id=cols;
+            const color=cols[7];
+            if(id) colors[id.trim()]=color.trim().toUpperCase();
         });
+        actionsAvailable=H2;
         updateActionDisplay();
         return colors;
     }
 
-    async function drawHexGrid() {
-        const svg = document.getElementById("hexGrid");
-        const map = document.getElementById("mapContainer");
-        svg.innerHTML = ""; hexData = []; selectedRed = null; highlightedAdjacents = [];
-        
-        svg.insertAdjacentHTML("afterbegin", `<defs><pattern id="hatch-red" patternUnits="userSpaceOnUse" width="6" height="6" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="6" stroke="rgba(255,0,0,0.5)" stroke-width="3"/></pattern></defs>`);
+    // --- SISTEMA DE SINCRONITZACIÓ DINÀMICA (CANVI IMPRESCINDIBLE) ---
+    async function syncData() {
+        try {
+            const currentText = await fetchCSV();
+            
+            // 1. Sempre comprovem el bloqueig E1 (Fila 1, Col 5) [3]
+            const lines = currentText.trim().split("\n");
+            const colsE1 = lines.split(",");
+            const E1 = colsE1[6].trim();
+            const btn = document.getElementById("confirmBtn");
+            btn._sheetLocked = (E1 === "1");
+            
+            if (btn._sheetLocked || btn._tempLocked) {
+                btn.disabled = true; btn.style.background = "#555"; btn.style.color = "#999"; btn.style.cursor = "not-allowed";
+            } else {
+                btn.disabled = false; btn.style.background = "#004400"; btn.style.color = "#aaffaa"; btn.style.cursor = "pointer";
+            }
 
-        const colors = await loadCSVData();
-        const B = map.clientWidth;
-        const scale = B / REAL_GRID_WIDTH;
-        const R = REAL_R * scale;
-        const hexH = Math.sqrt(3) * R;
-        const gridHeight = (Math.max(...PATTERN) - 1) * hexH + hexH;
-        const offsetX = (B - (17 * R)) / 2 + R;
-        const offsetY = (map.clientHeight - gridHeight) / 2 + hexH / 2;
+            // 2. Si el text és igual a l'anterior, no redibuixem el mapa
+            if (currentText === lastCSVText) return;
+            
+            // 3. Si hi ha canvis, actualitzem el mapa
+            lastCSVText = currentText;
+            redraw();
 
-        let id = 1;
-        PATTERN.forEach((rowCount, col) => {
-            for (let r = 0; r < rowCount; r++) {
-                const cx = offsetX + col * 1.5 * R;
-                const cy = offsetY + r * hexH + (col % 2 === 0 ? 0 : hexH / 2);
-                const pts = [];
-                for (let i = 0; i < 6; i++) {
-                    const ang = Math.PI / 3 * i;
-                    pts.push([cx + R * Math.cos(ang), cy + R * Math.sin(ang)].join(","));
+        } catch (err) {
+            console.log("Error en la sincronització:", err);
+        }
+    }
+
+    // --- FUNCIONS ORIGINALS DE GEOMETRIA I INTERACCIÓ [3-5] ---
+    function updateActionDisplay(){
+        const spent=usedPoints();
+        const remaining=actionsAvailable-spent;
+        document.getElementById("titleBar").textContent= `Equip vermell — Accions disponibles: ${actionsAvailable} — Gastades: ${spent} — Restants: ${remaining}`;
+        const pct=Math.min(100,(spent/actionsAvailable) *100);
+        document.getElementById("actionFill").style.width=pct+"%";
+    }
+
+    function resizeMap(){
+        const map=document.getElementById("mapContainer");
+        const W=window.innerWidth; const H=window.innerHeight;
+        const maxW=W*(2/3); const maxH=H*(2/3);
+        let width=maxW; let height=width/IMAGE_RATIO;
+        if(height>maxH){ height=maxH; width=height*IMAGE_RATIO; }
+        map.style.width=width+"px"; map.style.height=height+"px";
+    }
+
+    async function drawHexGrid(){
+        const svg=document.getElementById("hexGrid");
+        const map=document.getElementById("mapContainer");
+        svg.innerHTML=""; hexData=[]; selectedRed=null; highlightedAdjacents=[]; arrowImages={}; ordersSet=new Set();
+        document.getElementById("orders").innerHTML="";
+
+        svg.insertAdjacentHTML("afterbegin",`<defs><pattern id="hatch-red" patternUnits="userSpaceOnUse" width="6" height="6" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="6" stroke="rgba(255,0,0,0.5)" stroke-width="3"/></pattern></defs>`);
+
+        const colors=await loadCSV();
+        const B=map.clientWidth;
+        const scale=B/REAL_GRID_WIDTH;
+        const R=REAL_R* scale;
+        const hexH=Math.sqrt(3) *R;
+        const gridHeight=(Math.max(...PATTERN)-1)*hexH+hexH;
+        const offsetX=(B-(17*R))/2+R;
+        const offsetY=(map.clientHeight-gridHeight)/2+hexH/2;
+
+        let id=1;
+        PATTERN.forEach((rowCount,col)=>{
+            for(let r=0;r<rowCount;r++){
+                const cx=offsetX+col* 1.5 *R;
+                const cy=offsetY+r* hexH+(col%2===0?0:hexH/2);
+                const pts=[];
+                for(let i=0;i<6;i++){
+                    const ang=Math.PI/3 *i;
+                    pts.push([cx+R* Math.cos(ang),cy+R* Math.sin(ang)].join(","));
                 }
-                const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
-                const poly = document.createElementNS("http://www.w3.org/2000/svg", "polygon");
-                poly.setAttribute("points", pts.join(" "));
-                const color = (colors[id] || "").toUpperCase();
-                let cls = "hex hex-mar";
-                if (color.includes("RED")) cls = "hex hex-red";
-                else if (color.includes("BLUE")) cls = "hex hex-blue";
-                poly.setAttribute("class", cls); poly.dataset.id = id;
+                const g=document.createElementNS("http://www.w3.org/2000/svg","g");
+                const poly=document.createElementNS("http://www.w3.org/2000/svg","polygon");
+                poly.setAttribute("points",pts.join(" "));
+                const color=(colors[id]||"").toUpperCase();
+                let cls="hex hex-mar";
+                if(color.includes("RED")) cls="hex hex-red"; else if(color.includes("BLUE")) cls="hex hex-blue";
+                poly.setAttribute("class",cls); poly.dataset.id=id;
                 g.appendChild(poly);
-                const label = document.createElementNS("http://www.w3.org/2000/svg", "text");
-                label.setAttribute("x", cx); label.setAttribute("y", cy + 4);
-                label.setAttribute("class", "hex-label"); label.textContent = id;
+                const label=document.createElementNS("http://www.w3.org/2000/svg","text");
+                label.setAttribute("x",cx); label.setAttribute("y",cy+4);
+                label.setAttribute("class","hex-label"); label.textContent=id;
                 g.appendChild(label);
                 svg.appendChild(g);
-                hexData.push({ id, cx, cy, color, element: poly });
+                hexData.push({id,cx,cy,color,element:poly});
                 id++;
             }
         });
     }
 
-    // Resta de funcions originals d'interacció [3, 4]
-    function updateActionDisplay() {
-        const spent = usedPoints();
-        const remaining = actionsAvailable - spent;
-        document.getElementById("titleBar").textContent = `Equip vermell — Accions disponibles: ${actionsAvailable} — Gastades: ${spent} — Restants: ${remaining}`;
-        document.getElementById("actionFill").style.width = Math.min(100, (spent / actionsAvailable) * 100) + "%";
-    }
-
-    function usedPoints() { return ordersSet.size * 10; }
-
-    function highlightAdjacent(redHex) {
-        clearHighlights(); selectedRed = redHex;
-        const R = REAL_R * (document.getElementById("mapContainer").clientWidth / REAL_GRID_WIDTH);
-        const maxDist = Math.sqrt(3) * R * 1.01;
-        hexData.forEach(h => {
-            if (h.color === "BLUE") {
-                const dist = Math.sqrt(Math.pow(h.cx - redHex.cx, 2) + Math.pow(h.cy - redHex.cy, 2));
-                if (dist <= maxDist) { h.element.classList.add("hex-hatch"); highlightedAdjacents.push(h); }
+    function highlightAdjacent(redHex){
+        clearHighlights(); selectedRed=redHex;
+        const R=REAL_R*(document.getElementById("mapContainer").clientWidth/REAL_GRID_WIDTH);
+        const maxDist=Math.sqrt(3)*R*1.01;
+        hexData.forEach(h=>{
+            if(h.color==="BLUE"){
+                const dist=Math.sqrt(Math.pow(h.cx-redHex.cx,2)+Math.pow(h.cy-redHex.cy,2));
+                if(dist<=maxDist){ h.element.classList.add("hex-hatch"); highlightedAdjacents.push(h); }
             }
         });
     }
 
-    function clearHighlights() {
-        highlightedAdjacents.forEach(h => h.element.classList.remove("hex-hatch"));
-        highlightedAdjacents = []; selectedRed = null;
+    function clearHighlights(){ highlightedAdjacents.forEach(h=>h.element.classList.remove("hex-hatch")); highlightedAdjacents=[]; selectedRed=null; }
+    function showWarning(){ const w=document.getElementById("warning"); w.classList.add("blink"); w.style.opacity=1; setTimeout(()=>{w.style.opacity=0;w.classList.remove("blink");},2000); }
+    function showWarningActions(){ const w=document.getElementById("warningActions"); w.classList.add("blink"); w.style.opacity=1; setTimeout(()=>{w.style.opacity=0;w.classList.remove("blink");},2000); }
+    function usedPoints(){ return ordersSet.size * 10; }
+
+    function direction(origin,target){
+        const dx=target.cx-origin.cx; const dy=target.cy-origin.cy;
+        if(dy<0 && Math.abs(dx)<Math.abs(dy)) return "N"; if(dy>0 && Math.abs(dx)<Math.abs(dy)) return "S";
+        if(dx>0) return dy<0 ? "NE" : "SE"; return dy<0 ? "NO" : "SO";
     }
 
-    function addOrder(originID, targetID) {
-        const key = `${originID}-${targetID}`;
-        if (ordersSet.has(key)) { showWarning(); return; }
-        if ((actionsAvailable - usedPoints()) < 10) { showWarningActions(); return; }
+    function placeArrow(origin,target,key){
+        const map=document.getElementById("mapContainer");
+        const B=map.clientWidth; const R=REAL_R*(B/REAL_GRID_WIDTH); const hexH=Math.sqrt(3)*R;
+        const dir=direction(origin,target);
+        const img=document.createElement("img");
+        img.src=`https://raw.githubusercontent.com/enricjimenezmercader-a11y/mapa_estrategic/main/AT-${dir}.svg`;
+        img.className="attack-arrow attack-arrow--shake attack-arrow--glow";
+        const w=2*R*1.42; const h=hexH*1.42;
+        img.style.width=w+"px"; img.style.height=h+"px";
+        img.style.left=(origin.cx-w/2)+"px"; img.style.top=(origin.cy-h/2)+"px";
+        map.appendChild(img); arrowImages[key]=img;
+        setTimeout(()=>{ if(img) img.classList.remove("attack-arrow--shake"); },260);
+    }
+
+    function removeArrow(key){ if(arrowImages[key]){ arrowImages[key].remove(); delete arrowImages[key]; } }
+
+    function addOrder(originID,targetID){
+        const key=`${originID}-${targetID}`;
+        if(ordersSet.has(key)){ showWarning(); return; }
+        if((actionsAvailable - usedPoints()) < 10){ showWarningActions(); return; }
         ordersSet.add(key);
-        const origin = hexData.find(h => h.id === originID);
-        const target = hexData.find(h => h.id === targetID);
-        placeArrow(origin, target, key);
-        document.getElementById("moveSound").play();
-        const line = document.createElement("div"); line.className = "order-line";
-        line.innerHTML = `<span>Ordre d'atac, territori ${originID} a territori ${targetID}</span><button class="order-btn" onclick="removeOrder('${key}', this)">Suspendre ordre</button>`;
-        document.getElementById("orders").appendChild(line);
-        updateActionDisplay();
+        clickLocked=true; document.body.style.cursor="wait"; setTimeout(()=>{clickLocked=false; document.body.style.cursor="default";},1000);
+        const origin=hexData.find(h=>h.id===originID); const target=hexData.find(h=>h.id===targetID);
+        placeArrow(origin,target,key); document.getElementById("moveSound").play();
+        const line=document.createElement("div"); line.className="order-line";
+        line.innerHTML=`<span>Ordre d'atac, territori ${originID} a territori ${targetID}</span><button class="order-btn" onclick="removeOrder('${key}', this)">Suspendre ordre</button>`;
+        document.getElementById("orders").appendChild(line); updateActionDisplay();
     }
 
-    window.removeOrder = (key, btn) => {
-        ordersSet.delete(key);
-        if (arrowImages[key]) { arrowImages[key].remove(); delete arrowImages[key]; }
-        btn.parentElement.remove();
-        updateActionDisplay();
-    };
+    window.removeOrder = (key, btn) => { ordersSet.delete(key); removeArrow(key); btn.parentElement.remove(); updateActionDisplay(); };
 
-    function placeArrow(origin, target, key) {
-        const map = document.getElementById("mapContainer");
-        const R = REAL_R * (map.clientWidth / REAL_GRID_WIDTH);
-        const hexH = Math.sqrt(3) * R;
-        const img = document.createElement("img");
-        const dir = getDirection(origin, target);
-        img.src = `https://raw.githubusercontent.com/enricjimenezmercader-a11y/mapa_estrategic/main/AT-${dir}.svg`;
-        img.className = "attack-arrow attack-arrow--shake attack-arrow--glow";
-        const w = 2 * R * 1.42; const h = hexH * 1.42;
-        img.style.width = w + "px"; img.style.height = h + "px";
-        img.style.left = (origin.cx - w / 2) + "px"; img.style.top = (origin.cy - h / 2) + "px";
-        map.appendChild(img); arrowImages[key] = img;
-        setTimeout(() => img.classList.remove("attack-arrow--shake"), 260);
-    }
-
-    function getDirection(o, t) {
-        const dx = t.cx - o.cx; const dy = t.cy - o.cy;
-        if (dy < 0 && Math.abs(dx) < Math.abs(dy)) return "N";
-        if (dy > 0 && Math.abs(dx) < Math.abs(dy)) return "S";
-        if (dx > 0) return dy < 0 ? "NE" : "SE";
-        return dy < 0 ? "NO" : "SO";
-    }
-
-    function setupClickHandler() {
-        document.getElementById("hexGrid").onclick = (e) => {
-            if (clickLocked) return;
-            const poly = e.target.closest("polygon");
-            if (!poly) { clearHighlights(); return; }
-            const hex = hexData.find(h => h.id === parseInt(poly.dataset.id));
-            if (hex.color === "RED") highlightAdjacent(hex);
-            else if (selectedRed && highlightedAdjacents.includes(hex)) addOrder(selectedRed.id, hex.id);
-            else clearHighlights();
+    function setupClickHandler(){
+        const svg=document.getElementById("hexGrid");
+        svg.onclick=(e)=>{
+            if(clickLocked) return;
+            const poly=e.target.closest("polygon"); if(!poly){ clearHighlights(); return; }
+            const hex=hexData.find(h=>h.id===parseInt(poly.dataset.id));
+            if(hex.color==="RED"){ highlightAdjacent(hex); return; }
+            if(selectedRed && highlightedAdjacents.some(h=>h.id===hex.id)){ addOrder(selectedRed.id,hex.id); return; }
+            clearHighlights();
         };
     }
 
-    async function redraw() {
-        resizeMap();
-        await drawHexGrid();
-        setupClickHandler();
-    }
+    function redraw(){ resizeMap(); drawHexGrid().then(()=>{ setupClickHandler(); updateActionDisplay(); }); }
 
-    function resizeMap() {
-        const map = document.getElementById("mapContainer");
-        let width = window.innerWidth * (2/3); let height = width / IMAGE_RATIO;
-        if (height > window.innerHeight * (2/3)) { height = window.innerHeight * (2/3); width = height * IMAGE_RATIO; }
-        map.style.width = width + "px"; map.style.height = height + "px";
-    }
+    // --- INICIALITZACIÓ I BUCLE [3, 5] ---
+    window.addEventListener("resize", () => { lastCSVText = null; redraw(); });
 
-    function showWarning() { document.getElementById("warning").style.opacity = 1; setTimeout(() => document.getElementById("warning").style.opacity = 0, 2000); }
-    function showWarningActions() { document.getElementById("warningActions").style.opacity = 1; setTimeout(() => document.getElementById("warningActions").style.opacity = 0, 2000); }
+    // Càrrega inicial i bucle dinàmic cada 3 segons
+    syncData();
+    setInterval(syncData, 3000);
 
-    // Inicialització i bucle cada 3 segons [2, 4]
-    window.onresize = () => { lastCSVData = null; redraw(); };
-    syncSystem();
-    setInterval(syncSystem, 3000);
-
+    // Botó Confirmar original
     document.getElementById("confirmBtn").onclick = async () => {
         const btn = document.getElementById("confirmBtn");
         if (btn._sheetLocked || btn._tempLocked) return;
-        btn._tempLocked = true; btn.disabled = true;
+        btn._tempLocked = true; btn.disabled = true; btn.style.background = "#555"; document.body.style.cursor = "wait";
+        setTimeout(() => { btn._tempLocked = false; document.body.style.cursor = "default"; syncData(); }, 5000);
         document.getElementById("ordersSound").play();
-        setTimeout(() => { btn._tempLocked = false; syncSystem(); }, 5000);
         const url = "https://script.google.com/macros/s/AKfycbzMGXDTpJXy2jGjGxPT5g27kOntPOEj6aO-ap_8KIPqi1iyR-FQknxpNva-QqqTXxt/exec";
-        for (const line of document.querySelectorAll(".order-line span")) {
-            await fetch(url, { method: "POST", mode: "no-cors", body: JSON.stringify({ orderText: line.textContent }) });
+        const spans = document.querySelectorAll(".order-line span");
+        for (const span of spans) {
+            await fetch(url, { method: "POST", mode: "no-cors", body: JSON.stringify({ orderText: span.textContent }) });
             await new Promise(r => setTimeout(r, 150));
         }
     };
