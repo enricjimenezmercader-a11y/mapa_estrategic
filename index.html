@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <title>Mapa Estratègic — Retícula Hexagonal</title>
     <style>
+        /* ESTILS ORIGINALS (Línies 4-106 de la font [1]) */
         *{box-sizing:border-box;margin:0;padding:0}
         html,body{height:100%}
         body{ background:#000; color:#fff; font-family:Arial,Helvetica,sans-serif; display:flex; flex-direction:column; align-items:center; justify-content:flex-start; padding-top:20px; gap:20px; }
@@ -52,8 +53,8 @@
     <audio id="ordersSound" src="https://raw.githubusercontent.com/enricjimenezmercader-a11y/mapa_estrategic/main/orders.mp3"></audio>
 
 <script>
-    // --- CONFIGURACIÓ ORIGINAL ---
-    const PATTERN=[2, 3];
+    // --- CONSTANTS I VARIABLES (Línies 204-218 de la font [1, 3]) ---
+    const PATTERN=[4, 5];
     const CSV_URL="https://docs.google.com/spreadsheets/d/e/2PACX-1vS8k769FG5aF_PK-AmHLVdcfc6sgJeeIhWkL9Q8Gcrs39JW9GyJid_OtHcwhN9r3xhFvWPrc_yigZiY/pub?output=csv";
     const REAL_R=41.78;
     const REAL_GRID_WIDTH=17 * REAL_R;
@@ -66,11 +67,12 @@
     let actionsAvailable=0;
     let arrowImages={};
     let clickLocked=false;
-    
-    // --- NOVA LÒGICA DE SINCRONITZACIÓ --- [4]
-    let lastCSVData = null;
+    let lastCSVData = null; // Variable per detectar canvis
+
+    // --- NOVA LÒGICA DE SINCRONITZACIÓ DINÀMICA ---
 
     async function fetchCSV() {
+        // Cache-busting real: Timestamp i capçalera no-store [3]
         const res = await fetch(CSV_URL + "&cb=" + Date.now(), { cache: "no-store" });
         return await res.text();
     }
@@ -78,42 +80,42 @@
     async function syncData() {
         try {
             const currentText = await fetchCSV();
-            
-            // 1. SEMPRE comprovem el bloqueig E1 (Fila 1, Columna 5)
+
+            // 1. Gestionar el bloqueig del botó (Columna E de la fila 1 [3])
             const lines = currentText.trim().split("\n");
             const firstLineCols = lines.split(",");
-            const E1 = firstLineCols[3] ? firstLineCols[3].trim() : "0";
-            updateConfirmButtonState(E1);
+            const E1 = firstLineCols[5] ? firstLineCols[5].trim() : "0";
+            updateButtonLock(E1);
 
-            // 2. Si les dades NO han canviat, no redibuixem el mapa
+            // 2. Comprovar si les dades han canviat realment
             if (currentText === lastCSVData) return;
             
-            console.log("Canvis detectats al Sheet. Actualitzant mapa...");
+            console.log("Actualitzant dades per canvis al fitxer...");
             lastCSVData = currentText;
 
-            // 3. Processar colors i accions (H2 està a Fila 2, Columna 8)
+            // 3. Processar columnes (ID: A, Color: B, Accions H2: Fila 2 Col H [3])
             const colors = {};
             let H2 = 0;
             lines.forEach((line, index) => {
                 const cols = line.split(",");
-                if (index === 1) H2 = parseInt(cols[4]) || 0;
+                if(index === 1) H2 = parseInt(cols[3]) || 0;
                 const id = cols;
-                const color = cols[5];
-                if (id) colors[id.trim()] = (color || "").trim().toUpperCase();
+                const color = cols[6];
+                if(id) colors[id.trim()] = (color || "").trim().toUpperCase();
             });
 
             actionsAvailable = H2;
             
-            // 4. Redibuixar mapa mantenint funcionalitat original
+            // 4. Redibuixar mapa amb la lògica de geometria original
             await drawHexGrid(colors);
             updateActionDisplay();
 
         } catch (err) {
-            console.error("Error de sincronització:", err);
+            console.error("Error en la sincronització:", err);
         }
     }
 
-    function updateConfirmButtonState(E1) {
+    function updateButtonLock(E1) {
         const btn = document.getElementById("confirmBtn");
         btn._sheetLocked = (E1 === "1");
         if (btn._sheetLocked || btn._tempLocked) {
@@ -129,7 +131,7 @@
         }
     }
 
-    // --- FUNCIONS DE DIBUIX I INTERACCIÓ (Originals de les línies 262-639) --- [6-8]
+    // --- FUNCIONS DE DIBUIX I GEOMETRIA (Línies 262-350 originals [3]) ---
 
     async function drawHexGrid(colors) {
         const svg=document.getElementById("hexGrid");
@@ -142,6 +144,7 @@
         ordersSet=new Set();
         document.getElementById("orders").innerHTML="";
 
+        // Patró de ratllat (Línia 272 [3])
         svg.insertAdjacentHTML("afterbegin",`<defs>
             <pattern id="hatch-red" patternUnits="userSpaceOnUse" width="6" height="6" patternTransform="rotate(45)">
                 <line x1="0" y1="0" x2="0" y2="6" stroke="rgba(255,0,0,0.5)" stroke-width="3"/>
@@ -195,6 +198,8 @@
         });
     }
 
+    // --- FUNCIONS D'INTERACCIÓ I ACCIONS (Línies 350-639 originals [7, 8]) ---
+
     function updateActionDisplay(){
         const spent=usedPoints();
         const remaining=actionsAvailable-spent;
@@ -202,8 +207,6 @@
         const pct=Math.min(100,(spent/actionsAvailable) *100);
         document.getElementById("actionFill").style.width=pct+"%";
     }
-
-    function usedPoints(){ return ordersSet.size * 10; }
 
     function highlightAdjacent(redHex){
         clearHighlights();
@@ -240,6 +243,8 @@
         w.classList.add("blink"); w.style.opacity=1;
         setTimeout(()=>{w.style.opacity=0;w.classList.remove("blink");},2000);
     }
+
+    function usedPoints(){ return ordersSet.size * 10; }
 
     function direction(origin,target){
         const dx=target.cx-origin.cx; const dy=target.cy-origin.cy;
@@ -339,16 +344,16 @@
         map.style.width=width+"px"; map.style.height=height+"px";
     }
 
-    // --- INICIALITZACIÓ ---
+    // --- INICIALITZACIÓ (Línies 600-639 [2, 8]) ---
     window.onresize = () => { resizeMap(); lastCSVData = null; syncData(); };
     
     resizeMap();
     syncData().then(() => setupClickHandler());
     
-    // Bucle d'actualització dinàmica cada 3 segons
+    // Bucle de sincronització cada 3 segons (ajustable)
     setInterval(syncData, 3000);
 
-    // Gestió del botó Confirmar (Original)
+    // Gestió del botó Confirmar (Original amb bloqueig de 5s)
     document.getElementById("confirmBtn").onclick = async () => {
         const btn = document.getElementById("confirmBtn");
         if (btn._sheetLocked || btn._tempLocked) return;
