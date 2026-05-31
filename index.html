@@ -222,8 +222,19 @@ let clickLocked=false;
 // LECTURA CSV AMB CACHE-BUSTER
 // ------------------------------
 async function fetchCSV() {
-  const url = CSV_URL + "&cb=" + Date.now();  // ← evita cache de Google
-  const res = await fetch(url, { cache: "no-store" }); // ← evita cache del navegador
+  // Si la URL ja té ?, fem servir &; si no, fem servir ?
+  const sep = CSV_URL.includes("?") ? "&" : "?";
+  const url = CSV_URL + sep + "cb=" + Date.now();
+
+  const res = await fetch(url, {
+    cache: "no-store",
+    headers: {
+      "Cache-Control": "no-cache, no-store, must-revalidate",
+      "Pragma": "no-cache",
+      "Expires": "0"
+    }
+  });
+
   return await res.text();
 }
 
