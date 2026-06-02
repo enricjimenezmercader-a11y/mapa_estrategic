@@ -6,176 +6,176 @@
   <title>Mapa Estratègic — Retícula Hexagonal</title>
 
   <style>
-    *{box-sizing:border-box;margin:0;padding:0}
-    html,body{height:100%}
-    body{
-      background:#000;
-      color:#fff;
-      font-family:Arial,Helvetica,sans-serif;
-      display:flex;
-      flex-direction:column;
-      align-items:center;
-      justify-content:flex-start;
-      padding-top:20px;
-      gap:20px;
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; }
+    body {
+      background: #000;
+      color: #fff;
+      font-family: Arial, Helvetica, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      padding-top: 20px;
+      gap: 20px;
     }
 
-    #titleBar{
-      font-size:28px;
-      font-weight:bold;
-      text-align:center;
+    #titleBar {
+      font-size: 28px;
+      font-weight: bold;
+      text-align: center;
     }
 
-    #actionBar{
-      width:66%;
-      height:20px;
-      background:#333;
-      border:1px solid #666;
-      margin-top:-10px;
-      margin-bottom:10px;
-      position:relative;
+    #actionBar {
+      width: 66%;
+      height: 20px;
+      background: #333;
+      border: 1px solid #666;
+      margin-top: -10px;
+      margin-bottom: 10px;
+      position: relative;
     }
 
-    #actionFill{
-      height:100%;
-      background:#00cc00;
-      width:0%;
-      transition:width 0.3s ease;
+    #actionFill {
+      height: 100%;
+      background: #00cc00;
+      width: 0%;
+      transition: width 0.3s ease;
     }
 
-    .map-container{
-      position:relative;
-      background:#1a1a1a;
-      border:1px solid #333;
-      overflow:hidden;
+    .map-container {
+      position: relative;
+      background: #1a1a1a;
+      border: 1px solid #333;
+      overflow: hidden;
     }
 
-    .map-image{
-      position:absolute;
-      inset:0;
-      width:100%;
-      height:100%;
-      object-fit:contain;
-      z-index:1;
-      pointer-events:none;
+    .map-image {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      z-index: 1;
+      pointer-events: none;
     }
 
-    svg{
-      position:absolute;
-      inset:0;
-      width:100%;
-      height:100%;
-      z-index:10;
+    svg {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 10;
     }
 
-    .hex{
-      stroke:#000;
-      stroke-width:2;
-      cursor:pointer;
+    .hex {
+      stroke: #000;
+      stroke-width: 2;
+      cursor: pointer;
     }
 
-    .hex-red{ fill:rgba(255,0,0,0.33); }
-    .hex-blue{ fill:rgba(0,120,255,0.33); }
-    .hex-mar{ fill:rgba(120,120,120,0.33); }
+    .hex-red { fill: rgba(255, 0, 0, 0.33); }
+    .hex-blue { fill: rgba(0, 120, 255, 0.33); }
+    .hex-mar { fill: rgba(120, 120, 120, 0.33); }
 
-    .hex-hatch{
-      fill:url(#hatch-red);
+    .hex-hatch {
+      fill: url(#hatch-red);
     }
 
-    .hex-label{
-      fill:#fff;
-      font-weight:bold;
-      text-anchor:middle;
-      pointer-events:none;
-      stroke:#000;
-      stroke-width:0.8;
+    .hex-label {
+      fill: #fff;
+      font-weight: bold;
+      text-anchor: middle;
+      pointer-events: none;
+      stroke: #000;
+      stroke-width: 0.8;
     }
 
-    #orders{
-      width:66%;
-      color:#7CFF7C;
-      font-family:monospace;
-      font-size:18px;
-      white-space:pre-line;
-      min-height:40px;
+    #orders {
+      width: 66%;
+      color: #7CFF7C;
+      font-family: monospace;
+      font-size: 18px;
+      white-space: pre-line;
+      min-height: 40px;
     }
 
-    .order-line{
-      display:flex;
-      justify-content:space-between;
-      align-items:center;
-      margin-bottom:6px;
+    .order-line {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 6px;
     }
 
-    .order-btn{
-      background:#550000;
-      color:#fff;
-      border:1px solid #aa0000;
-      padding:3px 8px;
-      cursor:pointer;
-      font-size:14px;
+    .order-btn {
+      background: #550000;
+      color: #fff;
+      border: 1px solid #aa0000;
+      padding: 3px 8px;
+      cursor: pointer;
+      font-size: 14px;
     }
 
-    #confirmBtn{
-      margin-top:10px;
-      padding:6px 12px;
-      background:#004400;
-      color:#aaffaa;
-      border:1px solid #66ff66;
-      cursor:pointer;
-      font-size:16px;
-      display:block;
+    #confirmBtn {
+      margin-top: 10px;
+      padding: 6px 12px;
+      background: #004400;
+      color: #aaffaa;
+      border: 1px solid #66ff66;
+      cursor: pointer;
+      font-size: 16px;
+      display: block;
     }
 
-    #warning, #warningActions{
-      position:absolute;
-      top:10px;
-      left:50%;
-      transform:translateX(-50%);
-      font-size:40px;
-      font-weight:bold;
-      color:#FF4444;
-      text-shadow:0 0 10px #000;
-      opacity:0;
-      pointer-events:none;
-      z-index:999;
+    #warning, #warningActions {
+      position: absolute;
+      top: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 40px;
+      font-weight: bold;
+      color: #FF4444;
+      text-shadow: 0 0 10px #000;
+      opacity: 0;
+      pointer-events: none;
+      z-index: 999;
     }
 
-    .blink{
+    .blink {
       animation: blinkAnim 0.3s linear infinite;
     }
 
-    @keyframes blinkAnim{
-      0%{opacity:1;}
-      50%{opacity:0;}
-      100%{opacity:1;}
+    @keyframes blinkAnim {
+      0% { opacity: 1; }
+      50% { opacity: 0; }
+      100% { opacity: 1; }
     }
 
-    .attack-arrow{
-      position:absolute;
-      pointer-events:none;
-      z-index:20;
-      transform-origin:center center;
+    .attack-arrow {
+      position: absolute;
+      pointer-events: none;
+      z-index: 20;
+      transform-origin: center center;
     }
 
     @keyframes shake {
-      0%   { transform: translate(0,0); }
-      25%  { transform: translate(1px,-1px); }
-      50%  { transform: translate(-1px,1px); }
-      75%  { transform: translate(1px,1px); }
-      100% { transform: translate(0,0); }
+      0% { transform: translate(0, 0); }
+      25% { transform: translate(1px, -1px); }
+      50% { transform: translate(-1px, 1px); }
+      75% { transform: translate(1px, 1px); }
+      100% { transform: translate(0, 0); }
     }
-    .attack-arrow--shake{
-      animation:shake 0.25s linear 1;
+    .attack-arrow--shake {
+      animation: shake 0.25s linear 1;
     }
 
     @keyframes glow {
-      0%   { filter: drop-shadow(0 0 0px #fff); }
-      50%  { filter: drop-shadow(0 0 12px #ffff66); }
+      0% { filter: drop-shadow(0 0 0px #fff); }
+      50% { filter: drop-shadow(0 0 12px #ffff66); }
       100% { filter: drop-shadow(0 0 0px #fff); }
     }
-    .attack-arrow--glow{
-      animation:glow 1.4s ease-in-out infinite;
+    .attack-arrow--glow {
+      animation: glow 1.4s ease-in-out infinite;
     }
   </style>
 </head>
@@ -214,73 +214,96 @@ let hexData=[];
 let selectedRed=null;
 let highlightedAdjacents=[];
 let ordersSet=new Set();
-let actionsAvailable=0;
+let actionsAvailable=0; // Accions disponibles globals
 let arrowImages={};
 let clickLocked=false;
+
+// Variables per guardar l'estat actual del CSV
+let hexColors = {}; // Guarda els colors actuals de les hexàgons
+let currentActionsAvailable = 0; // Guarda el valor H2 actual
 
 // ------------------------------
 // LECTURA CSV AMB CACHE-BUSTER
 // ------------------------------
-async function fetchCSV(){
+async function fetchCSVText(){
+  // Afegeix un timestamp a la URL per evitar la cache del navegador
   const res = await fetch(CSV_URL + "&cb=" + Date.now());
+  if (!res.ok) {
+    throw new Error(`HTTP error! status: ${res.status}`);
+  }
   return await res.text();
 }
 
-async function loadCSV(){
-  const text = await fetchCSV();
-  const lines=text.trim().split("\n");
-
-  const colors={};
-  let H2=0;
-
-  lines.forEach((line,index)=>{
-    const cols=line.split(",");
-    if(index===1) H2=parseInt(cols[7]);
-    const id=cols[0];
-    const color=cols[1];
-    if(id) colors[id.trim()]=color.trim().toUpperCase();
-  });
-
-  actionsAvailable=H2;
-  updateActionDisplay();
-  return colors;
-}
-
-setInterval(fetchCSV, 1000);
-  
 // ------------------------------
-// BLOQUEIG DINÀMIC PER E1
+// PROCESSAMENT DE DADES I ACTUALITZACIÓ DEL DOM
 // ------------------------------
-async function checkLockState() {
+async function processCSVData() {
   try {
-    const text = await fetchCSV();
+    const text = await fetchCSVText();
     const lines = text.trim().split("\n");
-    const cols = lines[0].split(",");
-    const E1 = cols[4].trim();
 
-    const btn = document.getElementById("confirmBtn");
+    const newColors = {};
+    let H2 = 0; // Variable temporal per al nou valor d'accions disponibles
 
-    btn._sheetLocked = (E1 === "1");
+    lines.forEach((line, index) => {
+      const cols = line.split(",");
+      // Assumim que H2 (accions disponibles) està a la segona línia (index 1), columna 8 (index 7)
+      if (index === 1) {
+          const parsedH2 = parseInt(cols[7]);
+          if (!isNaN(parsedH2)) {
+              H2 = parsedH2;
+          }
+      }
+      const id = cols[0];
+      const color = cols[1];
+      if (id) newColors[id.trim()] = color.trim().toUpperCase();
+    });
 
-    if (btn._sheetLocked || btn._tempLocked) {
-      btn.disabled = true;
-      btn.style.background = "#555";
-      btn.style.color = "#999";
-      btn.style.cursor = "not-allowed";
-    } else {
-      btn.disabled = false;
-      btn.style.background = "#004400";
-      btn.style.color = "#aaffaa";
-      btn.style.cursor = "pointer";
+    // Comprova si les accions disponibles han canviat
+    if (H2 !== currentActionsAvailable) {
+      console.log(`Actions available changed from ${currentActionsAvailable} to ${H2}`);
+      currentActionsAvailable = H2;
+      actionsAvailable = H2; // Actualitza la variable global
+      updateActionDisplay(); // Actualitza la visualització a la interfície
     }
 
+    // Comprova si els colors de les hexàgons han canviat
+    let colorsChanged = false;
+    // Compara la quantitat de hexàgons
+    if (Object.keys(hexColors).length !== Object.keys(newColors).length) {
+        colorsChanged = true;
+    } else {
+        // Compara el color de cada hexàgon
+        for (const id in newColors) {
+            if (hexColors[id] !== newColors[id]) {
+                colorsChanged = true;
+                break;
+            }
+        }
+    }
+    hexColors = newColors; // Actualitza els colors emmagatzemats
+
+    // Si els colors han canviat, redibuixa el grid
+    if (colorsChanged) {
+      console.log("Hex colors have changed. Redrawing grid.");
+      await drawHexGrid(); // Redibuixa el grid amb les noves dades
+      setupClickHandler(); // Re-estableix els event listeners després de redibuixar
+      updateActionDisplay(); // Assegura que la barra d'acció estigui correcta
+    }
+
+    // Comprova també l'estat de bloqueig del botó 'Confirmar ordres'
+    checkLockState();
+
   } catch (err) {
-    console.log("Error checkLockState:", err);
+    console.error("Error processing CSV data:", err);
   }
 }
 
-setInterval(checkLockState, 1000);
+// Interval per cridar a processCSVData cada segon
+setInterval(processCSVData, 1000);
 
+// ------------------------------
+// FUNCIONS DE LA INTERFÍCIE
 // ------------------------------
 
 function updateActionDisplay(){
@@ -312,14 +335,15 @@ async function drawHexGrid(){
   const svg=document.getElementById("hexGrid");
   const map=document.getElementById("mapContainer");
 
-  svg.innerHTML="";
-  hexData=[];
-  selectedRed=null;
+  svg.innerHTML=""; // Neteja el contingut anterior del SVG
+  hexData=[]; // Reinicia les dades de les hexàgons
+  selectedRed=null; // Reinicia la selecció
   highlightedAdjacents=[];
-  arrowImages={};
-  ordersSet=new Set();
-  document.getElementById("orders").innerHTML="";
+  arrowImages={}; // Neteja les imatges de les fletxes
+  ordersSet=new Set(); // Neteja les ordres
+  document.getElementById("orders").innerHTML=""; // Neteja la llista d'ordres a la UI
 
+  // Afegeix les definicions per al patró de ratllat
   svg.insertAdjacentHTML("afterbegin",`
     <defs>
       <pattern id="hatch-red" patternUnits="userSpaceOnUse" width="6" height="6" patternTransform="rotate(45)">
@@ -328,7 +352,8 @@ async function drawHexGrid(){
     </defs>
   `);
 
-  const colors=await loadCSV();
+  // Utilitza les dades globals 'hexColors' que s'actualitzen periòdicament
+  const colors = hexColors;
 
   const B=map.clientWidth;
   const scale=B/REAL_GRID_WIDTH;
@@ -337,18 +362,21 @@ async function drawHexGrid(){
 
   const maxRows=Math.max(...PATTERN);
   const gridHeight=(maxRows-1)*hexH+hexH;
-  const A=17*R;
+  const A=17*R; // Amplada de la retícula en unitats de hexàgon
 
+  // Calcula els desplaçaments per centrar la retícula
   const offsetX=(B-A)/2+R;
   const offsetY=(map.clientHeight-gridHeight)/2+hexH/2;
 
-  let id=1;
+  let id=1; // Contador per a l'ID de cada hexàgon
 
   PATTERN.forEach((rowCount,col)=>{
     for(let r=0;r<rowCount;r++){
+      // Calcula les coordenades del centre de l'hexàgon
       const cx=offsetX+col*1.5*R;
       const cy=offsetY+r*hexH+(col%2===0?0:hexH/2);
 
+      // Calcula els vèrtexs del polígon de l'hexàgon
       const pts=[];
       for(let i=0;i<6;i++){
         const ang=Math.PI/3*i;
@@ -360,47 +388,87 @@ async function drawHexGrid(){
       const poly=document.createElementNS("http://www.w3.org/2000/svg","polygon");
       poly.setAttribute("points",pts.join(" "));
 
-      const color=(colors[id]||"").toUpperCase();
-      let cls="hex hex-mar";
+      const color=(colors[id]||"").toUpperCase(); // Obté el color de les dades globals
+      let cls="hex hex-mar"; // Classe per defecte (marró/gris)
       if(color.includes("RED")) cls="hex hex-red";
       else if(color.includes("BLUE")) cls="hex hex-blue";
 
       poly.setAttribute("class",cls);
-      poly.dataset.id=id;
+      poly.dataset.id=id; // Assigna l'ID a l'element del polígon
 
       g.appendChild(poly);
 
+      // Crea i afegeix l'etiqueta (número) de l'hexàgon
       const label=document.createElementNS("http://www.w3.org/2000/svg","text");
       label.setAttribute("x",cx);
-      label.setAttribute("y",cy+4);
+      label.setAttribute("y",cy+4); // Ajust lleuger per centrar verticalment
       label.setAttribute("class","hex-label");
       label.textContent=id;
       g.appendChild(label);
 
       svg.appendChild(g);
 
+      // Guarda les dades de l'hexàgon per a ús posterior
       hexData.push({id,cx,cy,color,element:poly});
       id++;
     }
   });
 }
 
+// ------------------------------
+// BLOQUEIG DINÀMIC PER E1 (DES DEL CSV)
+// ------------------------------
+async function checkLockState() {
+  try {
+    // Reutilitza la funció per obtenir el text del CSV
+    const text = await fetchCSVText();
+    const lines = text.trim().split("\n");
+    if (lines.length > 0) {
+        const cols = lines[0].split(","); // Suposant que E1 està a la primera línia (index 0)
+        const E1 = cols[4].trim(); // Suposant que E1 és la cinquena columna (index 4)
+
+        const btn = document.getElementById("confirmBtn");
+
+        // Bloqueja si E1 és "1" O si està temporalment bloquejat per l'usuari
+        btn._sheetLocked = (E1 === "1");
+
+        if (btn._sheetLocked || btn._tempLocked) {
+          btn.disabled = true;
+          btn.style.background = "#555";
+          btn.style.color = "#999";
+          btn.style.cursor = "not-allowed";
+        } else {
+          btn.disabled = false;
+          btn.style.background = "#004400";
+          btn.style.color = "#aaffaa";
+          btn.style.cursor = "pointer";
+        }
+    }
+  } catch (err) {
+    console.log("Error checkLockState:", err);
+  }
+}
+
+// ------------------------------
+// FUNCIONS AUXILIARS
+// ------------------------------
+
 function highlightAdjacent(redHex){
   clearHighlights();
   selectedRed=redHex;
 
   const R=REAL_R*(document.getElementById("mapContainer").clientWidth/REAL_GRID_WIDTH);
-  const maxDist=Math.sqrt(3)*R*1.01;
+  const maxDist=Math.sqrt(3)*R*1.01; // Distància per considerar adjacents
 
   highlightedAdjacents=[];
 
   hexData.forEach(h=>{
-    if(h.color==="BLUE"){
+    if(h.color==="BLUE"){ // Només ressaltem hexàgons blaus adjacents
       const dx=h.cx-redHex.cx;
       const dy=h.cy-redHex.cy;
       const dist=Math.sqrt(dx*dx+dy*dy);
       if(dist<=maxDist){
-        h.element.classList.add("hex-hatch");
+        h.element.classList.add("hex-hatch"); // Aplica el patró de ratllat
         highlightedAdjacents.push(h);
       }
     }
@@ -427,7 +495,7 @@ function showWarningActions(){
   setTimeout(()=>{w.style.opacity=0;w.classList.remove("blink");},2000);
 }
 
-function usedPoints(){ return ordersSet.size*10; }
+function usedPoints(){ return ordersSet.size*10; } // Cada ordre costa 10 punts
 
 function direction(origin,target){
   const dx=target.cx-origin.cx;
@@ -440,7 +508,7 @@ function direction(origin,target){
   if(dx<0 && dy<0) return "NO";
   if(dx<0 && dy>0) return "SO";
 
-  return "N";
+  return "N"; // Direcció per defecte si no es pot determinar clarament
 }
 
 function arrowURL(dir){
@@ -468,19 +536,21 @@ function placeArrow(origin,target,key){
   img.src=url;
   img.className="attack-arrow attack-arrow--shake attack-arrow--glow";
 
-  const FACTOR=1.42;
+  const FACTOR=1.42; // Factor d'escala per a la mida de la fletxa
 
   const width = 2 * R * FACTOR;
   const height = hexH * FACTOR;
 
   img.style.width  = width + "px";
   img.style.height = height + "px";
+  // Centra la fletxa a l'origen
   img.style.left   = (origin.cx - width/2) + "px";
   img.style.top    = (origin.cy - height/2) + "px";
 
   map.appendChild(img);
-  arrowImages[key]=img;
+  arrowImages[key]=img; // Guarda referència a la imatge
 
+  // Elimina l'animació 'shake' després d'un temps
   setTimeout(()=>{
     if(img) img.classList.remove("attack-arrow--shake");
   },260);
@@ -488,8 +558,8 @@ function placeArrow(origin,target,key){
 
 function removeArrow(key){
   if(arrowImages[key]){
-    arrowImages[key].remove();
-    delete arrowImages[key];
+    arrowImages[key].remove(); // Elimina la imatge del DOM
+    delete arrowImages[key]; // Elimina la referència
   }
 }
 
@@ -497,19 +567,19 @@ function addOrder(originID,targetID){
   const key=`${originID}-${targetID}`;
 
   if(ordersSet.has(key)){
-    showWarning();
+    showWarning(); // Ordre repetida
     return;
   }
 
   const remaining=actionsAvailable-usedPoints();
   if(remaining<10){
-    showWarningActions();
+    showWarningActions(); // Accions insuficients
     return;
   }
 
-  ordersSet.add(key);
+  ordersSet.add(key); // Afegeix l'ordre al conjunt
 
-  // Bloqueig de clics 1 segon + cursor rellotge
+  // Bloqueig temporal de clics per evitar doble-clic
   clickLocked = true;
   document.body.style.cursor = "wait";
   setTimeout(() => {
@@ -520,14 +590,15 @@ function addOrder(originID,targetID){
   const origin=hexData.find(h=>h.id===originID);
   const target=hexData.find(h=>h.id===targetID);
 
-  placeArrow(origin,target,key);
+  placeArrow(origin,target,key); // Col·loca la fletxa visual
 
-  target.element.classList.remove("hex-hatch");
+  target.element.classList.remove("hex-hatch"); // Treu el ratllat del hexàgon de destí
 
-  document.getElementById("moveSound").play();
+  document.getElementById("moveSound").play(); // Reprodueix so de moviment
 
   const orders=document.getElementById("orders");
 
+  // Crea la línia per mostrar l'ordre a la UI
   const line=document.createElement("div");
   line.className="order-line";
   line.dataset.key=key;
@@ -539,6 +610,7 @@ function addOrder(originID,targetID){
   btn.textContent="Suspendre ordre";
   btn.className="order-btn";
 
+  // Funció per cancel·lar una ordre
   btn.onclick=()=>{
     ordersSet.delete(key);
     removeArrow(key);
@@ -550,58 +622,85 @@ function addOrder(originID,targetID){
   line.appendChild(btn);
   orders.appendChild(line);
 
-  updateActionDisplay();
+  updateActionDisplay(); // Actualitza la visualització d'accions disponibles
 }
 
 function setupClickHandler(){
   const svg=document.getElementById("hexGrid");
 
   svg.addEventListener("click", e => {
-    if (clickLocked) return;
+    if (clickLocked) return; // Ignora clics si està bloquejat
 
+    // Neteja qualsevol ressaltat anterior
     hexData.forEach(h=>h.element.classList.remove("hex-hatch"));
 
-    const poly=e.target.closest("polygon");
+    const poly=e.target.closest("polygon"); // Troba el polígon clicat
     if(!poly){
-      clearHighlights();
+      clearHighlights(); // Si es fa clic fora d'un hexàgon, neteja seleccions
       return;
     }
 
     const id=parseInt(poly.dataset.id);
     const hex=hexData.find(h=>h.id===id);
 
-    if(hex.color==="RED"){
-      highlightAdjacent(hex);
+    if(hex.color==="RED"){ // Si es fa clic en un hexàgon vermell
+      highlightAdjacent(hex); // Rssalta els adjacents possibles
       return;
     }
 
+    // Si hi ha un hexàgon vermell seleccionat i es fa clic en un adjacent ressaltat
     if(selectedRed && highlightedAdjacents.some(h=>h.id===id)){
-      addOrder(selectedRed.id,hex.id);
+      addOrder(selectedRed.id,hex.id); // Afegeix l'ordre
       return;
     }
 
-    clearHighlights();
+    clearHighlights(); // Si no és cap dels casos anteriors, neteja seleccions
   });
 }
 
+// Funció per redibuixar el mapa (potser necessària en altres esdeveniments)
 function redraw(){
-  resizeMap();
+  resizeMap(); // Redimensiona el contenidor del mapa
+  // drawHexGrid utilitza ara les dades globals hexColors
   drawHexGrid().then(()=>{
-    setupClickHandler();
-    updateActionDisplay();
+    setupClickHandler(); // Re-configura el listener de clics
+    updateActionDisplay(); // Actualitza la barra d'acció
   });
 }
 
-window.addEventListener("resize",redraw);
-redraw();
-checkLockState();
+// Funció per a la càrrega inicial de l'aplicació
+async function initialLoad() {
+  await processCSVData(); // Primer, carrega les dades del CSV i actualitza l'estat global
+  resizeMap(); // Ajusta el mapa a la mida de la finestra
+  await drawHexGrid(); // Dibuixa la retícula amb les dades inicials
+  setupClickHandler(); // Configura el listener de clics
+  updateActionDisplay(); // Mostra l'estat inicial de les accions
+  checkLockState(); // Comprova l'estat de bloqueig inicial del botó
+}
+
+// ------------------------------
+// ESDEVENIMENTS I ARRENCADA
+// ------------------------------
+
+window.addEventListener("resize", redraw); // Redibuixa si la finestra canvia de mida
+
+// Crida a la funció de càrrega inicial en lloc de redraw() directament
+initialLoad();
+
+// Interval per actualitzar les dades del CSV (ja definit a processCSVData)
+// setInterval(processCSVData, 1000);
+
+// Interval per comprovar l'estat de bloqueig (independent de la lectura de dades del mapa)
+setInterval(checkLockState, 1000);
 
 // Botó Confirmar ordres: bloqueig 5s, cursor rellotge i enviament seqüencial
 document.getElementById("confirmBtn").addEventListener("click", async () => {
   const btn = document.getElementById("confirmBtn");
 
+  // Si el full està bloquejat (E1=1) o està temporalment bloquejat, no fa res
   if (btn._sheetLocked || btn._tempLocked) return;
 
+  // Bloqueig temporal del botó i canvi de cursor
   btn._tempLocked = true;
   btn.disabled = true;
   btn.style.background = "#555";
@@ -609,27 +708,31 @@ document.getElementById("confirmBtn").addEventListener("click", async () => {
   btn.style.cursor = "not-allowed";
   document.body.style.cursor = "wait";
 
+  // Allibera el bloqueig temporal després de 5 segons
   setTimeout(() => {
     btn._tempLocked = false;
     document.body.style.cursor = "default";
-    checkLockState();
+    checkLockState(); // Torna a comprovar l'estat de bloqueig per si ha canviat
   }, 5000);
 
-  document.getElementById("ordersSound").play();
+  document.getElementById("ordersSound").play(); // Reprodueix so de confirmació
 
+  // URL del Google Apps Script per enviar les ordres
   const url = "https://script.google.com/macros/s/AKfycbzMGXDTpJXy2jGjGxPT5g27kOntPOEj6aO-ap_8KIPqi1iyR-FQknxpNva-QqqTXxt_/exec";
-  const lines = document.querySelectorAll(".order-line");
+  const lines = document.querySelectorAll(".order-line"); // Selecciona totes les ordres actives
 
+  // Envia cada ordre seqüencialment
   for (const line of lines) {
-    const text = line.querySelector("span").textContent;
+    const text = line.querySelector("span").textContent; // Obté el text de l'ordre
 
     await fetch(url, {
       method: "POST",
-      mode: "no-cors",
+      mode: "no-cors", // Necessari per enviar a Google Apps Script sense CORS
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ orderText: text })
+      body: JSON.stringify({ orderText: text }) // Envia l'ordre com a JSON
     });
 
+    // Petita pausa entre enviaments per no saturar el servidor
     await new Promise(res => setTimeout(res, 150));
   }
 });
