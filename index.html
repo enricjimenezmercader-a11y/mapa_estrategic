@@ -18,6 +18,7 @@
       justify-content: flex-start;
       padding-top: 20px;
       gap: 20px;
+      position: relative; /* Necessari per posicionar el marcador de temps */
     }
 
     #titleBar {
@@ -141,41 +142,54 @@
       z-index: 999;
     }
 
+    /* Estils per al marcador de temps */
+    #timeInfo {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      font-size: 12px;
+      color: #aaa;
+      background: rgba(0, 0, 0, 0.5);
+      padding: 3px 6px;
+      border-radius: 4px;
+      z-index: 1000;
+    }
+
     .blink {
       animation: blinkAnim 0.3s linear infinite;
     }
 
-    @keyframes blinkAnim {
-      0% { opacity: 1; }
-      50% { opacity: 0; }
-      100% { opacity: 1; }
+    @keyframes blinkAnim{
+      0%{opacity:1;}
+      50%{opacity:0;}
+      100%{opacity:1;}
     }
 
-    .attack-arrow {
-      position: absolute;
-      pointer-events: none;
-      z-index: 20;
-      transform-origin: center center;
+    .attack-arrow{
+      position:absolute;
+      pointer-events:none;
+      z-index:20;
+      transform-origin:center center;
     }
 
     @keyframes shake {
-      0% { transform: translate(0, 0); }
-      25% { transform: translate(1px, -1px); }
-      50% { transform: translate(-1px, 1px); }
-      75% { transform: translate(1px, 1px); }
-      100% { transform: translate(0, 0); }
+      0%   { transform: translate(0,0); }
+      25%  { transform: translate(1px,-1px); }
+      50%  { transform: translate(-1px,1px); }
+      75%  { transform: translate(1px,1px); }
+      100% { transform: translate(0,0); }
     }
-    .attack-arrow--shake {
-      animation: shake 0.25s linear 1;
+    .attack-arrow--shake{
+      animation:shake 0.25s linear 1;
     }
 
     @keyframes glow {
-      0% { filter: drop-shadow(0 0 0px #fff); }
-      50% { filter: drop-shadow(0 0 12px #ffff66); }
+      0%   { filter: drop-shadow(0 0 0px #fff); }
+      50%  { filter: drop-shadow(0 0 12px #ffff66); }
       100% { filter: drop-shadow(0 0 0px #fff); }
     }
-    .attack-arrow--glow {
-      animation: glow 1.4s ease-in-out infinite;
+    .attack-arrow--glow{
+      animation:glow 1.4s ease-in-out infinite;
     }
   </style>
 </head>
@@ -184,6 +198,9 @@
 
 <audio id="moveSound" src="https://raw.githubusercontent.com/enricjimenezmercader-a11y/mapa_estrategic/main/Move.wav"></audio>
 <audio id="ordersSound" src="https://raw.githubusercontent.com/enricjimenezmercader-a11y/mapa_estrategic/main/Orders.wav"></audio>
+
+<!-- Marcador de temps per a la lectura del CSV -->
+<div id="timeInfo">Lectura CSV: 0 ms</div>
 
 <div id="titleBar">Equip vermell — Accions disponibles: ...</div>
 <div id="actionBar"><div id="actionFill"></div></div>
@@ -214,40 +231,50 @@ let hexData=[];
 let selectedRed=null;
 let highlightedAdjacents=[];
 let ordersSet=new Set();
-let actionsAvailable=0; // Accions disponibles globals
+let actionsAvailable=0;
 let arrowImages={};
 let clickLocked=false;
 
 // Variables per guardar l'estat actual del CSV
-let hexColors = {}; // Guarda els colors actuals de les hexàgons
-let currentActionsAvailable = 0; // Guarda el valor H2 actual
+let hexColors = {};
+let currentActionsAvailable = 0;
+
+// Variables per al seguiment del temps de lectura
+let lastCsvReadTime = Date.now();
+let timeInfoElement; // Referència a l'element div per mostrar el temps
 
 // ------------------------------
 // LECTURA CSV AMB CACHE-BUSTER
 // ------------------------------
 async function fetchCSVText(){
-  // Afegeix un timestamp a la URL per evitar la cache del navegador
+  const startTime = Date.now(); // Marca el temps d'inici de la petició
   const res = await fetch(CSV_URL + "&cb=" + Date.now());
   if (!res.ok) {
     throw new Error(`HTTP error! status: ${res.status}`);
   }
-  return await res.text();
+  const text = await res.text();
+  const endTime = Date.now(); // Marca el temps de finalització de la descàrrega
+  const duration = endTime - startTime; // Calcula la duració de la descàrrega
+  return { text, duration }; // Retorna el text i la durada
 }
 
 // ------------------------------
 // PROCESSAMENT DE DADES I ACTUALITZACIÓ DEL DOM
 // ------------------------------
 async function processCSVData() {
+  const processStartTime = Date.now(); // Marca el temps d'inici del processament complet
+
   try {
-    const text = await fetchCSVText();
+    const { text, duration: fetchDuration } = await fetchCSVText(); // Obté el text i la durada de la descàrrega
+    lastCsvReadTime = Date.now(); // Actualitza el temps de l'última lectura correcta
+
     const lines = text.trim().split("\n");
 
     const newColors = {};
-    let H2 = 0; // Variable temporal per al nou valor d'accions disponibles
+    let H2 = 0;
 
     lines.forEach((line, index) => {
       const cols = line.split(",");
-      // Assumim que H2 (accions disponibles) està a la segona línia (index 1), columna 8 (index 7)
       if (index === 1) {
           const parsedH2 = parseInt(cols[7]);
           if (!isNaN(parsedH2)) {
@@ -259,21 +286,19 @@ async function processCSVData() {
       if (id) newColors[id.trim()] = color.trim().toUpperCase();
     });
 
-    // Comprova si les accions disponibles han canviat
+    // Actualitza accions disponibles si canvien
     if (H2 !== currentActionsAvailable) {
       console.log(`Actions available changed from ${currentActionsAvailable} to ${H2}`);
       currentActionsAvailable = H2;
-      actionsAvailable = H2; // Actualitza la variable global
-      updateActionDisplay(); // Actualitza la visualització a la interfície
+      actionsAvailable = H2;
+      updateActionDisplay();
     }
 
     // Comprova si els colors de les hexàgons han canviat
     let colorsChanged = false;
-    // Compara la quantitat de hexàgons
     if (Object.keys(hexColors).length !== Object.keys(newColors).length) {
         colorsChanged = true;
     } else {
-        // Compara el color de cada hexàgon
         for (const id in newColors) {
             if (hexColors[id] !== newColors[id]) {
                 colorsChanged = true;
@@ -281,21 +306,44 @@ async function processCSVData() {
             }
         }
     }
-    hexColors = newColors; // Actualitza els colors emmagatzemats
+    hexColors = newColors;
 
     // Si els colors han canviat, redibuixa el grid
     if (colorsChanged) {
       console.log("Hex colors have changed. Redrawing grid.");
-      await drawHexGrid(); // Redibuixa el grid amb les noves dades
-      setupClickHandler(); // Re-estableix els event listeners després de redibuixar
-      updateActionDisplay(); // Assegura que la barra d'acció estigui correcta
+      await drawHexGrid();
+      setupClickHandler();
+      updateActionDisplay();
     }
 
-    // Comprova també l'estat de bloqueig del botó 'Confirmar ordres'
     checkLockState();
+
+    // Actualitza el marcador de temps al final del processament
+    const processEndTime = Date.now();
+    const totalDuration = processEndTime - processStartTime;
+    updateTimeInfo(fetchDuration, totalDuration);
 
   } catch (err) {
     console.error("Error processing CSV data:", err);
+    // Si hi ha un error, podríem voler mostrar un temps d'error o mantenir l'anterior
+    updateTimeInfo(0, 0, true); // Indica error
+  }
+}
+
+// Funció per actualitzar el marcador de temps a la UI
+function updateTimeInfo(fetchDuration, totalDuration, isError = false) {
+  if (!timeInfoElement) {
+    timeInfoElement = document.getElementById("timeInfo");
+  }
+  if (timeInfoElement) {
+    if (isError) {
+      timeInfoElement.textContent = `Lectura CSV: ERROR`;
+      timeInfoElement.style.color = "#FF4444";
+    } else {
+      // Mostra el temps de descàrrega (fetch) i el temps total de processament
+      timeInfoElement.textContent = `Lectura CSV: ${fetchDuration} ms (Fetch) / ${totalDuration} ms (Total)`;
+      timeInfoElement.style.color = "#aaa"; // Color normal
+    }
   }
 }
 
@@ -335,15 +383,14 @@ async function drawHexGrid(){
   const svg=document.getElementById("hexGrid");
   const map=document.getElementById("mapContainer");
 
-  svg.innerHTML=""; // Neteja el contingut anterior del SVG
-  hexData=[]; // Reinicia les dades de les hexàgons
-  selectedRed=null; // Reinicia la selecció
+  svg.innerHTML="";
+  hexData=[];
+  selectedRed=null;
   highlightedAdjacents=[];
-  arrowImages={}; // Neteja les imatges de les fletxes
-  ordersSet=new Set(); // Neteja les ordres
-  document.getElementById("orders").innerHTML=""; // Neteja la llista d'ordres a la UI
+  arrowImages={};
+  ordersSet=new Set();
+  document.getElementById("orders").innerHTML="";
 
-  // Afegeix les definicions per al patró de ratllat
   svg.insertAdjacentHTML("afterbegin",`
     <defs>
       <pattern id="hatch-red" patternUnits="userSpaceOnUse" width="6" height="6" patternTransform="rotate(45)">
@@ -352,7 +399,6 @@ async function drawHexGrid(){
     </defs>
   `);
 
-  // Utilitza les dades globals 'hexColors' que s'actualitzen periòdicament
   const colors = hexColors;
 
   const B=map.clientWidth;
@@ -362,21 +408,18 @@ async function drawHexGrid(){
 
   const maxRows=Math.max(...PATTERN);
   const gridHeight=(maxRows-1)*hexH+hexH;
-  const A=17*R; // Amplada de la retícula en unitats de hexàgon
+  const A=17*R;
 
-  // Calcula els desplaçaments per centrar la retícula
   const offsetX=(B-A)/2+R;
   const offsetY=(map.clientHeight-gridHeight)/2+hexH/2;
 
-  let id=1; // Contador per a l'ID de cada hexàgon
+  let id=1;
 
   PATTERN.forEach((rowCount,col)=>{
     for(let r=0;r<rowCount;r++){
-      // Calcula les coordenades del centre de l'hexàgon
       const cx=offsetX+col*1.5*R;
       const cy=offsetY+r*hexH+(col%2===0?0:hexH/2);
 
-      // Calcula els vèrtexs del polígon de l'hexàgon
       const pts=[];
       for(let i=0;i<6;i++){
         const ang=Math.PI/3*i;
@@ -388,27 +431,25 @@ async function drawHexGrid(){
       const poly=document.createElementNS("http://www.w3.org/2000/svg","polygon");
       poly.setAttribute("points",pts.join(" "));
 
-      const color=(colors[id]||"").toUpperCase(); // Obté el color de les dades globals
-      let cls="hex hex-mar"; // Classe per defecte (marró/gris)
+      const color=(colors[id]||"").toUpperCase();
+      let cls="hex hex-mar";
       if(color.includes("RED")) cls="hex hex-red";
       else if(color.includes("BLUE")) cls="hex hex-blue";
 
       poly.setAttribute("class",cls);
-      poly.dataset.id=id; // Assigna l'ID a l'element del polígon
+      poly.dataset.id=id;
 
       g.appendChild(poly);
 
-      // Crea i afegeix l'etiqueta (número) de l'hexàgon
       const label=document.createElementNS("http://www.w3.org/2000/svg","text");
       label.setAttribute("x",cx);
-      label.setAttribute("y",cy+4); // Ajust lleuger per centrar verticalment
+      label.setAttribute("y",cy+4);
       label.setAttribute("class","hex-label");
       label.textContent=id;
       g.appendChild(label);
 
       svg.appendChild(g);
 
-      // Guarda les dades de l'hexàgon per a ús posterior
       hexData.push({id,cx,cy,color,element:poly});
       id++;
     }
@@ -421,15 +462,14 @@ async function drawHexGrid(){
 async function checkLockState() {
   try {
     // Reutilitza la funció per obtenir el text del CSV
-    const text = await fetchCSVText();
+    const { text } = await fetchCSVText(); // Només necessitem el text aquí
     const lines = text.trim().split("\n");
     if (lines.length > 0) {
-        const cols = lines[0].split(","); // Suposant que E1 està a la primera línia (index 0)
-        const E1 = cols[4].trim(); // Suposant que E1 és la cinquena columna (index 4)
+        const cols = lines[0].split(",");
+        const E1 = cols[4].trim();
 
         const btn = document.getElementById("confirmBtn");
 
-        // Bloqueja si E1 és "1" O si està temporalment bloquejat per l'usuari
         btn._sheetLocked = (E1 === "1");
 
         if (btn._sheetLocked || btn._tempLocked) {
@@ -458,17 +498,17 @@ function highlightAdjacent(redHex){
   selectedRed=redHex;
 
   const R=REAL_R*(document.getElementById("mapContainer").clientWidth/REAL_GRID_WIDTH);
-  const maxDist=Math.sqrt(3)*R*1.01; // Distància per considerar adjacents
+  const maxDist=Math.sqrt(3)*R*1.01;
 
   highlightedAdjacents=[];
 
   hexData.forEach(h=>{
-    if(h.color==="BLUE"){ // Només ressaltem hexàgons blaus adjacents
+    if(h.color==="BLUE"){
       const dx=h.cx-redHex.cx;
       const dy=h.cy-redHex.cy;
       const dist=Math.sqrt(dx*dx+dy*dy);
       if(dist<=maxDist){
-        h.element.classList.add("hex-hatch"); // Aplica el patró de ratllat
+        h.element.classList.add("hex-hatch");
         highlightedAdjacents.push(h);
       }
     }
@@ -495,7 +535,7 @@ function showWarningActions(){
   setTimeout(()=>{w.style.opacity=0;w.classList.remove("blink");},2000);
 }
 
-function usedPoints(){ return ordersSet.size*10; } // Cada ordre costa 10 punts
+function usedPoints(){ return ordersSet.size*10; }
 
 function direction(origin,target){
   const dx=target.cx-origin.cx;
@@ -508,7 +548,7 @@ function direction(origin,target){
   if(dx<0 && dy<0) return "NO";
   if(dx<0 && dy>0) return "SO";
 
-  return "N"; // Direcció per defecte si no es pot determinar clarament
+  return "N";
 }
 
 function arrowURL(dir){
@@ -536,21 +576,19 @@ function placeArrow(origin,target,key){
   img.src=url;
   img.className="attack-arrow attack-arrow--shake attack-arrow--glow";
 
-  const FACTOR=1.42; // Factor d'escala per a la mida de la fletxa
+  const FACTOR=1.42;
 
   const width = 2 * R * FACTOR;
   const height = hexH * FACTOR;
 
   img.style.width  = width + "px";
   img.style.height = height + "px";
-  // Centra la fletxa a l'origen
   img.style.left   = (origin.cx - width/2) + "px";
   img.style.top    = (origin.cy - height/2) + "px";
 
   map.appendChild(img);
-  arrowImages[key]=img; // Guarda referència a la imatge
+  arrowImages[key]=img;
 
-  // Elimina l'animació 'shake' després d'un temps
   setTimeout(()=>{
     if(img) img.classList.remove("attack-arrow--shake");
   },260);
@@ -558,8 +596,8 @@ function placeArrow(origin,target,key){
 
 function removeArrow(key){
   if(arrowImages[key]){
-    arrowImages[key].remove(); // Elimina la imatge del DOM
-    delete arrowImages[key]; // Elimina la referència
+    arrowImages[key].remove();
+    delete arrowImages[key];
   }
 }
 
@@ -567,19 +605,18 @@ function addOrder(originID,targetID){
   const key=`${originID}-${targetID}`;
 
   if(ordersSet.has(key)){
-    showWarning(); // Ordre repetida
+    showWarning();
     return;
   }
 
   const remaining=actionsAvailable-usedPoints();
   if(remaining<10){
-    showWarningActions(); // Accions insuficients
+    showWarningActions();
     return;
   }
 
-  ordersSet.add(key); // Afegeix l'ordre al conjunt
+  ordersSet.add(key);
 
-  // Bloqueig temporal de clics per evitar doble-clic
   clickLocked = true;
   document.body.style.cursor = "wait";
   setTimeout(() => {
@@ -590,15 +627,14 @@ function addOrder(originID,targetID){
   const origin=hexData.find(h=>h.id===originID);
   const target=hexData.find(h=>h.id===targetID);
 
-  placeArrow(origin,target,key); // Col·loca la fletxa visual
+  placeArrow(origin,target,key);
 
-  target.element.classList.remove("hex-hatch"); // Treu el ratllat del hexàgon de destí
+  target.element.classList.remove("hex-hatch");
 
-  document.getElementById("moveSound").play(); // Reprodueix so de moviment
+  document.getElementById("moveSound").play();
 
   const orders=document.getElementById("orders");
 
-  // Crea la línia per mostrar l'ordre a la UI
   const line=document.createElement("div");
   line.className="order-line";
   line.dataset.key=key;
@@ -610,7 +646,6 @@ function addOrder(originID,targetID){
   btn.textContent="Suspendre ordre";
   btn.className="order-btn";
 
-  // Funció per cancel·lar una ordre
   btn.onclick=()=>{
     ordersSet.delete(key);
     removeArrow(key);
@@ -622,85 +657,80 @@ function addOrder(originID,targetID){
   line.appendChild(btn);
   orders.appendChild(line);
 
-  updateActionDisplay(); // Actualitza la visualització d'accions disponibles
+  updateActionDisplay();
 }
 
 function setupClickHandler(){
   const svg=document.getElementById("hexGrid");
 
   svg.addEventListener("click", e => {
-    if (clickLocked) return; // Ignora clics si està bloquejat
+    if (clickLocked) return;
 
-    // Neteja qualsevol ressaltat anterior
     hexData.forEach(h=>h.element.classList.remove("hex-hatch"));
 
-    const poly=e.target.closest("polygon"); // Troba el polígon clicat
+    const poly=e.target.closest("polygon");
     if(!poly){
-      clearHighlights(); // Si es fa clic fora d'un hexàgon, neteja seleccions
+      clearHighlights();
       return;
     }
 
     const id=parseInt(poly.dataset.id);
     const hex=hexData.find(h=>h.id===id);
 
-    if(hex.color==="RED"){ // Si es fa clic en un hexàgon vermell
-      highlightAdjacent(hex); // Rssalta els adjacents possibles
+    if(hex.color==="RED"){
+      highlightAdjacent(hex);
       return;
     }
 
-    // Si hi ha un hexàgon vermell seleccionat i es fa clic en un adjacent ressaltat
     if(selectedRed && highlightedAdjacents.some(h=>h.id===id)){
-      addOrder(selectedRed.id,hex.id); // Afegeix l'ordre
+      addOrder(selectedRed.id,hex.id);
       return;
     }
 
-    clearHighlights(); // Si no és cap dels casos anteriors, neteja seleccions
+    clearHighlights();
   });
 }
 
-// Funció per redibuixar el mapa (potser necessària en altres esdeveniments)
 function redraw(){
-  resizeMap(); // Redimensiona el contenidor del mapa
-  // drawHexGrid utilitza ara les dades globals hexColors
+  resizeMap();
   drawHexGrid().then(()=>{
-    setupClickHandler(); // Re-configura el listener de clics
-    updateActionDisplay(); // Actualitza la barra d'acció
+    setupClickHandler();
+    updateActionDisplay();
   });
-}
-
-// Funció per a la càrrega inicial de l'aplicació
-async function initialLoad() {
-  await processCSVData(); // Primer, carrega les dades del CSV i actualitza l'estat global
-  resizeMap(); // Ajusta el mapa a la mida de la finestra
-  await drawHexGrid(); // Dibuixa la retícula amb les dades inicials
-  setupClickHandler(); // Configura el listener de clics
-  updateActionDisplay(); // Mostra l'estat inicial de les accions
-  checkLockState(); // Comprova l'estat de bloqueig inicial del botó
 }
 
 // ------------------------------
 // ESDEVENIMENTS I ARRENCADA
 // ------------------------------
 
-window.addEventListener("resize", redraw); // Redibuixa si la finestra canvia de mida
+window.addEventListener("resize", redraw);
 
-// Crida a la funció de càrrega inicial en lloc de redraw() directament
+// Funció per a la càrrega inicial de l'aplicació
+async function initialLoad() {
+  // Obtenim les dades inicials primer per poder dibuixar el mapa correctament
+  await processCSVData();
+  resizeMap();
+  await drawHexGrid();
+  setupClickHandler();
+  updateActionDisplay();
+  checkLockState();
+}
+
+// Crida a la funció de càrrega inicial
 initialLoad();
 
-// Interval per actualitzar les dades del CSV (ja definit a processCSVData)
+// Interval per actualitzar les dades del CSV (ja gestionat dins de processCSVData)
 // setInterval(processCSVData, 1000);
 
 // Interval per comprovar l'estat de bloqueig (independent de la lectura de dades del mapa)
 setInterval(checkLockState, 1000);
 
-// Botó Confirmar ordres: bloqueig 5s, cursor rellotge i enviament seqüencial
+// Botó Confirmar ordres
 document.getElementById("confirmBtn").addEventListener("click", async () => {
   const btn = document.getElementById("confirmBtn");
 
-  // Si el full està bloquejat (E1=1) o està temporalment bloquejat, no fa res
   if (btn._sheetLocked || btn._tempLocked) return;
 
-  // Bloqueig temporal del botó i canvi de cursor
   btn._tempLocked = true;
   btn.disabled = true;
   btn.style.background = "#555";
@@ -708,31 +738,27 @@ document.getElementById("confirmBtn").addEventListener("click", async () => {
   btn.style.cursor = "not-allowed";
   document.body.style.cursor = "wait";
 
-  // Allibera el bloqueig temporal després de 5 segons
   setTimeout(() => {
     btn._tempLocked = false;
     document.body.style.cursor = "default";
-    checkLockState(); // Torna a comprovar l'estat de bloqueig per si ha canviat
+    checkLockState();
   }, 5000);
 
-  document.getElementById("ordersSound").play(); // Reprodueix so de confirmació
+  document.getElementById("ordersSound").play();
 
-  // URL del Google Apps Script per enviar les ordres
   const url = "https://script.google.com/macros/s/AKfycbzMGXDTpJXy2jGjGxPT5g27kOntPOEj6aO-ap_8KIPqi1iyR-FQknxpNva-QqqTXxt_/exec";
-  const lines = document.querySelectorAll(".order-line"); // Selecciona totes les ordres actives
+  const lines = document.querySelectorAll(".order-line");
 
-  // Envia cada ordre seqüencialment
   for (const line of lines) {
-    const text = line.querySelector("span").textContent; // Obté el text de l'ordre
+    const text = line.querySelector("span").textContent;
 
     await fetch(url, {
       method: "POST",
-      mode: "no-cors", // Necessari per enviar a Google Apps Script sense CORS
+      mode: "no-cors",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ orderText: text }) // Envia l'ordre com a JSON
+      body: JSON.stringify({ orderText: text })
     });
 
-    // Petita pausa entre enviaments per no saturar el servidor
     await new Promise(res => setTimeout(res, 150));
   }
 });
