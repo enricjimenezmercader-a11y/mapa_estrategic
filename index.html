@@ -284,13 +284,9 @@ setInterval(checkLockState, 1000);
 // ------------------------------
 
 function updateActionDisplay(){
-  const spent=usedPoints();
-  const remaining=actionsAvailable-spent;
-  document.getElementById("titleBar").textContent=
-    `Equip vermell — Accions disponibles: ${actionsAvailable} — Gastades: ${spent} — Restants: ${remaining}`;
-  const pct=Math.min(100,(spent/actionsAvailable)*100);
-  document.getElementById("actionFill").style.width=pct+"%";
-}
+    document.getElementById("titleBar").textContent=
+    `Equip vermell — Accions disponibles: ${actionsAvailable}`;
+ }
 
 function resizeMap(){
   const map=document.getElementById("mapContainer");
@@ -501,7 +497,7 @@ function addOrder(originID,targetID){
     return;
   }
 
-  const remaining=actionsAvailable-usedPoints();
+  const remaining=actionsAvailable;
   if(remaining<10){
     showWarningActions();
     return;
