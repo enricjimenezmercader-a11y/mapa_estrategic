@@ -202,6 +202,7 @@
 <!-- Marcador de temps per a la lectura del CSV -->
 <div id="timeInfo">Lectura CSV: 0 ms</div>
 
+<!-- Actualitzat per mostrar només les accions disponibles -->
 <div id="titleBar">Equip vermell — Accions disponibles: ...</div>
 <div id="actionBar"><div id="actionFill"></div></div>
 
@@ -231,50 +232,50 @@ let hexData=[];
 let selectedRed=null;
 let highlightedAdjacents=[];
 let ordersSet=new Set();
-let actionsAvailable=0;
+let actionsAvailable=0; // Ara només representa les accions totals disponibles
 let arrowImages={};
 let clickLocked=false;
 
 // Variables per guardar l'estat actual del CSV
 let hexColors = {};
-let currentActionsAvailable = 0;
+let currentActionsAvailable = 0; // S'utilitza per comparar amb el nou valor H2
 
-// Variables per al seguiment del temps de lectura
 let lastCsvReadTime = Date.now();
-let timeInfoElement; // Referència a l'element div per mostrar el temps
+let timeInfoElement;
 
 // ------------------------------
 // LECTURA CSV AMB CACHE-BUSTER
 // ------------------------------
 async function fetchCSVText(){
-  const startTime = Date.now(); // Marca el temps d'inici de la petició
+  const startTime = Date.now();
   const res = await fetch(CSV_URL + "&cb=" + Date.now());
   if (!res.ok) {
     throw new Error(`HTTP error! status: ${res.status}`);
   }
   const text = await res.text();
-  const endTime = Date.now(); // Marca el temps de finalització de la descàrrega
-  const duration = endTime - startTime; // Calcula la duració de la descàrrega
-  return { text, duration }; // Retorna el text i la durada
+  const endTime = Date.now();
+  const duration = endTime - startTime;
+  return { text, duration };
 }
 
 // ------------------------------
 // PROCESSAMENT DE DADES I ACTUALITZACIÓ DEL DOM
 // ------------------------------
 async function processCSVData() {
-  const processStartTime = Date.now(); // Marca el temps d'inici del processament complet
+  const processStartTime = Date.now();
 
   try {
-    const { text, duration: fetchDuration } = await fetchCSVText(); // Obté el text i la durada de la descàrrega
-    lastCsvReadTime = Date.now(); // Actualitza el temps de l'última lectura correcta
+    const { text, duration: fetchDuration } = await fetchCSVText();
+    lastCsvReadTime = Date.now();
 
     const lines = text.trim().split("\n");
 
     const newColors = {};
-    let H2 = 0;
+    let H2 = 0; // Valor temporal per a les accions disponibles llegides
 
     lines.forEach((line, index) => {
       const cols = line.split(",");
+      // Assumim que H2 (accions disponibles) està a la segona línia (index 1), columna 8 (index 7)
       if (index === 1) {
           const parsedH2 = parseInt(cols[7]);
           if (!isNaN(parsedH2)) {
@@ -286,12 +287,13 @@ async function processCSVData() {
       if (id) newColors[id.trim()] = color.trim().toUpperCase();
     });
 
-    // Actualitza accions disponibles si canvien
+    // Actualitza 'actionsAvailable' si el valor llegit (H2) és diferent
+    // Ja no es fa càlcul de gastades/restants en aquest punt
     if (H2 !== currentActionsAvailable) {
       console.log(`Actions available changed from ${currentActionsAvailable} to ${H2}`);
       currentActionsAvailable = H2;
-      actionsAvailable = H2;
-      updateActionDisplay();
+      actionsAvailable = H2; // Només actualitzem el total disponible
+      updateActionDisplay(); // Actualitza la barra d'acció
     }
 
     // Comprova si els colors de les hexàgons han canviat
@@ -313,37 +315,18 @@ async function processCSVData() {
       console.log("Hex colors have changed. Redrawing grid.");
       await drawHexGrid();
       setupClickHandler();
-      updateActionDisplay();
+      updateActionDisplay(); // Re-actualitza la display per si el nombre d'accions disponibles ha canviat
     }
 
-    checkLockState();
+    checkLockState(); // Comprova també l'estat de bloqueig
 
-    // Actualitza el marcador de temps al final del processament
     const processEndTime = Date.now();
     const totalDuration = processEndTime - processStartTime;
     updateTimeInfo(fetchDuration, totalDuration);
 
   } catch (err) {
     console.error("Error processing CSV data:", err);
-    // Si hi ha un error, podríem voler mostrar un temps d'error o mantenir l'anterior
     updateTimeInfo(0, 0, true); // Indica error
-  }
-}
-
-// Funció per actualitzar el marcador de temps a la UI
-function updateTimeInfo(fetchDuration, totalDuration, isError = false) {
-  if (!timeInfoElement) {
-    timeInfoElement = document.getElementById("timeInfo");
-  }
-  if (timeInfoElement) {
-    if (isError) {
-      timeInfoElement.textContent = `Lectura CSV: ERROR`;
-      timeInfoElement.style.color = "#FF4444";
-    } else {
-      // Mostra el temps de descàrrega (fetch) i el temps total de processament
-      timeInfoElement.textContent = `Lectura CSV: ${fetchDuration} ms (Fetch) / ${totalDuration} ms (Total)`;
-      timeInfoElement.style.color = "#aaa"; // Color normal
-    }
   }
 }
 
@@ -354,13 +337,23 @@ setInterval(processCSVData, 1000);
 // FUNCIONS DE LA INTERFÍCIE
 // ------------------------------
 
+// Modificada per mostrar només les accions disponibles
 function updateActionDisplay(){
-  const spent=usedPoints();
-  const remaining=actionsAvailable-spent;
+  // Eliminat el càlcul de 'spent' i 'remaining'
   document.getElementById("titleBar").textContent=
-    `Equip vermell — Accions disponibles: ${actionsAvailable} — Gastades: ${spent} — Restants: ${remaining}`;
-  const pct=Math.min(100,(spent/actionsAvailable)*100);
-  document.getElementById("actionFill").style.width=pct+"%";
+    `Equip vermell — Accions disponibles: ${actionsAvailable}`; // Només mostra el total disponible
+
+  // L'amplada de la barra d'acció ara es basa en el percentatge del total disponible
+  // Si es vol mantenir la barra com a indicador d'ús (d'un total), es podria fer servir:
+  // const pct = Math.min(100, (usedPoints() / actionsAvailable) * 100);
+  // Però si només volem mostrar el total, podríem fer que la barra sempre estigui al 100% o tenir un altre significat.
+  // De moment, deixem-la com estava, assumint que potser es volia visualitzar la proporció d'un total
+  // Si no, es podria posar width: 100%;
+  const pct = Math.min(100, (usedPoints() / actionsAvailable) * 100); // Es manté el càlcul per si té sentit visual, però no s'exhibeix
+  document.getElementById("actionFill").style.width = pct + "%"; // Si actionsAvailable és 0, pct serà NaN, caldria un check.
+  if (isNaN(pct)) {
+      document.getElementById("actionFill").style.width = "0%";
+  }
 }
 
 function resizeMap(){
@@ -461,8 +454,7 @@ async function drawHexGrid(){
 // ------------------------------
 async function checkLockState() {
   try {
-    // Reutilitza la funció per obtenir el text del CSV
-    const { text } = await fetchCSVText(); // Només necessitem el text aquí
+    const { text } = await fetchCSVText();
     const lines = text.trim().split("\n");
     if (lines.length > 0) {
         const cols = lines[0].split(",");
@@ -535,6 +527,8 @@ function showWarningActions(){
   setTimeout(()=>{w.style.opacity=0;w.classList.remove("blink");},2000);
 }
 
+// La funció usedPoints() encara es manté, ja que és necessària per a la lògica de validació d'ordres
+// (per comprovar si es gasten 10 punts per ordre). Si ja no es vol validar el cost, es podria eliminar.
 function usedPoints(){ return ordersSet.size*10; }
 
 function direction(origin,target){
@@ -609,10 +603,12 @@ function addOrder(originID,targetID){
     return;
   }
 
-  const remaining=actionsAvailable-usedPoints();
-  if(remaining<10){
-    showWarningActions();
-    return;
+  // Aquesta validació utilitza `usedPoints()` per comprovar si es pot gastar 10 punts.
+  // Si ja no es vol validar el cost, aquesta condició es podria eliminar.
+  const remainingPoints = actionsAvailable - usedPoints();
+  if (remainingPoints < 10) {
+      showWarningActions();
+      return;
   }
 
   ordersSet.add(key);
@@ -650,6 +646,7 @@ function addOrder(originID,targetID){
     ordersSet.delete(key);
     removeArrow(key);
     line.remove();
+    // Re-actualitzem el display d'accions quan es cancel·la una ordre
     updateActionDisplay();
   };
 
@@ -657,7 +654,7 @@ function addOrder(originID,targetID){
   line.appendChild(btn);
   orders.appendChild(line);
 
-  updateActionDisplay();
+  updateActionDisplay(); // Actualitza el display (potser per mostrar que s'han gastat punts, si es manté la barra visual)
 }
 
 function setupClickHandler(){
@@ -705,9 +702,7 @@ function redraw(){
 
 window.addEventListener("resize", redraw);
 
-// Funció per a la càrrega inicial de l'aplicació
 async function initialLoad() {
-  // Obtenim les dades inicials primer per poder dibuixar el mapa correctament
   await processCSVData();
   resizeMap();
   await drawHexGrid();
@@ -716,13 +711,9 @@ async function initialLoad() {
   checkLockState();
 }
 
-// Crida a la funció de càrrega inicial
 initialLoad();
 
-// Interval per actualitzar les dades del CSV (ja gestionat dins de processCSVData)
-// setInterval(processCSVData, 1000);
-
-// Interval per comprovar l'estat de bloqueig (independent de la lectura de dades del mapa)
+// Interval per comprovar l'estat de bloqueig
 setInterval(checkLockState, 1000);
 
 // Botó Confirmar ordres
