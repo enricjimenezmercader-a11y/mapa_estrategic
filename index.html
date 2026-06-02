@@ -6,156 +6,142 @@
   <title>Mapa Estratègic — Retícula Hexagonal</title>
 
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    html, body { height: 100%; }
-    body {
-      background: #000;
-      color: #fff;
-      font-family: Arial, Helvetica, sans-serif;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: flex-start;
-      padding-top: 20px;
-      gap: 20px;
-      position: relative; /* Necessari per posicionar el marcador de temps */
+    *{box-sizing:border-box;margin:0;padding:0}
+    html,body{height:100%}
+    body{
+      background:#000;
+      color:#fff;
+      font-family:Arial,Helvetica,sans-serif;
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      justify-content:flex-start;
+      padding-top:20px;
+      gap:20px;
     }
 
-    #titleBar {
-      font-size: 28px;
-      font-weight: bold;
-      text-align: center;
+    #titleBar{
+      font-size:28px;
+      font-weight:bold;
+      text-align:center;
     }
 
-    #actionBar {
-      width: 66%;
-      height: 20px;
-      background: #333;
-      border: 1px solid #666;
-      margin-top: -10px;
-      margin-bottom: 10px;
-      position: relative;
+    #actionBar{
+      width:66%;
+      height:20px;
+      background:#333;
+      border:1px solid #666;
+      margin-top:-10px;
+      margin-bottom:10px;
+      position:relative;
     }
 
-    #actionFill {
-      height: 100%;
-      background: #00cc00;
-      width: 0%;
-      transition: width 0.3s ease;
+    #actionFill{
+      height:100%;
+      background:#00cc00;
+      width:0%;
+      transition:width 0.3s ease;
     }
 
-    .map-container {
-      position: relative;
-      background: #1a1a1a;
-      border: 1px solid #333;
-      overflow: hidden;
+    .map-container{
+      position:relative;
+      background:#1a1a1a;
+      border:1px solid #333;
+      overflow:hidden;
     }
 
-    .map-image {
-      position: absolute;
-      inset: 0;
-      width: 100%;
-      height: 100%;
-      object-fit: contain;
-      z-index: 1;
-      pointer-events: none;
+    .map-image{
+      position:absolute;
+      inset:0;
+      width:100%;
+      height:100%;
+      object-fit:contain;
+      z-index:1;
+      pointer-events:none;
     }
 
-    svg {
-      position: absolute;
-      inset: 0;
-      width: 100%;
-      height: 100%;
-      z-index: 10;
+    svg{
+      position:absolute;
+      inset:0;
+      width:100%;
+      height:100%;
+      z-index:10;
     }
 
-    .hex {
-      stroke: #000;
-      stroke-width: 2;
-      cursor: pointer;
+    .hex{
+      stroke:#000;
+      stroke-width:2;
+      cursor:pointer;
     }
 
-    .hex-red { fill: rgba(255, 0, 0, 0.33); }
-    .hex-blue { fill: rgba(0, 120, 255, 0.33); }
-    .hex-mar { fill: rgba(120, 120, 120, 0.33); }
+    .hex-red{ fill:rgba(255,0,0,0.33); }
+    .hex-blue{ fill:rgba(0,120,255,0.33); }
+    .hex-mar{ fill:rgba(120,120,120,0.33); }
 
-    .hex-hatch {
-      fill: url(#hatch-red);
+    .hex-hatch{
+      fill:url(#hatch-red);
     }
 
-    .hex-label {
-      fill: #fff;
-      font-weight: bold;
-      text-anchor: middle;
-      pointer-events: none;
-      stroke: #000;
-      stroke-width: 0.8;
+    .hex-label{
+      fill:#fff;
+      font-weight:bold;
+      text-anchor:middle;
+      pointer-events:none;
+      stroke:#000;
+      stroke-width:0.8;
     }
 
-    #orders {
-      width: 66%;
-      color: #7CFF7C;
-      font-family: monospace;
-      font-size: 18px;
-      white-space: pre-line;
-      min-height: 40px;
+    #orders{
+      width:66%;
+      color:#7CFF7C;
+      font-family:monospace;
+      font-size:18px;
+      white-space:pre-line;
+      min-height:40px;
     }
 
-    .order-line {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 6px;
+    .order-line{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      margin-bottom:6px;
     }
 
-    .order-btn {
-      background: #550000;
-      color: #fff;
-      border: 1px solid #aa0000;
-      padding: 3px 8px;
-      cursor: pointer;
-      font-size: 14px;
+    .order-btn{
+      background:#550000;
+      color:#fff;
+      border:1px solid #aa0000;
+      padding:3px 8px;
+      cursor:pointer;
+      font-size:14px;
     }
 
-    #confirmBtn {
-      margin-top: 10px;
-      padding: 6px 12px;
-      background: #004400;
-      color: #aaffaa;
-      border: 1px solid #66ff66;
-      cursor: pointer;
-      font-size: 16px;
-      display: block;
+    #confirmBtn{
+      margin-top:10px;
+      padding:6px 12px;
+      background:#004400;
+      color:#aaffaa;
+      border:1px solid #66ff66;
+      cursor:pointer;
+      font-size:16px;
+      display:block;
     }
 
-    #warning, #warningActions {
-      position: absolute;
-      top: 10px;
-      left: 50%;
-      transform: translateX(-50%);
-      font-size: 40px;
-      font-weight: bold;
-      color: #FF4444;
-      text-shadow: 0 0 10px #000;
-      opacity: 0;
-      pointer-events: none;
-      z-index: 999;
+    #warning, #warningActions{
+      position:absolute;
+      top:10px;
+      left:50%;
+      transform:translateX(-50%);
+      font-size:40px;
+      font-weight:bold;
+      color:#FF4444;
+      text-shadow:0 0 10px #000;
+      opacity:0;
+      pointer-events:none;
+      z-index:999;
     }
 
-    /* Estils per al marcador de temps */
-    #timeInfo {
-      position: absolute;
-      top: 10px;
-      right: 10px;
-      font-size: 12px;
-      color: #aaa;
-      background: rgba(0, 0, 0, 0.5);
-      padding: 3px 6px;
-      border-radius: 4px;
-      z-index: 1000;
-    }
-
-    .blink {
+    .blink{
       animation: blinkAnim 0.3s linear infinite;
     }
 
@@ -199,10 +185,6 @@
 <audio id="moveSound" src="https://raw.githubusercontent.com/enricjimenezmercader-a11y/mapa_estrategic/main/Move.wav"></audio>
 <audio id="ordersSound" src="https://raw.githubusercontent.com/enricjimenezmercader-a11y/mapa_estrategic/main/Orders.wav"></audio>
 
-<!-- Marcador de temps per a la lectura del CSV -->
-<div id="timeInfo">Lectura CSV: 0 ms</div>
-
-<!-- Títol i barra d'acció (només mostra accions disponibles) -->
 <div id="titleBar">Equip vermell — Accions disponibles: ...</div>
 <div id="actionBar"><div id="actionFill"></div></div>
 
@@ -228,129 +210,88 @@ const REAL_R=41.78;
 const REAL_GRID_WIDTH=17*REAL_R;
 const IMAGE_RATIO=1.4;
 
-let hexData=[]; // Dades de les hexàgons dibuixades
-let selectedRed=null; // Hexàgon vermell seleccionat actualment
-let highlightedAdjacents=[]; // Hexàgons blaus adjacents ressaltats
-let ordersSet=new Set(); // Conjunt d'ordres pendents
-let actionsAvailable=0; // Accions totals disponibles (llegit del CSV)
-let arrowImages={}; // Referències a les imatges de les fletxes d'atac
-let clickLocked=false; // Estat de bloqueig de clics
-
-// Variables per guardar l'estat actual del CSV
-let hexColors = {}; // Mapa {id: color} de les hexàgons
-let currentActionsAvailable = 0; // Valor H2 llegit del CSV, per comparar si ha canviat
-
-let lastCsvReadTime = Date.now();
-let timeInfoElement; // Element div per mostrar informació de temps
+let hexData=[];
+let selectedRed=null;
+let highlightedAdjacents=[];
+let ordersSet=new Set();
+let actionsAvailable=0;
+let arrowImages={};
+let clickLocked=false;
 
 // ------------------------------
 // LECTURA CSV AMB CACHE-BUSTER
 // ------------------------------
-async function fetchCSVText(){
-  const startTime = Date.now();
+async function fetchCSV(){
   const res = await fetch(CSV_URL + "&cb=" + Date.now());
-  if (!res.ok) {
-    throw new Error(`HTTP error! status: ${res.status}`);
-  }
-  const text = await res.text();
-  const endTime = Date.now();
-  const duration = endTime - startTime;
-  return { text, duration };
+  return await res.text();
 }
 
-// ------------------------------
-// PROCESSAMENT DE DADES I ACTUALITZACIÓ DEL DOM
-// ------------------------------
-async function processCSVData() {
-  const processStartTime = Date.now();
+async function loadCSV(){
+  const text = await fetchCSV();
+  const lines=text.trim().split("\n");
 
+  const colors={};
+  let H2=0;
+
+  lines.forEach((line,index)=>{
+    const cols=line.split(",");
+    if(index===1) H2=parseInt(cols[7]);
+    const id=cols[0];
+    const color=cols[1];
+    if(id) colors[id.trim()]=color.trim().toUpperCase();
+  });
+
+  actionsAvailable=H2;
+  updateActionDisplay();
+  return colors;
+}
+
+setInterval(fetchCSV, 1000);
+  
+// ------------------------------
+// BLOQUEIG DINÀMIC PER E1
+// ------------------------------
+async function checkLockState() {
   try {
-    const { text, duration: fetchDuration } = await fetchCSVText();
-    lastCsvReadTime = Date.now();
-
+    const text = await fetchCSV();
     const lines = text.trim().split("\n");
+    const cols = lines[0].split(",");
+    const E1 = cols[4].trim();
 
-    const newColors = {};
-    let H2 = 0; // Valor temporal per a les accions disponibles llegides
+    const btn = document.getElementById("confirmBtn");
 
-    lines.forEach((line, index) => {
-      const cols = line.split(",");
-      // Assumim que H2 (accions disponibles) està a la segona línia (index 1), columna 8 (index 7)
-      if (index === 1) {
-          const parsedH2 = parseInt(cols[7]);
-          if (!isNaN(parsedH2)) {
-              H2 = parsedH2;
-          }
-      }
-      // Assumim que id i color estan a les columnes 0 i 1 respectivament
-      const id = cols[0];
-      const color = cols[1];
-      if (id) newColors[id.trim()] = color.trim().toUpperCase();
-    });
+    btn._sheetLocked = (E1 === "1");
 
-    // Actualitza 'actionsAvailable' si el valor llegit (H2) és diferent
-    if (H2 !== currentActionsAvailable) {
-      console.log(`Actions available changed from ${currentActionsAvailable} to ${H2}`);
-      currentActionsAvailable = H2;
-      actionsAvailable = H2;
-      updateActionDisplay();
-    }
-
-    // Comprova si els colors de les hexàgons han canviat
-    let colorsChanged = false;
-    if (Object.keys(hexColors).length !== Object.keys(newColors).length) {
-        colorsChanged = true;
+    if (btn._sheetLocked || btn._tempLocked) {
+      btn.disabled = true;
+      btn.style.background = "#555";
+      btn.style.color = "#999";
+      btn.style.cursor = "not-allowed";
     } else {
-        for (const id in newColors) {
-            if (hexColors[id] !== newColors[id]) {
-                colorsChanged = true;
-                break;
-            }
-        }
+      btn.disabled = false;
+      btn.style.background = "#004400";
+      btn.style.color = "#aaffaa";
+      btn.style.cursor = "pointer";
     }
-    hexColors = newColors; // Actualitza els colors emmagatzemats
-
-    // SI ELS COLORS HAN CANVIAT, LLAVORS REDIBUIXEM EL MAPA
-    if (colorsChanged) {
-      console.log("Hex colors have changed. Redrawing grid.");
-      // Crida a redraw() que s'encarrega de redimensionar i després redibuixar
-      redraw();
-    }
-
-    // Comprova també l'estat de bloqueig del botó 'Confirmar ordres'
-    checkLockState();
-
-    const processEndTime = Date.now();
-    const totalDuration = processEndTime - processStartTime;
-    updateTimeInfo(fetchDuration, totalDuration);
 
   } catch (err) {
-    console.error("Error processing CSV data:", err);
-    updateTimeInfo(0, 0, true); // Indica error al marcador de temps
+    console.log("Error checkLockState:", err);
   }
 }
 
-// Interval per cridar a processCSVData cada segon
-setInterval(processCSVData, 1000);
+setInterval(checkLockState, 1000);
 
 // ------------------------------
-// FUNCIONS DE LA INTERFÍCIE
-// ------------------------------
 
-// Actualitza la barra d'accions per mostrar només les disponibles
 function updateActionDisplay(){
+  const spent=usedPoints();
+  const remaining=actionsAvailable-spent;
   document.getElementById("titleBar").textContent=
-    `Equip vermell — Accions disponibles: ${actionsAvailable}`;
-
-  const spent = usedPoints(); // Es calcula per a la barra d'acció (visualització d'ús)
-  let pct = 0;
-  if (actionsAvailable > 0) {
-      pct = Math.min(100, (spent / actionsAvailable) * 100);
-  }
-  document.getElementById("actionFill").style.width = pct + "%";
+    `Equip vermell — Accions disponibles: ${actionsAvailable} — Gastades: ${spent} — Restants: ${remaining}`;
+  const pct=Math.min(100,(spent/actionsAvailable)*100);
+  document.getElementById("actionFill").style.width=pct+"%";
 }
 
-// Ajusta la mida del contenidor del mapa
 function resizeMap(){
   const map=document.getElementById("mapContainer");
   const W=window.innerWidth;
@@ -367,20 +308,18 @@ function resizeMap(){
   map.style.height=height+"px";
 }
 
-// DIBUIXA la retícula SVG utilitzant les dades globals hexColors
 async function drawHexGrid(){
   const svg=document.getElementById("hexGrid");
   const map=document.getElementById("mapContainer");
 
-  svg.innerHTML=""; // Neteja el SVG anterior
-  hexData=[]; // Reinicia les dades
+  svg.innerHTML="";
+  hexData=[];
   selectedRed=null;
   highlightedAdjacents=[];
   arrowImages={};
   ordersSet=new Set();
   document.getElementById("orders").innerHTML="";
 
-  // Definició del patró de ratllat
   svg.insertAdjacentHTML("afterbegin",`
     <defs>
       <pattern id="hatch-red" patternUnits="userSpaceOnUse" width="6" height="6" patternTransform="rotate(45)">
@@ -389,8 +328,7 @@ async function drawHexGrid(){
     </defs>
   `);
 
-  // Utilitza les dades globals hexColors
-  const colors = hexColors;
+  const colors=await loadCSV();
 
   const B=map.clientWidth;
   const scale=B/REAL_GRID_WIDTH;
@@ -447,42 +385,6 @@ async function drawHexGrid(){
   });
 }
 
-// ------------------------------
-// BLOQUEIG DINÀMIC PER E1 (DES DEL CSV)
-// ------------------------------
-async function checkLockState() {
-  try {
-    const { text } = await fetchCSVText();
-    const lines = text.trim().split("\n");
-    if (lines.length > 0) {
-        const cols = lines[0].split(",");
-        const E1 = cols[4].trim();
-
-        const btn = document.getElementById("confirmBtn");
-
-        btn._sheetLocked = (E1 === "1");
-
-        if (btn._sheetLocked || btn._tempLocked) {
-          btn.disabled = true;
-          btn.style.background = "#555";
-          btn.style.color = "#999";
-          btn.style.cursor = "not-allowed";
-        } else {
-          btn.disabled = false;
-          btn.style.background = "#004400";
-          btn.style.color = "#aaffaa";
-          btn.style.cursor = "pointer";
-        }
-    }
-  } catch (err) {
-    console.log("Error checkLockState:", err);
-  }
-}
-
-// ------------------------------
-// FUNCIONS AUXILIARS
-// ------------------------------
-
 function highlightAdjacent(redHex){
   clearHighlights();
   selectedRed=redHex;
@@ -525,7 +427,6 @@ function showWarningActions(){
   setTimeout(()=>{w.style.opacity=0;w.classList.remove("blink");},2000);
 }
 
-// Calcula els punts "gastats" basant-se en el nombre d'ordres actives
 function usedPoints(){ return ordersSet.size*10; }
 
 function direction(origin,target){
@@ -600,14 +501,15 @@ function addOrder(originID,targetID){
     return;
   }
 
-  const remainingPoints = actionsAvailable - usedPoints();
-  if (remainingPoints < 10) {
-      showWarningActions();
-      return;
+  const remaining=actionsAvailable-usedPoints();
+  if(remaining<10){
+    showWarningActions();
+    return;
   }
 
   ordersSet.add(key);
 
+  // Bloqueig de clics 1 segon + cursor rellotge
   clickLocked = true;
   document.body.style.cursor = "wait";
   setTimeout(() => {
@@ -682,41 +584,19 @@ function setupClickHandler(){
   });
 }
 
-// Redibuixa el mapa: ajusta la mida i crida a drawHexGrid()
 function redraw(){
-  resizeMap(); // Ajusta la mida del contenidor
-  // drawHexGrid utilitza les dades globals hexColors
-  drawHexGrid().then(()=>{ // Després de redibuixar, reconfigura listeners i actualitza display
+  resizeMap();
+  drawHexGrid().then(()=>{
     setupClickHandler();
     updateActionDisplay();
   });
 }
 
-// ------------------------------
-// ESDEVENIMENTS I ARRENCADA
-// ------------------------------
+window.addEventListener("resize",redraw);
+redraw();
+checkLockState();
 
-window.addEventListener("resize", redraw); // Redibuixa quan es redimensiona la finestra
-
-// Funció per a la càrrega inicial de l'aplicació
-async function initialLoad() {
-  // Càrrega inicial de dades del CSV
-  await processCSVData();
-  resizeMap();
-  // Dibuixa el mapa amb les dades inicials
-  await drawHexGrid();
-  setupClickHandler(); // Configura els listeners de clic
-  updateActionDisplay(); // Actualitza la UI d'accions
-  checkLockState(); // Comprova l'estat de bloqueig inicial
-}
-
-// Inicia l'aplicació
-initialLoad();
-
-// Interval per comprovar l'estat de bloqueig del botó
-setInterval(checkLockState, 1000);
-
-// Botó Confirmar ordres
+// Botó Confirmar ordres: bloqueig 5s, cursor rellotge i enviament seqüencial
 document.getElementById("confirmBtn").addEventListener("click", async () => {
   const btn = document.getElementById("confirmBtn");
 
