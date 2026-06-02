@@ -202,7 +202,7 @@
 <!-- Marcador de temps per a la lectura del CSV -->
 <div id="timeInfo">Lectura CSV: 0 ms</div>
 
-<!-- Actualitzat per mostrar només les accions disponibles -->
+<!-- Títol i barra d'acció (només mostra accions disponibles) -->
 <div id="titleBar">Equip vermell — Accions disponibles: ...</div>
 <div id="actionBar"><div id="actionFill"></div></div>
 
@@ -228,26 +228,27 @@ const REAL_R=41.78;
 const REAL_GRID_WIDTH=17*REAL_R;
 const IMAGE_RATIO=1.4;
 
-let hexData=[];
-let selectedRed=null;
-let highlightedAdjacents=[];
-let ordersSet=new Set();
-let actionsAvailable=0; // Ara només representa les accions totals disponibles
-let arrowImages={};
-let clickLocked=false;
+let hexData=[]; // Dades de les hexàgons dibuixades
+let selectedRed=null; // Hexàgon vermell seleccionat actualment
+let highlightedAdjacents=[]; // Hexàgons blaus adjacents ressaltats
+let ordersSet=new Set(); // Conjunt d'ordres pendents
+let actionsAvailable=0; // Accions totals disponibles (llegit del CSV)
+let arrowImages={}; // Referències a les imatges de les fletxes d'atac
+let clickLocked=false; // Estat de bloqueig de clics
 
 // Variables per guardar l'estat actual del CSV
-let hexColors = {};
-let currentActionsAvailable = 0; // S'utilitza per comparar amb el nou valor H2
+let hexColors = {}; // Mapa {id: color} de les hexàgons
+let currentActionsAvailable = 0; // Valor H2 llegit del CSV, per comparar si ha canviat
 
 let lastCsvReadTime = Date.now();
-let timeInfoElement;
+let timeInfoElement; // Element div per mostrar informació de temps
 
 // ------------------------------
 // LECTURA CSV AMB CACHE-BUSTER
 // ------------------------------
 async function fetchCSVText(){
   const startTime = Date.now();
+  // Utilitza `Date.now()` com a cache-buster a la URL
   const res = await fetch(CSV_URL + "&cb=" + Date.now());
   if (!res.ok) {
     throw new Error(`HTTP error! status: ${res.status}`);
@@ -255,6 +256,7 @@ async function fetchCSVText(){
   const text = await res.text();
   const endTime = Date.now();
   const duration = endTime - startTime;
+  // Retorna el text del CSV i la durada de la descàrrega
   return { text, duration };
 }
 
@@ -262,17 +264,19 @@ async function fetchCSVText(){
 // PROCESSAMENT DE DADES I ACTUALITZACIÓ DEL DOM
 // ------------------------------
 async function processCSVData() {
-  const processStartTime = Date.now();
+  const processStartTime = Date.now(); // Marca l'inici del processament
 
   try {
+    // Obtenir el text del CSV i la durada de la descàrrega
     const { text, duration: fetchDuration } = await fetchCSVText();
-    lastCsvReadTime = Date.now();
+    lastCsvReadTime = Date.now(); // Actualitza el moment de la darrera lectura correcta
 
     const lines = text.trim().split("\n");
 
-    const newColors = {};
-    let H2 = 0; // Valor temporal per a les accions disponibles llegides
+    const newColors = {}; // Mapa temporal per als nous colors llegits
+    let H2 = 0; // Variable temporal per al nou valor d'accions disponibles
 
+    // Parsejar cada línia del CSV
     lines.forEach((line, index) => {
       const cols = line.split(",");
       // Assumim que H2 (accions disponibles) està a la segona línia (index 1), columna 8 (index 7)
@@ -282,25 +286,34 @@ async function processCSVData() {
               H2 = parsedH2;
           }
       }
+      // A partir de la tercera línia (index 2), assumeix que són dades de hexàgons
+      // El codi original sembla assumir que els hexàgons comencen a l'índex 0 i no s'ignoren capçaleres.
+      // Ajustem per parsejar hexàgons si el format del CSV ho requereix
+      // Si les primeres línies són capçalera, s'haurien d'ignorar o ajustar els índexos
+      // El codi original utilitzava els índexos 0 i 1 per id i color per a *totes* les línies, incloses les primeres.
+      // Si les primeres línies no tenen id/color, això podria donar problemes.
+      // Per simplificar, mantenim la lògica original d'iterar sobre totes les línies, assumint que les dades d'id/color són vàlides.
+
       const id = cols[0];
       const color = cols[1];
       if (id) newColors[id.trim()] = color.trim().toUpperCase();
     });
 
-    // Actualitza 'actionsAvailable' si el valor llegit (H2) és diferent
-    // Ja no es fa càlcul de gastades/restants en aquest punt
+    // Comprova si el nombre total d'accions disponibles ha canviat
     if (H2 !== currentActionsAvailable) {
       console.log(`Actions available changed from ${currentActionsAvailable} to ${H2}`);
       currentActionsAvailable = H2;
-      actionsAvailable = H2; // Només actualitzem el total disponible
-      updateActionDisplay(); // Actualitza la barra d'acció
+      actionsAvailable = H2; // Actualitza la variable global d'accions disponibles
+      updateActionDisplay(); // Actualitza la interfície d'accions
     }
 
     // Comprova si els colors de les hexàgons han canviat
     let colorsChanged = false;
+    // Compara el nombre de hexàgons
     if (Object.keys(hexColors).length !== Object.keys(newColors).length) {
         colorsChanged = true;
     } else {
+        // Compara el color de cada hexàgon
         for (const id in newColors) {
             if (hexColors[id] !== newColors[id]) {
                 colorsChanged = true;
@@ -308,25 +321,27 @@ async function processCSVData() {
             }
         }
     }
-    hexColors = newColors;
+    hexColors = newColors; // Actualitza els colors emmagatzemats
 
     // Si els colors han canviat, redibuixa el grid
     if (colorsChanged) {
       console.log("Hex colors have changed. Redrawing grid.");
-      await drawHexGrid();
-      setupClickHandler();
-      updateActionDisplay(); // Re-actualitza la display per si el nombre d'accions disponibles ha canviat
+      await drawHexGrid(); // Redibuixa el mapa amb les noves dades de color
+      setupClickHandler(); // Re-estableix els event listeners després de redibuixar
+      updateActionDisplay(); // Assegura que la display d'accions sigui correcta
     }
 
-    checkLockState(); // Comprova també l'estat de bloqueig
+    // Comprova també l'estat de bloqueig del botó 'Confirmar ordres'
+    checkLockState();
 
+    // Actualitza el marcador de temps amb la durada de la descàrrega i del processament
     const processEndTime = Date.now();
     const totalDuration = processEndTime - processStartTime;
     updateTimeInfo(fetchDuration, totalDuration);
 
   } catch (err) {
     console.error("Error processing CSV data:", err);
-    updateTimeInfo(0, 0, true); // Indica error
+    updateTimeInfo(0, 0, true); // Indica error al marcador de temps
   }
 }
 
@@ -339,21 +354,22 @@ setInterval(processCSVData, 1000);
 
 // Modificada per mostrar només les accions disponibles
 function updateActionDisplay(){
-  // Eliminat el càlcul de 'spent' i 'remaining'
+  // Actualitza el títol només amb les accions disponibles
   document.getElementById("titleBar").textContent=
-    `Equip vermell — Accions disponibles: ${actionsAvailable}`; // Només mostra el total disponible
+    `Equip vermell — Accions disponibles: ${actionsAvailable}`;
 
-  // L'amplada de la barra d'acció ara es basa en el percentatge del total disponible
-  // Si es vol mantenir la barra com a indicador d'ús (d'un total), es podria fer servir:
-  // const pct = Math.min(100, (usedPoints() / actionsAvailable) * 100);
-  // Però si només volem mostrar el total, podríem fer que la barra sempre estigui al 100% o tenir un altre significat.
-  // De moment, deixem-la com estava, assumint que potser es volia visualitzar la proporció d'un total
-  // Si no, es podria posar width: 100%;
-  const pct = Math.min(100, (usedPoints() / actionsAvailable) * 100); // Es manté el càlcul per si té sentit visual, però no s'exhibeix
-  document.getElementById("actionFill").style.width = pct + "%"; // Si actionsAvailable és 0, pct serà NaN, caldria un check.
-  if (isNaN(pct)) {
-      document.getElementById("actionFill").style.width = "0%";
+  // L'amplada de la barra d'acció ara es calcula basant-se en l'ús (si es vol mantenir visualment)
+  // o es podria posar al 100% si només mostra el total.
+  // Aquí mantenim el càlcul basat en l'ús per si encara té sentit visual,
+  // però eliminem la visualització explícita de "gastades/restants" al títol.
+  const spent = usedPoints(); // Calcula punts gastats per a la visualització de la barra
+  let pct = 0;
+  if (actionsAvailable > 0) { // Evita divisió per zero
+      pct = Math.min(100, (spent / actionsAvailable) * 100);
   }
+  // Si la barra d'acció no hauria de reflectir l'ús, es podria posar:
+  // document.getElementById("actionFill").style.width = "100%";
+  document.getElementById("actionFill").style.width = pct + "%";
 }
 
 function resizeMap(){
@@ -372,18 +388,20 @@ function resizeMap(){
   map.style.height=height+"px";
 }
 
+// Aquesta funció DIBUIXA la retícula utilitzant les dades globals hexColors
 async function drawHexGrid(){
   const svg=document.getElementById("hexGrid");
   const map=document.getElementById("mapContainer");
 
-  svg.innerHTML="";
-  hexData=[];
-  selectedRed=null;
+  svg.innerHTML=""; // Neteja el contingut SVG anterior
+  hexData=[]; // Reinicia les dades de les hexàgons dibuixades
+  selectedRed=null; // Reinicia la selecció
   highlightedAdjacents=[];
-  arrowImages={};
-  ordersSet=new Set();
-  document.getElementById("orders").innerHTML="";
+  arrowImages={}; // Neteja referències a fletxes
+  ordersSet=new Set(); // Reinicia les ordres
+  document.getElementById("orders").innerHTML=""; // Neteja la llista d'ordres a la UI
 
+  // Definició del patró de ratllat per a les hexàgons adjacents ressaltades
   svg.insertAdjacentHTML("afterbegin",`
     <defs>
       <pattern id="hatch-red" patternUnits="userSpaceOnUse" width="6" height="6" patternTransform="rotate(45)">
@@ -392,48 +410,55 @@ async function drawHexGrid(){
     </defs>
   `);
 
+  // Utilitza les dades globals 'hexColors' que s'actualitzen periòdicament
   const colors = hexColors;
 
-  const B=map.clientWidth;
-  const scale=B/REAL_GRID_WIDTH;
-  const R=REAL_R*scale;
-  const hexH=Math.sqrt(3)*R;
+  const B=map.clientWidth; // Amplada del contenidor del mapa
+  const scale=B/REAL_GRID_WIDTH; // Factor d'escala basat en l'amplada del mapa
+  const R=REAL_R*scale; // Radi de l'hexàgon escalat
+  const hexH=Math.sqrt(3)*R; // Alçada d'un hexàgon
 
-  const maxRows=Math.max(...PATTERN);
-  const gridHeight=(maxRows-1)*hexH+hexH;
-  const A=17*R;
+  const maxRows=Math.max(...PATTERN); // Nombre màxim de files en una columna
+  const gridHeight=(maxRows-1)*hexH+hexH; // Alçada total de la retícula
+  const A=17*R; // Amplada total de la retícula en unitats de hexàgon
 
+  // Calcula els desplaçaments per centrar la retícula al contenidor
   const offsetX=(B-A)/2+R;
   const offsetY=(map.clientHeight-gridHeight)/2+hexH/2;
 
-  let id=1;
+  let id=1; // Contador per a l'ID de cada hexàgon
 
+  // Dibuixa cada hexàgon
   PATTERN.forEach((rowCount,col)=>{
     for(let r=0;r<rowCount;r++){
+      // Calcula les coordenades del centre de l'hexàgon
       const cx=offsetX+col*1.5*R;
       const cy=offsetY+r*hexH+(col%2===0?0:hexH/2);
 
+      // Calcula els vèrtexs del polígon
       const pts=[];
       for(let i=0;i<6;i++){
         const ang=Math.PI/3*i;
         pts.push([cx+R*Math.cos(ang),cy+R*Math.sin(ang)].join(","));
       }
 
-      const g=document.createElementNS("http://www.w3.org/2000/svg","g");
+      const g=document.createElementNS("http://www.w3.org/2000/svg","g"); // Grup SVG per a cada hexàgon
 
       const poly=document.createElementNS("http://www.w3.org/2000/svg","polygon");
       poly.setAttribute("points",pts.join(" "));
 
+      // Obté el color de les dades globals 'colors'
       const color=(colors[id]||"").toUpperCase();
-      let cls="hex hex-mar";
+      let cls="hex hex-mar"; // Classe per defecte (marró/gris)
       if(color.includes("RED")) cls="hex hex-red";
       else if(color.includes("BLUE")) cls="hex hex-blue";
 
-      poly.setAttribute("class",cls);
-      poly.dataset.id=id;
+      poly.setAttribute("class",cls); // Assigna la classe de color
+      poly.dataset.id=id; // Assigna l'ID a l'element per poder-lo referenciar
 
-      g.appendChild(poly);
+      g.appendChild(poly); // Afegeix el polígon al grup
 
+      // Crea i afegeix l'etiqueta (número) de l'hexàgon
       const label=document.createElementNS("http://www.w3.org/2000/svg","text");
       label.setAttribute("x",cx);
       label.setAttribute("y",cy+4);
@@ -441,8 +466,9 @@ async function drawHexGrid(){
       label.textContent=id;
       g.appendChild(label);
 
-      svg.appendChild(g);
+      svg.appendChild(g); // Afegeix el grup (hexàgon+etiqueta) al SVG
 
+      // Guarda les dades de l'hexàgon per a ús posterior (selecció, ordres, etc.)
       hexData.push({id,cx,cy,color,element:poly});
       id++;
     }
@@ -454,16 +480,18 @@ async function drawHexGrid(){
 // ------------------------------
 async function checkLockState() {
   try {
+    // Només necessitem el text del CSV per comprovar E1
     const { text } = await fetchCSVText();
     const lines = text.trim().split("\n");
     if (lines.length > 0) {
-        const cols = lines[0].split(",");
+        const cols = lines[0].split(","); // Assumim E1 a la línia 0, columna 4
         const E1 = cols[4].trim();
 
         const btn = document.getElementById("confirmBtn");
 
-        btn._sheetLocked = (E1 === "1");
+        btn._sheetLocked = (E1 === "1"); // Bloquejat si E1 és '1'
 
+        // Actualitza l'aparença i l'estat del botó
         if (btn._sheetLocked || btn._tempLocked) {
           btn.disabled = true;
           btn.style.background = "#555";
@@ -489,18 +517,20 @@ function highlightAdjacent(redHex){
   clearHighlights();
   selectedRed=redHex;
 
+  // Calcula la distància màxima per considerar hexàgons adjacents
   const R=REAL_R*(document.getElementById("mapContainer").clientWidth/REAL_GRID_WIDTH);
-  const maxDist=Math.sqrt(3)*R*1.01;
+  const maxDist=Math.sqrt(3)*R*1.01; // Marge lleuger per assegurar adjacència
 
   highlightedAdjacents=[];
 
+  // Rssalta només els hexàgons blaus adjacents al vermell seleccionat
   hexData.forEach(h=>{
     if(h.color==="BLUE"){
       const dx=h.cx-redHex.cx;
       const dy=h.cy-redHex.cy;
       const dist=Math.sqrt(dx*dx+dy*dy);
       if(dist<=maxDist){
-        h.element.classList.add("hex-hatch");
+        h.element.classList.add("hex-hatch"); // Aplica el patró de ratllat
         highlightedAdjacents.push(h);
       }
     }
@@ -527,8 +557,7 @@ function showWarningActions(){
   setTimeout(()=>{w.style.opacity=0;w.classList.remove("blink");},2000);
 }
 
-// La funció usedPoints() encara es manté, ja que és necessària per a la lògica de validació d'ordres
-// (per comprovar si es gasten 10 punts per ordre). Si ja no es vol validar el cost, es podria eliminar.
+// Calcula els punts "gastats" basant-se en el nombre d'ordres actives
 function usedPoints(){ return ordersSet.size*10; }
 
 function direction(origin,target){
@@ -603,8 +632,7 @@ function addOrder(originID,targetID){
     return;
   }
 
-  // Aquesta validació utilitza `usedPoints()` per comprovar si es pot gastar 10 punts.
-  // Si ja no es vol validar el cost, aquesta condició es podria eliminar.
+  // Validació per assegurar prou accions disponibles (cost 10 punts per ordre)
   const remainingPoints = actionsAvailable - usedPoints();
   if (remainingPoints < 10) {
       showWarningActions();
@@ -613,6 +641,7 @@ function addOrder(originID,targetID){
 
   ordersSet.add(key);
 
+  // Bloqueig temporal de clics
   clickLocked = true;
   document.body.style.cursor = "wait";
   setTimeout(() => {
@@ -625,12 +654,13 @@ function addOrder(originID,targetID){
 
   placeArrow(origin,target,key);
 
-  target.element.classList.remove("hex-hatch");
+  target.element.classList.remove("hex-hatch"); // Treu el ressaltat del hexàgon de destí
 
   document.getElementById("moveSound").play();
 
   const orders=document.getElementById("orders");
 
+  // Crea la línia per mostrar l'ordre a la UI
   const line=document.createElement("div");
   line.className="order-line";
   line.dataset.key=key;
@@ -646,53 +676,55 @@ function addOrder(originID,targetID){
     ordersSet.delete(key);
     removeArrow(key);
     line.remove();
-    // Re-actualitzem el display d'accions quan es cancel·la una ordre
-    updateActionDisplay();
+    updateActionDisplay(); // Actualitza la UI quan es cancel·la una ordre
   };
 
   line.appendChild(text);
   line.appendChild(btn);
   orders.appendChild(line);
 
-  updateActionDisplay(); // Actualitza el display (potser per mostrar que s'han gastat punts, si es manté la barra visual)
+  updateActionDisplay(); // Actualitza la UI d'accions disponibles
 }
 
 function setupClickHandler(){
   const svg=document.getElementById("hexGrid");
 
   svg.addEventListener("click", e => {
-    if (clickLocked) return;
+    if (clickLocked) return; // Ignora clics si està bloquejat
 
+    // Neteja qualsevol ressaltat anterior
     hexData.forEach(h=>h.element.classList.remove("hex-hatch"));
 
-    const poly=e.target.closest("polygon");
+    const poly=e.target.closest("polygon"); // Troba el polígon clicat
     if(!poly){
-      clearHighlights();
+      clearHighlights(); // Si es fa clic fora d'un hexàgon, neteja seleccions
       return;
     }
 
     const id=parseInt(poly.dataset.id);
     const hex=hexData.find(h=>h.id===id);
 
-    if(hex.color==="RED"){
-      highlightAdjacent(hex);
+    if(hex.color==="RED"){ // Si es fa clic en un hexàgon vermell
+      highlightAdjacent(hex); // Rssalta els adjacents possibles
       return;
     }
 
+    // Si hi ha un hexàgon vermell seleccionat i es fa clic en un adjacent ressaltat
     if(selectedRed && highlightedAdjacents.some(h=>h.id===id)){
-      addOrder(selectedRed.id,hex.id);
+      addOrder(selectedRed.id,hex.id); // Afegeix l'ordre
       return;
     }
 
-    clearHighlights();
+    clearHighlights(); // Si no és cap dels casos anteriors, neteja seleccions
   });
 }
 
+// Redibuixa el mapa (canvia la mida i redibuixa la retícula)
 function redraw(){
   resizeMap();
-  drawHexGrid().then(()=>{
-    setupClickHandler();
-    updateActionDisplay();
+  drawHexGrid().then(()=>{ // drawHexGrid utilitzarà les dades globals hexColors
+    setupClickHandler(); // Reconfigura el listener de clics
+    updateActionDisplay(); // Actualitza la display d'accions
   });
 }
 
@@ -700,28 +732,33 @@ function redraw(){
 // ESDEVENIMENTS I ARRENCADA
 // ------------------------------
 
-window.addEventListener("resize", redraw);
+window.addEventListener("resize", redraw); // Redibuixa si la finestra canvia de mida
 
+// Funció per a la càrrega inicial de l'aplicació
 async function initialLoad() {
+  // Primer, carrega les dades del CSV i actualitza l'estat global
   await processCSVData();
-  resizeMap();
-  await drawHexGrid();
-  setupClickHandler();
-  updateActionDisplay();
-  checkLockState();
+  resizeMap(); // Ajusta el mapa a la mida de la finestra
+  await drawHexGrid(); // Dibuixa la retícula amb les dades inicials carregades
+  setupClickHandler(); // Configura el listener de clics
+  updateActionDisplay(); // Mostra l'estat inicial de les accions
+  checkLockState(); // Comprova l'estat de bloqueig inicial del botó
 }
 
+// Crida a la funció de càrrega inicial
 initialLoad();
 
-// Interval per comprovar l'estat de bloqueig
+// Interval per comprovar l'estat de bloqueig del botó
 setInterval(checkLockState, 1000);
 
-// Botó Confirmar ordres
+// Botó Confirmar ordres: bloqueig temporal, cursor de rellotge i enviament seqüencial
 document.getElementById("confirmBtn").addEventListener("click", async () => {
   const btn = document.getElementById("confirmBtn");
 
+  // Evita accions si el full està bloquejat o temporalment bloquejat
   if (btn._sheetLocked || btn._tempLocked) return;
 
+  // Bloqueig temporal del botó i canvi de cursor
   btn._tempLocked = true;
   btn.disabled = true;
   btn.style.background = "#555";
@@ -729,27 +766,31 @@ document.getElementById("confirmBtn").addEventListener("click", async () => {
   btn.style.cursor = "not-allowed";
   document.body.style.cursor = "wait";
 
+  // Allibera el bloqueig temporal després de 5 segons
   setTimeout(() => {
     btn._tempLocked = false;
     document.body.style.cursor = "default";
-    checkLockState();
+    checkLockState(); // Torna a comprovar l'estat de bloqueig
   }, 5000);
 
-  document.getElementById("ordersSound").play();
+  document.getElementById("ordersSound").play(); // Reprodueix so de confirmació
 
+  // URL del Google Apps Script per enviar les ordres
   const url = "https://script.google.com/macros/s/AKfycbzMGXDTpJXy2jGjGxPT5g27kOntPOEj6aO-ap_8KIPqi1iyR-FQknxpNva-QqqTXxt_/exec";
-  const lines = document.querySelectorAll(".order-line");
+  const lines = document.querySelectorAll(".order-line"); // Selecciona totes les ordres actives
 
+  // Envia cada ordre seqüencialment
   for (const line of lines) {
     const text = line.querySelector("span").textContent;
 
     await fetch(url, {
       method: "POST",
-      mode: "no-cors",
+      mode: "no-cors", // Necessari per enviar a Google Apps Script sense problemes de CORS
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ orderText: text })
+      body: JSON.stringify({ orderText: text }) // Envia l'ordre com a JSON
     });
 
+    // Pausa breu entre enviaments
     await new Promise(res => setTimeout(res, 150));
   }
 });
