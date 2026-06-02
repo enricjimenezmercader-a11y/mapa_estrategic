@@ -221,32 +221,159 @@ let clickLocked=false;
 // ------------------------------
 // LECTURA CSV AMB CACHE-BUSTER
 // ------------------------------
-async function fetchCSV(){
-  const res = await fetch(CSV_URL + "&cb=" + Date.now());
-  return await res.text();
+// --- Configuration ---
+const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vS8k769FG5aF_PK-AmHLVdcfc6sgJeeIhWkL9Q8Gcrs39JW9GyJid_OtHcwhN9r3xhFvWPrc_yigZiY/pub?output=csv"; // Replace with your actual URL
+const REFRESH_INTERVAL_MS = 1000; // Refresh every 5 seconds (adjust as needed)
+const TARGET_ROW_INDEX_FOR_H2 = 1; // The second row (index 1)
+const COLUMN_INDEX_FOR_H2 = 7;   // The 8th column
+const COLUMN_INDEX_FOR_ID = 0;   // The 1st column for ID
+const COLUMN_INDEX_FOR_COLOR = 1; // The 2nd column for Color
+
+// --- Global State (consider managing state more formally in larger apps) ---
+let actionsAvailable = 0;
+let cachedColors = {}; // Cache the parsed colors
+
+// --- Helper Functions ---
+
+/**
+ * Fetches CSV data from the specified URL with cache-busting.
+ * @returns {Promise<string>} A promise that resolves with the CSV text.
+ * @throws {Error} If the network request fails or returns an error status.
+ */
+async function fetchCSV() {
+  const urlWithCacheBuster = `${CSV_URL}&cb=${Date.now()}`;
+  try {
+    console.log(`Fetching CSV from: ${urlWithCacheBuster}`);
+    const response = await fetch(urlWithCacheBuster);
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status} ${response.statusText}`);
+    }
+
+    const text = await response.text();
+    if (!text) {
+      throw new Error("Received empty response from CSV URL.");
+    }
+    return text;
+  } catch (error) {
+    console.error("Error fetching CSV:", error);
+    // Re-throw the error to be caught by the caller
+    throw error;
+  }
 }
 
-async function loadCSV(){
-  const text = await fetchCSV();
-  const lines=text.trim().split("\n");
+/**
+ * Parses CSV text into a structure suitable for the application.
+ * @param {string} csvText The raw CSV text.
+ * @returns {{colors: Record<string, string>, maxActions: number}} An object containing parsed colors and max actions.
+ * @throws {Error} If the CSV format is invalid or parsing fails.
+ */
+function parseCSV(csvText) {
+  const lines = csvText.trim().split("\n");
+  if (lines.length === 0) {
+    throw new Error("CSV data is empty after trimming.");
+  }
 
-  const colors={};
-  let H2=0;
+  const colors = {};
+  let maxActions = 0; // More descriptive name for H2
 
-  lines.forEach((line,index)=>{
-    const cols=line.split(",");
-    if(index===1) H2=parseInt(cols[7]);
-    const id=cols[0];
-    const color=cols[1];
-    if(id) colors[id.trim()]=color.trim().toUpperCase();
+  lines.forEach((line, index) => {
+    if (!line.trim()) return; // Skip empty lines
+
+    const cols = line.split(",");
+
+    // --- Parse Max Actions ---
+    if (index === TARGET_ROW_INDEX_FOR_H2) {
+      if (cols.length > COLUMN_INDEX_FOR_H2) {
+        const parsedValue = parseInt(cols[COLUMN_INDEX_FOR_H2]);
+        if (!isNaN(parsedValue)) {
+          maxActions = parsedValue;
+        } else {
+          console.warn(`Warning: Could not parse value for max actions at row ${index + 1}, column ${COLUMN_INDEX_FOR_H2 + 1}. Expected a number.`);
+          // Decide how to handle: keep default 0, throw error, etc.
+        }
+      } else {
+        console.warn(`Warning: Row ${index + 1} does not have enough columns to extract max actions (expected at least ${COLUMN_INDEX_FOR_H2 + 1}).`);
+      }
+    }
+
+    // --- Parse Colors ---
+    if (cols.length > Math.max(COLUMN_INDEX_FOR_ID, COLUMN_INDEX_FOR_COLOR)) {
+      const id = cols[COLUMN_INDEX_FOR_ID]?.trim(); // Optional chaining for safety
+      const color = cols[COLUMN_INDEX_FOR_COLOR]?.trim();
+
+      if (id) { // Ensure there's an ID to use as a key
+        colors[id] = color ? color.toUpperCase() : ""; // Handle cases where color might be missing
+      } else {
+        // Optionally warn if an ID is missing, depending on requirements
+        // console.warn(`Warning: Skipping row ${index + 1} due to missing ID.`);
+      }
+    } else {
+      // Optionally warn if a row doesn't have enough columns for ID/Color
+      // console.warn(`Warning: Skipping row ${index + 1} due to insufficient columns for ID/Color.`);
+    }
   });
 
-  actionsAvailable=H2;
-  updateActionDisplay();
-  return colors;
+  if (Object.keys(colors).length === 0 && lines.length > 0) {
+      console.warn("Warning: No color data was successfully parsed from the CSV.");
+  }
+
+  return { colors, maxActions }; // Closing brace for the return object
+} // Closing brace for the parseCSV function
+
+// --- Orchestration ---
+
+/**
+ * Orchestrates fetching and parsing the CSV data.
+ */
+async function loadAndProcessCSV() {
+  try {
+    const csvText = await fetchCSV();
+    const { colors, maxActions } = parseCSV(csvText);
+
+    // Update global state
+    cachedColors = colors; // Update the cached colors
+    actionsAvailable = maxActions;
+
+    // Update the UI
+    updateActionDisplay(); // Assuming this function exists and uses actionsAvailable
+
+    console.log("CSV data loaded and processed successfully.");
+    console.log("Max Actions:", actionsAvailable);
+    console.log("Parsed Colors:", cachedColors);
+
+  } catch (error) {
+    console.error("Failed to load or process CSV:", error);
+    // Optionally, you could implement retry logic with backoff here
+    // or display a user-friendly error message on the UI.
+  }
 }
 
-setInterval(fetchCSV, 1000);
+// --- Initialization and Scheduling ---
+
+// Define the updateActionDisplay function if it's not globally available
+// For demonstration:
+function updateActionDisplay() {
+  console.log(`UI updated: Actions available are now ${actionsAvailable}`);
+  // Example: document.getElementById('actionCount').textContent = actionsAvailable;
+}
+
+// Initial load when the script runs
+loadAndProcessCSV();
+
+// Schedule regular fetching and processing
+const intervalId = setInterval(loadAndProcessCSV, REFRESH_INTERVAL_MS);
+
+// Optional: Function to stop the interval if needed
+function stopCsvUpdates() {
+  clearInterval(intervalId);
+  console.log("CSV updates stopped.");
+}
+
+// You might want to call stopCsvUpdates() on page unload or when the feature is disabled.
+// window.addEventListener('beforeunload', stopCsvUpdates);
+
+
   
 // ------------------------------
 // BLOQUEIG DINÀMIC PER E2
