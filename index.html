@@ -204,7 +204,7 @@
 
 <script>
 const PATTERN=[5,4,5,4,5,4,5,4,5,4,5];
-const CSV_URL="https://docs.google.com/spreadsheets/d/e/2PACX-1vS8k769FG5aF_PK-AmHLVdcfc6sgJeeIhWkL9Q8Gcrs39JW9GyJid_OtHcwhN9r3xhFvWPrc_yigZiY/pub?output=csv";
+
 
 const REAL_R=41.78;
 const REAL_GRID_WIDTH=17*REAL_R;
@@ -218,42 +218,53 @@ let actionsAvailable=0;
 let arrowImages={};
 let clickLocked=false;
 
+
+  const DATA_URL = "https://script.google.com/macros/s/AKfycbz_pSDXfaxX20KC64P1N5EygoqiWALXF9LFaAdh8P15JUKvyISevu39Pmc6gNxfqHx3/exec";
+
+async function fetchSheetData() {
+  const res = await fetch(DATA_URL + "?cb=" + Date.now(), {
+    cache: "no-store"
+  });
+  return await res.json();
+}
+
+
 // ------------------------------
 // LECTURA CSV AMB CACHE-BUSTER
 // ------------------------------
-async function fetchCSV(){
-  const res = await fetch(CSV_URL + "&cb=" + Date.now());
-  return await res.text();
-}
 
-async function loadCSV(){
-  const text = await fetchCSV();
-  const lines=text.trim().split("\n");
+async function loadColors() {
+  const data = await fetchSheetData();
+  const colors = {};
 
-  const colors={};
-  let H2=0;
-
-  lines.forEach((line,index)=>{
-    const cols=line.split(",");
-    if(index===1) H2=parseInt(cols[7]);
-    const id=cols[0];
-    const color=cols[1];
-    if(id) colors[id.trim()]=color.trim().toUpperCase();
+  data.forEach((row, index) => {
+    if (index === 0) return; // header
+    const id = row[0];
+    const color = row[1];
+    if (id) colors[id.trim()] = color.trim().toUpperCase();
   });
 
-  actionsAvailable=H2;
-  updateActionDisplay();
   return colors;
 }
 
-setInterval(fetchCSV, 1000);
+  async function updateActionsFromSheet() {
+  const data = await fetchSheetData();
+  const H2 = parseInt(data[1][7]); // fila 2, columna H
+
+  if (!isNaN(H2)) {
+    actionsAvailable = H2;
+    updateActionDisplay();
+  }
+}
+setInterval(updateActionsFromSheet, 1000);
+  
   
 // ------------------------------
 // BLOQUEIG DINÀMIC PER E1
 // ------------------------------
 async function checkLockState() {
   try {
-    const text = await fetchCSV();
+    
     const lines = text.trim().split("\n");
     const cols = lines[0].split(",");
     const E1 = cols[4].trim();
@@ -328,8 +339,7 @@ async function drawHexGrid(){
     </defs>
   `);
 
-  const colors=await loadCSV();
-
+  
   const B=map.clientWidth;
   const scale=B/REAL_GRID_WIDTH;
   const R=REAL_R*scale;
