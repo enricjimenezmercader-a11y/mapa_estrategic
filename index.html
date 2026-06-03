@@ -221,44 +221,32 @@ let clickLocked=false;
 // ------------------------------
 // LECTURA CSV AMB CACHE-BUSTER
 // ------------------------------
+async function fetchCSV(){
+  const res = await fetch(CSV_URL + "&cb=" + Date.now());
+  return await res.text();
+}
 
-async function loadColorsFromCSV() {
+async function loadCSV(){
   const text = await fetchCSV();
-  const lines = text.trim().split("\n");
+  const lines=text.trim().split("\n");
 
-  const colors = {};
+  const colors={};
+  let H2=0;
 
-  lines.forEach((line, index) => {
-    if (index === 0) return; // saltar header
-    const cols = line.split(",");
-    const id = cols[0];
-    const color = cols[1];
-
-    if (id) {
-      colors[id.trim()] = color.trim().toUpperCase();
-    }
+  lines.forEach((line,index)=>{
+    const cols=line.split(",");
+    if(index===1) H2=parseInt(cols[7]);
+    const id=cols[0];
+    const color=cols[1];
+    if(id) colors[id.trim()]=color.trim().toUpperCase();
   });
 
+  actionsAvailable=H2;
+  updateActionDisplay();
   return colors;
 }
 
-  async function updateActionsFromSheet() {
-  const text = await fetchCSV();
-  const lines = text.trim().split("\n");
-
-  if (lines.length < 2) return;
-
-  const cols = lines[1].split(",");
-  const H2 = parseInt(cols[7]);
-
-  if (!isNaN(H2)) {
-    actionsAvailable = H2;
-    updateActionDisplay();
-  }
-}
-
-  setInterval(updateActionsFromSheet, 1000);
-  
+setInterval(fetchCSV, 1000);
   
 // ------------------------------
 // BLOQUEIG DINÀMIC PER E2
