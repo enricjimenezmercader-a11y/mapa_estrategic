@@ -214,7 +214,7 @@ let hexData=[];
 let selectedRed=null;
 let highlightedAdjacents=[];
 let ordersSet=new Set();
-let actions=0;
+let actionsAvailable=0;
 let arrowImages={};
 let clickLocked=false;
 
@@ -249,18 +249,18 @@ async function loadCSV(){
 setInterval(fetchCSV, 1000);
   
 // ------------------------------
-// BLOQUEIG DINÀMIC PER E2
+// BLOQUEIG DINÀMIC PER E1
 // ------------------------------
 async function checkLockState() {
   try {
     const text = await fetchCSV();
     const lines = text.trim().split("\n");
     const cols = lines[0].split(",");
-    const E2 = cols[4].trim();
+    const E1 = cols[4].trim();
 
     const btn = document.getElementById("confirmBtn");
 
-    btn._sheetLocked = (E2 === "1");
+    btn._sheetLocked = (E1 === "1");
 
     if (btn._sheetLocked || btn._tempLocked) {
       btn.disabled = true;
@@ -287,7 +287,7 @@ function updateActionDisplay(){
   const spent=usedPoints();
   const remaining=actionsAvailable-spent;
   document.getElementById("titleBar").textContent=
-    `Equip vermell — Accions disponibles: ${actionsAvailable}`;
+    `Equip vermell — Accions disponibles: ${actionsAvailable} — Gastades: ${spent} — Restants: ${remaining}`;
   const pct=Math.min(100,(spent/actionsAvailable)*100);
   document.getElementById("actionFill").style.width=pct+"%";
 }
