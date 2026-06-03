@@ -214,7 +214,7 @@ let hexData=[];
 let selectedRed=null;
 let highlightedAdjacents=[];
 let ordersSet=new Set();
-let actionsAvailable=0;
+let actionsAvailable=H2;
 let arrowImages={};
 let clickLocked=false;
 
@@ -247,6 +247,7 @@ async function loadCSV(){
 }
 
 setInterval(fetchCSV, 1000);
+setInterval(loadCSV, 1000);
   
 // ------------------------------
 // BLOQUEIG DINÀMIC PER E2
