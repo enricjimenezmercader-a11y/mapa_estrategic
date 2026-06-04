@@ -204,7 +204,7 @@
 
 <script>
 const PATTERN=[5,4,5,4,5,4,5,4,5,4,5];
-const JSON_URL="https://script.google.com/macros/s/AKfycbybWdepeqLxEQhcKHOUNr0PpYHDtM4ut4wch4DTAg67XyL-WXAI4myJSE1i8bDj4S_I/exec";
+const JSON_URL="https://docs.google.com/spreadsheets/d/1j1rTmUle3A-Ros3cRGKyQd8B0pVV29rzwyf_4Bo1Q/gviz/query?tq=SELECT%20*&tqx=out:json";
 
 const REAL_R=41.78;
 const REAL_GRID_WIDTH=17*REAL_R;
@@ -224,28 +224,44 @@ let actionsAvailable=0;
 // ------------------------------
 async function fetchJSON(){
   const res = await fetch(JSON_URL + "&cb=" + Date.now());
-  return await res.json();
+  const text = await res.text();
+  // Google Visualization API retorna JSONP, necessitem parsejar-lo
+  const jsonString = text.substring(6, text.length - 2);
+  return JSON.parse(jsonString);
 }
 
 async function loadJSON(){
   const data = await fetchJSON();
   
-  const colors={};
-  let H2=0;
-
-  // Si data és un array, agafa el primer element (la fila de dades)
-  const row = Array.isArray(data) ? data[0] : data;
+  const colors = {};
+  let H2 = 0;
   
-  if(row && row.H2) H2 = parseInt(row.H2);
-  
-  // Construir l'objecte de colors a partir del JSON
-  if(row && row.hexagons) {
-    Object.keys(row.hexagons).forEach(id => {
-      colors[id] = row.hexagons[id].toUpperCase();
-    });
+  // Estructura Google Sheets: data.table.rows
+  if (data.table && data.table.rows.length > 0) {
+    const headers = data.table.cols;
+    const rows = data.table.rows;
+    
+    // Primera fila de dades (índex 0)
+    if (rows[0]) {
+      const firstRow = rows[0].c;
+      // Buscar la columna H (accions disponibles)
+      if (headers[7] && headers[7].label === "ACCIONS RES") {
+        H2 = parseInt(firstRow[7]?.v) || 0;
+      }
+    }
+    
+    // Construir colors des de les files 2+
+    for (let i = 1; i < rows.length; i++) {
+      const row = rows[i].c;
+      const id = row[0]?.v;
+      const color = row[1]?.v;
+      if (id) {
+        colors[id] = (color || "MAR").toUpperCase();
+      }
+    }
   }
 
-  actionsAvailable=H2;
+  actionsAvailable = H2;
   updateActionDisplay();
   return colors;
 }
@@ -258,23 +274,27 @@ setInterval(fetchJSON, 1000);
 async function checkLockState() {
   try {
     const data = await fetchJSON();
-    const row = Array.isArray(data) ? data[0] : data;
-    const E2 = (row && row.E2) ? row.E2.toString().trim() : "0";
+    
+    // Estructura Google Sheets: data.table.rows
+    if (data.table && data.table.rows.length > 0) {
+      const firstRow = data.table.rows[0].c;
+      const E2 = (firstRow[4]?.v) ? firstRow[4].v.toString().trim() : "0";
 
-    const btn = document.getElementById("confirmBtn");
+      const btn = document.getElementById("confirmBtn");
 
-    btn._sheetLocked = (E2 === "1");
+      btn._sheetLocked = (E2 === "1");
 
-    if (btn._sheetLocked || btn._tempLocked) {
-      btn.disabled = true;
-      btn.style.background = "#555";
-      btn.style.color = "#999";
-      btn.style.cursor = "not-allowed";
-    } else {
-      btn.disabled = false;
-      btn.style.background = "#004400";
-      btn.style.color = "#aaffaa";
-      btn.style.cursor = "pointer";
+      if (btn._sheetLocked || btn._tempLocked) {
+        btn.disabled = true;
+        btn.style.background = "#555";
+        btn.style.color = "#999";
+        btn.style.cursor = "not-allowed";
+      } else {
+        btn.disabled = false;
+        btn.style.background = "#004400";
+        btn.style.color = "#aaffaa";
+        btn.style.cursor = "pointer";
+      }
     }
 
   } catch (err) {
