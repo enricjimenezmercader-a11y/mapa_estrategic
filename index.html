@@ -223,7 +223,7 @@ let clickLocked=false;
 // ------------------------------
 async function fetchCSV(){
   const data = await fetchNoCache(JSON_URL);
-  return await res.text();
+  return await res.json();
 }
 
 async function loadCSV(){
