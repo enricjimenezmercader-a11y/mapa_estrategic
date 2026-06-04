@@ -204,7 +204,7 @@
 
 <script>
 const PATTERN=[5,4,5,4,5,4,5,4,5,4,5];
-const JSON_URL="https://cors-anywhere.herokuapp.com/https://script.google.com/macros/s/AKfycbznq8tu-w2eNfv4OhKXYoNYyS3KjSiCDAthY6NHPaJCS07Cg39LDYHJIdGKgEUFnyt2/exec";
+const JSON_URL="https://script.google.com/macros/s/AKfycbyIBE0IOb8fMe5oGXHwPUwh2T8ct-dftnUJAv6hT_IH_-kTKGR8dNtxZfONc7LzxmBi/exec";
 
 const REAL_R=41.78;
 const REAL_GRID_WIDTH=17*REAL_R;
@@ -220,47 +220,58 @@ let clickLocked=false;
 let actionsAvailable=0;
 
 // ------------------------------
-// LECTURA JSON AMB CACHE-BUSTER
+// LECTURA JSONP
 // ------------------------------
 async function fetchJSON(){
-  try {
-    const res = await fetch(JSON_URL + "?cb=" + Date.now());
-    if (!res.ok) {
-      console.error("HTTP Error:", res.status, res.statusText);
-      throw new Error(`HTTP error! status: ${res.status}`);
-    }
-    const data = await res.json();
-    console.log("JSON rebut:", data);
-    return data;
-  } catch (err) {
-    console.error("Error fetching JSON:", err);
-    return [];
-  }
+  return new Promise((resolve, reject) => {
+    const callbackName = 'jsonpCallback_' + Date.now();
+    
+    window[callbackName] = function(data) {
+      delete window[callbackName];
+      document.body.removeChild(script);
+      resolve(data);
+    };
+    
+    const script = document.createElement('script');
+    script.src = JSON_URL + "?callback=" + callbackName;
+    script.onerror = () => {
+      delete window[callbackName];
+      document.body.removeChild(script);
+      console.error('JSONP load error');
+      reject(new Error('JSONP load error'));
+    };
+    document.body.appendChild(script);
+  });
 }
 
 async function loadJSON(){
-  const data = await fetchJSON();
-  
-  const colors = {};
-  let H2 = 0;
-
-  if (Array.isArray(data) && data.length > 0) {
-    const firstRow = data[0];
-    H2 = parseInt(firstRow["ACCIONS RES"]) || 0;
+  try {
+    const data = await fetchJSON();
     
-    for (let i = 0; i < data.length; i++) {
-      const row = data[i];
-      const id = row["HEXAGONS"];
-      const color = row["HEXAGONS "];
-      if (id) {
-        colors[id] = (color || "MAR").toUpperCase();
+    const colors = {};
+    let H2 = 0;
+
+    if (Array.isArray(data) && data.length > 0) {
+      const firstRow = data[0];
+      H2 = parseInt(firstRow["ACCIONS RES"]) || 0;
+      
+      for (let i = 0; i < data.length; i++) {
+        const row = data[i];
+        const id = row["HEXAGONS"];
+        const color = row["HEXAGONS "];
+        if (id) {
+          colors[id] = (color || "MAR").toUpperCase();
+        }
       }
     }
-  }
 
-  actionsAvailable = H2;
-  updateActionDisplay();
-  return colors;
+    actionsAvailable = H2;
+    updateActionDisplay();
+    return colors;
+  } catch (err) {
+    console.error('Error loading JSON:', err);
+    return {};
+  }
 }
 
 setInterval(fetchJSON, 1000);
