@@ -204,7 +204,7 @@
 
 <script>
 const PATTERN=[5,4,5,4,5,4,5,4,5,4,5];
-const JSON_URL = "https://script.google.com/macros/s/AKfycbz_pSDXfaxX20KC64P1N5EygoqiWALXF9LFaAdh8P15JUKvyISevu39Pmc6gNxfqHx3/exec";
+const JSON_URL="https://script.google.com/macros/s/AKfycbz_pSDXfaxX20KC64P1N5EygoqiWALXF9LFaAdh8P15JUKvyISevu39Pmc6gNxfqHx3/exec";
 
 const REAL_R=41.78;
 const REAL_GRID_WIDTH=17*REAL_R;
@@ -217,46 +217,49 @@ let ordersSet=new Set();
 let actions=0;
 let arrowImages={};
 let clickLocked=false;
+let actionsAvailable=0;
 
 // ------------------------------
-// LECTURA CSV AMB CACHE-BUSTER
+// LECTURA JSON AMB CACHE-BUSTER
 // ------------------------------
-async function fetchCSV(){
-  const data = await fetchNoCache(JSON_URL);
+async function fetchJSON(){
+  const res = await fetch(JSON_URL + "&cb=" + Date.now());
   return await res.json();
 }
 
-async function loadCSV(){
-  const text = await fetchCSV();
-  const lines=text.trim().split("\n");
-
+async function loadJSON(){
+  const data = await fetchJSON();
+  
   const colors={};
   let H2=0;
 
-  lines.forEach((line,index)=>{
-    const cols=line.split(",");
-    if(index===1) H2=parseInt(cols[7]);
-    const id=cols[0];
-    const color=cols[1];
-    if(id) colors[id.trim()]=color.trim().toUpperCase();
-  });
+  // Si data és un array, agafa el primer element (la fila de dades)
+  const row = Array.isArray(data) ? data[0] : data;
+  
+  if(row && row.H2) H2 = parseInt(row.H2);
+  
+  // Construir l'objecte de colors a partir del JSON
+  if(row && row.hexagons) {
+    Object.keys(row.hexagons).forEach(id => {
+      colors[id] = row.hexagons[id].toUpperCase();
+    });
+  }
 
   actionsAvailable=H2;
   updateActionDisplay();
   return colors;
 }
 
-setInterval(fetchCSV, 1000);
+setInterval(fetchJSON, 1000);
   
 // ------------------------------
 // BLOQUEIG DINÀMIC PER E2
 // ------------------------------
 async function checkLockState() {
   try {
-    const text = await fetchCSV();
-    const lines = text.trim().split("\n");
-    const cols = lines[0].split(",");
-    const E2 = cols[4].trim();
+    const data = await fetchJSON();
+    const row = Array.isArray(data) ? data[0] : data;
+    const E2 = (row && row.E2) ? row.E2.toString().trim() : "0";
 
     const btn = document.getElementById("confirmBtn");
 
@@ -328,7 +331,7 @@ async function drawHexGrid(){
     </defs>
   `);
 
-  const colors=await loadCSV();
+  const colors=await loadJSON();
 
   const B=map.clientWidth;
   const scale=B/REAL_GRID_WIDTH;
