@@ -225,8 +225,13 @@ let actionsAvailable=0;
 async function fetchJSON(){
   try {
     const res = await fetch(JSON_URL + "?cb=" + Date.now());
-    if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
-    return await res.json();
+    if (!res.ok) {
+      console.error("HTTP Error:", res.status, res.statusText);
+      throw new Error(`HTTP error! status: ${res.status}`);
+    }
+    const data = await res.json();
+    console.log("JSON rebut:", data);
+    return data;
   } catch (err) {
     console.error("Error fetching JSON:", err);
     return [];
