@@ -204,7 +204,7 @@
 
 <script>
 const PATTERN=[5,4,5,4,5,4,5,4,5,4,5];
-const CSV_URL="https://docs.google.com/spreadsheets/d/e/2PACX-1vS8k769FG5aF_PK-AmHLVdcfc6sgJeeIhWkL9Q8Gcrs39JW9GyJid_OtHcwhN9r3xhFvWPrc_yigZiY/pub?output=csv";
+const JSON_URL = "https://script.google.com/macros/s/AKfycbz_pSDXfaxX20KC64P1N5EygoqiWALXF9LFaAdh8P15JUKvyISevu39Pmc6gNxfqHx3/exec";
 
 const REAL_R=41.78;
 const REAL_GRID_WIDTH=17*REAL_R;
@@ -222,7 +222,7 @@ let clickLocked=false;
 // LECTURA CSV AMB CACHE-BUSTER
 // ------------------------------
 async function fetchCSV(){
-  const res = await fetch(CSV_URL + "&cb=" + Date.now());
+  const data = await fetchNoCache(JSON_URL);
   return await res.text();
 }
 
