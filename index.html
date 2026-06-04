@@ -204,7 +204,7 @@
 
 <script>
 const PATTERN=[5,4,5,4,5,4,5,4,5,4,5];
-const JSON_URL="https://script.google.com/macros/s/AKfycbwljG5pj84olBxWYK-RWgfTMuJWKNNBXhDgy4JFz4yZnl5swl_KsoXzSG4_wd8G-_QA/exec";
+const JSON_URL="https://script.google.com/macros/s/AKfycbznq8tu-w2eNfv4OhKXYoNYyS3KjSiCDAthY6NHPaJCS07Cg39LDYHJIdGKgEUFnyt2/exec";
 
 const REAL_R=41.78;
 const REAL_GRID_WIDTH=17*REAL_R;
@@ -223,8 +223,14 @@ let actionsAvailable=0;
 // LECTURA JSON AMB CACHE-BUSTER
 // ------------------------------
 async function fetchJSON(){
-  const res = await fetch(JSON_URL + "?cb=" + Date.now());
-  return await res.json();
+  try {
+    const res = await fetch(JSON_URL + "?cb=" + Date.now());
+    if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+    return await res.json();
+  } catch (err) {
+    console.error("Error fetching JSON:", err);
+    return [];
+  }
 }
 
 async function loadJSON(){
