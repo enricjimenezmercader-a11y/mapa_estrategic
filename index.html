@@ -204,7 +204,7 @@
 
 <script>
 const PATTERN=[5,4,5,4,5,4,5,4,5,4,5];
-const JSON_URL="https://docs.google.com/spreadsheets/d/1j1rTmUle3A-Ros3cRGKyQd8B0pVV29rzwyf_4Bo1Q/gviz/query?tq=SELECT%20*&tqx=out:json";
+const JSON_URL="https://script.google.com/macros/s/AKfycbwljG5pj84olBxWYK-RWgfTMuJWKNNBXhDgy4JFz4yZnl5swl_KsoXzSG4_wd8G-_QA/exec";
 
 const REAL_R=41.78;
 const REAL_GRID_WIDTH=17*REAL_R;
@@ -223,11 +223,8 @@ let actionsAvailable=0;
 // LECTURA JSON AMB CACHE-BUSTER
 // ------------------------------
 async function fetchJSON(){
-  const res = await fetch(JSON_URL + "&cb=" + Date.now());
-  const text = await res.text();
-  // Google Visualization API retorna JSONP, necessitem parsejar-lo
-  const jsonString = text.substring(6, text.length - 2);
-  return JSON.parse(jsonString);
+  const res = await fetch(JSON_URL + "?cb=" + Date.now());
+  return await res.json();
 }
 
 async function loadJSON(){
@@ -235,26 +232,15 @@ async function loadJSON(){
   
   const colors = {};
   let H2 = 0;
-  
-  // Estructura Google Sheets: data.table.rows
-  if (data.table && data.table.rows.length > 0) {
-    const headers = data.table.cols;
-    const rows = data.table.rows;
+
+  if (Array.isArray(data) && data.length > 0) {
+    const firstRow = data[0];
+    H2 = parseInt(firstRow["ACCIONS RES"]) || 0;
     
-    // Primera fila de dades (índex 0)
-    if (rows[0]) {
-      const firstRow = rows[0].c;
-      // Buscar la columna H (accions disponibles)
-      if (headers[7] && headers[7].label === "ACCIONS RES") {
-        H2 = parseInt(firstRow[7]?.v) || 0;
-      }
-    }
-    
-    // Construir colors des de les files 2+
-    for (let i = 1; i < rows.length; i++) {
-      const row = rows[i].c;
-      const id = row[0]?.v;
-      const color = row[1]?.v;
+    for (let i = 0; i < data.length; i++) {
+      const row = data[i];
+      const id = row["HEXAGONS"];
+      const color = row["HEXAGONS "];
       if (id) {
         colors[id] = (color || "MAR").toUpperCase();
       }
@@ -275,10 +261,9 @@ async function checkLockState() {
   try {
     const data = await fetchJSON();
     
-    // Estructura Google Sheets: data.table.rows
-    if (data.table && data.table.rows.length > 0) {
-      const firstRow = data.table.rows[0].c;
-      const E2 = (firstRow[4]?.v) ? firstRow[4].v.toString().trim() : "0";
+    if (Array.isArray(data) && data.length > 0) {
+      const firstRow = data[0];
+      const E2 = (firstRow["ORDRES IMPAI"] || "0").toString().trim();
 
       const btn = document.getElementById("confirmBtn");
 
