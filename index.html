@@ -272,13 +272,13 @@ async function loadJSON(){
 
     if (Array.isArray(data) && data.length > 0) {
       const firstRow = data[0];
-      // Columna H: ACCIONS RES
-      H2 = parseInt(firstRow["ACCIONS RES"]) || 0;
+      // Columna H: accions disponibles
+      H2 = parseInt(firstRow["H"]) || 0;
       
       for (let i = 0; i < data.length; i++) {
         const row = data[i];
-        const id = row["HEXAGONS"];           // Columna A
-        const color = row["HEXAGONS "];       // Columna B (amb espai!)
+        const id = row["A"];           // Columna A: número hexagon
+        const color = row["B"];        // Columna B: color (red, blue, MAR)
         if (id) {
           colors[id] = (color || "MAR").toUpperCase();
         }
@@ -308,7 +308,7 @@ async function checkLockState() {
     
     if (Array.isArray(data) && data.length > 0) {
       const firstRow = data[0];
-      const E2 = (firstRow["ORDRES IMPAI"] || "0").toString().trim();
+      const E2 = (firstRow["E"] || "0").toString().trim();
 
       const btn = document.getElementById("confirmBtn");
 
