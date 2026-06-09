@@ -220,27 +220,48 @@ let clickLocked=false;
 let actionsAvailable=0;
 
 // ------------------------------
-// LECTURA JSONP
+// LECTURA JSONP MEJORADA
 // ------------------------------
 async function fetchJSON(){
   return new Promise((resolve, reject) => {
-    const callbackName = 'jsonpCallback_' + Date.now();
+    const callbackName = 'jsonpCallback_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
     
+    // Definir la funció globalment ABANS de crear el script
     window[callbackName] = function(data) {
+      console.log("JSONP rebut:", data);
       delete window[callbackName];
-      document.body.removeChild(script);
+      try {
+        document.head.removeChild(script);
+      } catch(e) {}
+      clearTimeout(window[callbackName].timeout);
       resolve(data);
     };
     
     const script = document.createElement('script');
     script.src = JSON_URL + "?callback=" + callbackName;
-    script.onerror = () => {
+    script.type = 'text/javascript';
+    
+    script.onerror = function() {
+      console.error('Script error:', callbackName);
       delete window[callbackName];
-      document.body.removeChild(script);
-      console.error('JSONP load error');
-      reject(new Error('JSONP load error'));
+      try {
+        document.head.removeChild(script);
+      } catch(e) {}
+      reject(new Error('JSONP script error'));
     };
-    document.body.appendChild(script);
+    
+    // Timeout per si el servidor no respon
+    const timeout = setTimeout(() => {
+      delete window[callbackName];
+      try {
+        document.head.removeChild(script);
+      } catch(e) {}
+      reject(new Error('JSONP timeout'));
+    }, 5000);
+    
+    window[callbackName].timeout = timeout;
+    
+    document.head.appendChild(script);
   });
 }
 
@@ -263,6 +284,8 @@ async function loadJSON(){
           colors[id] = (color || "MAR").toUpperCase();
         }
       }
+      
+      console.log("Colors carregats:", colors);
     }
 
     actionsAvailable = H2;
@@ -394,6 +417,8 @@ async function drawHexGrid(){
       let cls="hex hex-mar";
       if(color.includes("RED")) cls="hex hex-red";
       else if(color.includes("BLUE")) cls="hex hex-blue";
+
+      if (id <= 5) console.log(`ID: ${id}, Color: ${color}, Classe: ${cls}, Colors object:`, colors);
 
       poly.setAttribute("class",cls);
       poly.dataset.id=id;
