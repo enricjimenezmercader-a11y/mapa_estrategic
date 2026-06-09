@@ -52,7 +52,7 @@
       width:100%;
       height:100%;
       z-index:10;
-      pointer-events:none; /* Mode informatiu bloquejat */
+      pointer-events:none;
     }
 
     .hex{
@@ -113,9 +113,9 @@
 <script>
 const PATTERN=[5,4,5,4,5,4,5,4,5,4,5];
 
-// URLs actualitzades de les teves plataformes de Google Apps Script
+// URLs de les plataformes de Google Apps Script (Actualitzades)
 const COLORS_JSON_URL="https://script.google.com/macros/s/AKfycbyM44gMczZ9XQvIJhAcKaBx9CPbMNAXEgVze1ClXJIZ6VOkZJxSxPKwrmQj57_KjLyX/exec";
-const ORDERS_JSON_URL="https://script.google.com/macros/s/AKfycbwp_Qy6vzBUuo2jK0gtI-9hdUY3mFZ41BPIf6VZqyGwPpEBZh0KnUGqOdTiBgZXm4YF1A/exec";
+const ORDERS_JSON_URL="https://script.google.com/macros/s/AKfycbzDdC4yHTVFzNdsSRJE7yfiRRvOiCPssSyVBEDPV92gSksgOnwfIVSUVVRkGSbzy_EBDw/exec";
 
 const REAL_R=41.78;
 const REAL_GRID_WIDTH=17*REAL_R;
@@ -124,7 +124,7 @@ const IMAGE_RATIO=1.4;
 let hexData=[];
 let arrowElements=[]; 
 
-// Motor de lectura JSONP robust i lliure d'errors de timeout/scope
+// Motor de lectura JSONP robust i asíncron
 async function fetchJSONP(url){
   return new Promise((resolve, reject) => {
     const callbackName = 'jsonp_' + Date.now() + '_' + Math.random().toString(36).substring(2, 9);
@@ -132,7 +132,7 @@ async function fetchJSONP(url){
     
     const timerId = setTimeout(() => {
       cleanup();
-      reject(new Error('El servidor de Google triga massa a respondre.'));
+      reject(new Error('Temps d\'espera esgotat (Timeout de Google)'));
     }, 8000);
 
     function cleanup() {
@@ -152,7 +152,7 @@ async function fetchJSONP(url){
 
     script.onerror = function() {
       cleanup();
-      reject(new Error('Accés denegat (Revisa els permisos "Cualquiera" de l\'Script)'));
+      reject(new Error('Error de connexió o permís denegat.'));
     };
 
     document.head.appendChild(script);
@@ -257,12 +257,13 @@ async function updateActiveOrders(){
   try {
     const orderStrings = await fetchJSONP(ORDERS_JSON_URL);
     
-    // Si hem rebut les dades correctament, esborrem les fletxes velles i pintem les noves
+    // Netegem fletxes antigues
     arrowElements.forEach(img => img.remove());
     arrowElements = [];
 
     if (Array.isArray(orderStrings)) {
       orderStrings.forEach(orderText => {
+        // Encaixa amb: "territori X a territori Y" (sense importar l'accent ni la d' d'atac)
         const match = orderText.match(/territori\s+(\d+)\s+a\s+territori\s+(\d+)/i);
         if (match) {
           const originID = parseInt(match[1]);
@@ -281,7 +282,7 @@ async function updateActiveOrders(){
       document.getElementById("loadingIndicator").textContent = `Radar sincronitzat: Darrera actualització a les ${d.toLocaleTimeString()}`;
     }
   } catch(e) {
-    document.getElementById("loadingIndicator").textContent = `⚠️ Error de radar: ${e.message}`;
+    document.getElementById("loadingIndicator").textContent = `⚠️ Error en llegir ordres: ${e.message}`;
   }
 }
 
@@ -348,12 +349,12 @@ function fullRedraw(){
 
 window.addEventListener("resize", fullRedraw);
 
-// Inicialització automàtica
+// Inicialització automàtica en carregar la pàgina
 resizeMap();
 initHexGridStructure();
 setTimeout(syncRadarData, 500);
 
-// Refresc automàtic fixat cada 5 segons
+// Refresc automàtic cada 5 segons per veure els canvis en viu
 setInterval(syncRadarData, 5000);
 </script>
 
