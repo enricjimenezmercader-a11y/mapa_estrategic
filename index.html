@@ -203,6 +203,7 @@
 <button id="confirmBtn">Confirmar ordres</button>
 
 <script>
+
 const PATTERN=[5,4,5,4,5,4,5,4,5,4,5];
 const JSON_URL="https://script.google.com/macros/s/AKfycbyM44gMczZ9XQvIJhAcKaBx9CPbMNAXEgVze1ClXJIZ6VOkZJxSxPKwrmQj57_KjLyX/exec";
 
@@ -218,44 +219,34 @@ let actions=0;
 let arrowImages={};
 let clickLocked=false;
 let actionsAvailable=0;
+let lastColors = {};
 
-// ------------------------------
 // LECTURA JSONP ROBUSTA
-// ------------------------------
 async function fetchJSON(){
   return new Promise((resolve, reject) => {
     const callbackName = 'jsonpCallback_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+    const timeoutId = setTimeout(() => {
+      delete window[callbackName];
+      try { document.head.removeChild(script); } catch(e) {}
+      reject(new Error('JSONP timeout'));
+    }, 5000);
     
     window[callbackName] = function(data) {
+      clearTimeout(timeoutId);
       delete window[callbackName];
-      try {
-        document.head.removeChild(script);
-      } catch(e) {}
-      clearTimeout(window[callbackName].timeout);
+      try { document.head.removeChild(script); } catch(e) {}
       resolve(data);
     };
     
     const script = document.createElement('script');
     script.src = JSON_URL + "?callback=" + callbackName;
     script.type = 'text/javascript';
-    
     script.onerror = function() {
+      clearTimeout(timeoutId);
       delete window[callbackName];
-      try {
-        document.head.removeChild(script);
-      } catch(e) {}
+      try { document.head.removeChild(script); } catch(e) {}
       reject(new Error('JSONP script error'));
     };
-    
-    const timeout = setTimeout(() => {
-      delete window[callbackName];
-      try {
-        document.head.removeChild(script);
-      } catch(e) {}
-      reject(new Error('JSONP timeout'));
-    }, 5000);
-    
-    window[callbackName].timeout = timeout;
     
     document.head.appendChild(script);
   });
@@ -284,15 +275,15 @@ async function loadJSON(){
     }
 
     actionsAvailable = H2;
+    lastColors = colors;
     updateActionDisplay();
     return colors;
   } catch (err) {
-    console.error('Error loading JSON:', err);
-    return {};
+    return lastColors;
   }
 }
 
-// Funció única que actualitza TODO cada 3 segons
+// Actualització periòdica
 async function updateAllData() {
   try {
     const data = await fetchJSON();
@@ -300,12 +291,10 @@ async function updateAllData() {
     if (Array.isArray(data) && data.length > 0) {
       const firstRow = data[0];
       
-      // Actualitzar accions
       const H2 = parseInt(firstRow["H"]) || 0;
       actionsAvailable = H2;
       updateActionDisplay();
       
-      // Actualitzar lock state
       const E2 = (firstRow["E"] || "0").toString().trim();
       const btn = document.getElementById("confirmBtn");
       btn._sheetLocked = (E2 === "1");
@@ -322,7 +311,6 @@ async function updateAllData() {
         btn.style.cursor = "pointer";
       }
       
-      // REDIBUIXAR els hexagons amb els colors actualitzats
       await drawHexGrid();
     }
   } catch (err) {
@@ -330,11 +318,8 @@ async function updateAllData() {
   }
 }
 
-// ------------------------------
-
 function updateActionDisplay(){
   const spent=usedPoints();
-  const remaining=actionsAvailable-spent;
   document.getElementById("titleBar").textContent=
     `Equip vermell — Accions disponibles: ${actionsAvailable}`;
   const pct=Math.min(100,(spent/actionsAvailable)*100);
@@ -365,9 +350,6 @@ async function drawHexGrid(){
   hexData=[];
   selectedRed=null;
   highlightedAdjacents=[];
-  arrowImages={};
-  ordersSet=new Set();
-  document.getElementById("orders").innerHTML="";
 
   svg.insertAdjacentHTML("afterbegin",`
     <defs>
@@ -377,7 +359,7 @@ async function drawHexGrid(){
     </defs>
   `);
 
-  const colors=await loadJSON();
+  const colors = lastColors || await loadJSON();
 
   const B=map.clientWidth;
   const scale=B/REAL_GRID_WIDTH;
@@ -405,7 +387,6 @@ async function drawHexGrid(){
       }
 
       const g=document.createElementNS("http://www.w3.org/2000/svg","g");
-
       const poly=document.createElementNS("http://www.w3.org/2000/svg","polygon");
       poly.setAttribute("points",pts.join(" "));
 
@@ -416,7 +397,6 @@ async function drawHexGrid(){
 
       poly.setAttribute("class",cls);
       poly.dataset.id=id;
-
       g.appendChild(poly);
 
       const label=document.createElementNS("http://www.w3.org/2000/svg","text");
@@ -427,7 +407,6 @@ async function drawHexGrid(){
       g.appendChild(label);
 
       svg.appendChild(g);
-
       hexData.push({id,cx,cy,color,element:poly});
       id++;
     }
@@ -488,7 +467,6 @@ function direction(origin,target){
   if(dx>0 && dy>0) return "SE";
   if(dx<0 && dy<0) return "NO";
   if(dx<0 && dy>0) return "SO";
-
   return "N";
 }
 
@@ -518,7 +496,6 @@ function placeArrow(origin,target,key){
   img.className="attack-arrow attack-arrow--shake attack-arrow--glow";
 
   const FACTOR=1.42;
-
   const width = 2 * R * FACTOR;
   const height = hexH * FACTOR;
 
@@ -557,7 +534,6 @@ function addOrder(originID,targetID){
   }
 
   ordersSet.add(key);
-
   clickLocked = true;
   document.body.style.cursor = "wait";
   setTimeout(() => {
@@ -569,13 +545,11 @@ function addOrder(originID,targetID){
   const target=hexData.find(h=>h.id===targetID);
 
   placeArrow(origin,target,key);
-
   target.element.classList.remove("hex-hatch");
 
   document.getElementById("moveSound").play();
 
   const orders=document.getElementById("orders");
-
   const line=document.createElement("div");
   line.className="order-line";
   line.dataset.key=key;
@@ -635,9 +609,7 @@ function setupClickHandler(){
 // Inicialitzar
 window.addEventListener("resize",()=>{
   resizeMap();
-  drawHexGrid().then(()=>{
-    setupClickHandler();
-  });
+  drawHexGrid().then(()=>{ setupClickHandler(); });
 });
 
 resizeMap();
@@ -646,7 +618,7 @@ drawHexGrid().then(()=>{
   updateActionDisplay();
 });
 
-// Actualitzar dades cada 3 segons
+// Actualitzar cada 3 segons
 setInterval(updateAllData, 3000);
 
 document.getElementById("confirmBtn").addEventListener("click", async () => {
@@ -685,6 +657,8 @@ document.getElementById("confirmBtn").addEventListener("click", async () => {
     await new Promise(res => setTimeout(res, 150));
   }
 });
+
+  
 </script>
 
 </body>
