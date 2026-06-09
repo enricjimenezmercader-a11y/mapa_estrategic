@@ -220,15 +220,14 @@ let clickLocked=false;
 let actionsAvailable=0;
 
 // ------------------------------
-// LECTURA JSONP MEJORADA
+// LECTURA JSONP ROBUSTA
 // ------------------------------
 async function fetchJSON(){
   return new Promise((resolve, reject) => {
     const callbackName = 'jsonpCallback_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
     
-    // Definir la funció globalment ABANS de crear el script
     window[callbackName] = function(data) {
-      console.log("JSONP rebut:", data);
+      console.log("JSONP raw rebut:", data);
       delete window[callbackName];
       try {
         document.head.removeChild(script);
@@ -242,7 +241,7 @@ async function fetchJSON(){
     script.type = 'text/javascript';
     
     script.onerror = function() {
-      console.error('Script error:', callbackName);
+      console.error('Script error');
       delete window[callbackName];
       try {
         document.head.removeChild(script);
@@ -250,7 +249,6 @@ async function fetchJSON(){
       reject(new Error('JSONP script error'));
     };
     
-    // Timeout per si el servidor no respon
     const timeout = setTimeout(() => {
       delete window[callbackName];
       try {
@@ -272,20 +270,39 @@ async function loadJSON(){
     const colors = {};
     let H2 = 0;
 
-    if (Array.isArray(data) && data.length > 0) {
-      const firstRow = data[0];
-      H2 = parseInt(firstRow["ACCIONS RES"]) || 0;
-      
-      for (let i = 0; i < data.length; i++) {
-        const row = data[i];
-        const id = row["HEXAGONS"];
-        const color = row["HEXAGONS "];
-        if (id) {
-          colors[id] = (color || "MAR").toUpperCase();
+    // Intenta amb columnes positionals si l'estructura és d'array de arrays
+    if (Array.isArray(data)) {
+      if (data.length > 0) {
+        const firstRow = data[0];
+        
+        // Si és un objecte
+        if (typeof firstRow === 'object' && !Array.isArray(firstRow)) {
+          H2 = parseInt(firstRow["ACCIONS RES"] || firstRow[7]) || 0;
+          
+          for (let i = 0; i < data.length; i++) {
+            const row = data[i];
+            const id = row["HEXAGONS"] || row[0];
+            const color = row["HEXAGONS "] || row[1];
+            if (id) {
+              colors[id] = (color || "MAR").toUpperCase();
+            }
+          }
+        } 
+        // Si és un array de arrays
+        else if (Array.isArray(firstRow)) {
+          H2 = parseInt(firstRow[7]) || 0;
+          
+          for (let i = 0; i < data.length; i++) {
+            const row = data[i];
+            if (row.length > 1) {
+              colors[row[0]] = (row[1] || "MAR").toUpperCase();
+            }
+          }
         }
+        
+        console.log("Colors carregats:", colors);
+        console.log("H2 (accions):", H2);
       }
-      
-      console.log("Colors carregats:", colors);
     }
 
     actionsAvailable = H2;
@@ -308,7 +325,13 @@ async function checkLockState() {
     
     if (Array.isArray(data) && data.length > 0) {
       const firstRow = data[0];
-      const E2 = (firstRow["ORDRES IMPAI"] || "0").toString().trim();
+      let E2 = "0";
+      
+      if (typeof firstRow === 'object' && !Array.isArray(firstRow)) {
+        E2 = (firstRow["ORDRES IMPAI"] || "0").toString().trim();
+      } else if (Array.isArray(firstRow)) {
+        E2 = (firstRow[4] || "0").toString().trim();
+      }
 
       const btn = document.getElementById("confirmBtn");
 
@@ -417,8 +440,6 @@ async function drawHexGrid(){
       let cls="hex hex-mar";
       if(color.includes("RED")) cls="hex hex-red";
       else if(color.includes("BLUE")) cls="hex hex-blue";
-
-      if (id <= 5) console.log(`ID: ${id}, Color: ${color}, Classe: ${cls}, Colors object:`, colors);
 
       poly.setAttribute("class",cls);
       poly.dataset.id=id;
@@ -564,7 +585,6 @@ function addOrder(originID,targetID){
 
   ordersSet.add(key);
 
-  // Bloqueig de clics 1 segon + cursor rellotge
   clickLocked = true;
   document.body.style.cursor = "wait";
   setTimeout(() => {
@@ -651,7 +671,6 @@ window.addEventListener("resize",redraw);
 redraw();
 checkLockState();
 
-// Botó Confirmar ordres: bloqueig 5s, cursor rellotge i enviament seqüencial
 document.getElementById("confirmBtn").addEventListener("click", async () => {
   const btn = document.getElementById("confirmBtn");
 
