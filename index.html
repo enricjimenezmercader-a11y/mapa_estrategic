@@ -220,18 +220,27 @@ let clickLocked=false;
 let actionsAvailable=0;
 
 // ------------------------------
-// LECTURA JSONP ROBUSTA
+// LECTURA JSONP REVISADA I CORREGIDA
 // ------------------------------
 async function fetchJSON(){
   return new Promise((resolve, reject) => {
     const callbackName = 'jsonpCallback_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
     
+    // Control de timeout integrat de forma segura
+    const timeout = setTimeout(() => {
+      if (window[callbackName]) {
+        delete window[callbackName];
+        try { document.head.removeChild(script); } catch(e) {}
+        reject(new Error('JSONP timeout'));
+      }
+    }, 5000);
+
     window[callbackName] = function(data) {
+      clearTimeout(timeout);
       delete window[callbackName];
       try {
         document.head.removeChild(script);
       } catch(e) {}
-      clearTimeout(window[callbackName].timeout);
       resolve(data);
     };
     
@@ -240,22 +249,13 @@ async function fetchJSON(){
     script.type = 'text/javascript';
     
     script.onerror = function() {
-      delete window[callbackName];
-      try {
-        document.head.removeChild(script);
-      } catch(e) {}
+      clearTimeout(timeout);
+      if (window[callbackName]) {
+        delete window[callbackName];
+        try { document.head.removeChild(script); } catch(e) {}
+      }
       reject(new Error('JSONP script error'));
     };
-    
-    const timeout = setTimeout(() => {
-      delete window[callbackName];
-      try {
-        document.head.removeChild(script);
-      } catch(e) {}
-      reject(new Error('JSONP timeout'));
-    }, 5000);
-    
-    window[callbackName].timeout = timeout;
     
     document.head.appendChild(script);
   });
@@ -292,7 +292,6 @@ async function loadJSON(){
   }
 }
 
-// Funció única que actualitza TODO cada 3 segons
 async function updateAllData() {
   try {
     const data = await fetchJSON();
@@ -305,7 +304,7 @@ async function updateAllData() {
       actionsAvailable = H2;
       updateActionDisplay();
       
-      // Actualitzar lock state
+      // Actualitzar estat de bloqueig
       const E2 = (firstRow["E"] || "0").toString().trim();
       const btn = document.getElementById("confirmBtn");
       btn._sheetLocked = (E2 === "1");
@@ -323,7 +322,7 @@ async function updateAllData() {
       }
     }
   } catch (err) {
-    // Silenciar errors
+    // Silenciar errors de fons
   }
 }
 
