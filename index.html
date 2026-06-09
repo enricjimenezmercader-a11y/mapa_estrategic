@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Mapa Informatiu Global — Estat de la Guerra</title>
+  <title>Mapa Informatiu Global — Radar i Anàlisi de Batalles</title>
 
   <style>
     *{box-sizing:border-box;margin:0;padding:0}
@@ -17,7 +17,7 @@
       align-items:center;
       justify-content:flex-start;
       padding-top:20px;
-      gap:20px;
+      gap:15px;
     }
 
     #titleBar{
@@ -26,6 +26,47 @@
       text-align:center;
       letter-spacing:1px;
       text-shadow: 0 0 10px rgba(255,255,255,0.2);
+    }
+
+    #loadingIndicator {
+      font-size: 13px;
+      color: #888;
+      font-family: monospace;
+    }
+
+    /* Panell d'anàlisi tàctica */
+    .analysis-panel {
+      width: 85%;
+      max-width: 1000px;
+      background: rgba(15, 15, 30, 0.85);
+      border: 1px solid #334;
+      border-radius: 6px;
+      padding: 12px 20px;
+      display: flex;
+      justify-content: space-around;
+      gap: 20px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+    }
+    .analysis-sector {
+      flex: 1;
+    }
+    .analysis-sector h3 {
+      font-size: 14px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 6px;
+      padding-bottom: 4px;
+      border-bottom: 1px solid #445;
+    }
+    .sector-contact h3 { color: #ff5555; }
+    .sector-at-def h3 { color: #ffcc00; }
+    .analysis-list {
+      font-family: monospace;
+      font-size: 12px;
+      color: #ccc;
+      list-style: none;
+      max-height: 50px;
+      overflow-y: auto;
     }
 
     .map-container{
@@ -88,11 +129,29 @@
     .attack-arrow--glow{
       animation:glow 2s ease-in-out infinite;
     }
+
+    /* Estils de les etiquetes de batalles a l'SVG */
+    .battle-glow {
+      animation: battlePulse 1.5s ease-in-out infinite alternate;
+    }
+    @keyframes battlePulse {
+      0% { transform: scale(0.95); filter: drop-shadow(0 0 2px rgba(255,255,255,0.6)); }
+      100% { transform: scale(1.05); filter: drop-shadow(0 0 8px #ff3333); }
+    }
     
-    #loadingIndicator {
+    .bg-badge-contact { fill: #cc0000; stroke: #ff9999; stroke-width: 1.5; }
+    .bg-badge-atdef { fill: #d4a373; stroke: #ffffcc; stroke-width: 1.5; }
+    
+    .text-battle {
+      fill: #ffffff;
+      font-family: Arial, sans-serif;
+      font-weight: bold;
+      font-size: 10px;
+      text-anchor: middle;
+    }
+    .emoji-battle {
       font-size: 14px;
-      color: #888;
-      font-family: monospace;
+      text-anchor: middle;
     }
   </style>
 </head>
@@ -101,6 +160,17 @@
 
 <div id="titleBar">PANEL INFORMATIU GLOBAL — RADAR TÀCTIC</div>
 <div id="loadingIndicator">Sincronitzant dades amb el quarter general...</div>
+
+<div class="analysis-panel">
+  <div class="analysis-sector sector-contact">
+    <h3>⚔️ Batalles de Contacte (Encreuaments directes)</h3>
+    <ul class="analysis-list" id="contactList"><li>Cap en aquest cicle</li></ul>
+  </div>
+  <div class="analysis-sector sector-at-def">
+    <h3>🛡️ Assalts Atac-Defensa (Hexàgons Objectiu)</h3>
+    <ul class="analysis-list" id="atDefList"><li>Cap en aquest cicle</li></ul>
+  </div>
+</div>
 
 <div class="map-container" id="mapContainer">
   <img class="map-image"
@@ -113,7 +183,6 @@
 <script>
 const PATTERN=[5,4,5,4,5,4,5,4,5,4,5];
 
-// URLs de les plataformes de Google Apps Script (Actualitzades)
 const COLORS_JSON_URL="https://script.google.com/macros/s/AKfycbyM44gMczZ9XQvIJhAcKaBx9CPbMNAXEgVze1ClXJIZ6VOkZJxSxPKwrmQj57_KjLyX/exec";
 const ORDERS_JSON_URL="https://script.google.com/macros/s/AKfycbzDdC4yHTVFzNdsSRJE7yfiRRvOiCPssSyVBEDPV92gSksgOnwfIVSUVVRkGSbzy_EBDw/exec";
 
@@ -124,7 +193,6 @@ const IMAGE_RATIO=1.4;
 let hexData=[];
 let arrowElements=[]; 
 
-// Motor de lectura JSONP robust i asíncron
 async function fetchJSONP(url){
   return new Promise((resolve, reject) => {
     const callbackName = 'jsonp_' + Date.now() + '_' + Math.random().toString(36).substring(2, 9);
@@ -132,7 +200,7 @@ async function fetchJSONP(url){
     
     const timerId = setTimeout(() => {
       cleanup();
-      reject(new Error('Temps d\'espera esgotat (Timeout de Google)'));
+      reject(new Error('Temps d\'espera esgotat amb Google'));
     }, 8000);
 
     function cleanup() {
@@ -152,7 +220,7 @@ async function fetchJSONP(url){
 
     script.onerror = function() {
       cleanup();
-      reject(new Error('Error de connexió o permís denegat.'));
+      reject(new Error('Error de connexió de xarxa'));
     };
 
     document.head.appendChild(script);
@@ -164,7 +232,7 @@ function resizeMap(){
   const W=window.innerWidth;
   const H=window.innerHeight;
   const maxW=W*(0.85);
-  const maxH=H*(0.80);
+  const maxH=H*(0.65); // Reduït una mica per fer espai còmode al panell superior
   let width=maxW;
   let height=width/IMAGE_RATIO;
   if(height>maxH){
@@ -228,6 +296,11 @@ function initHexGridStructure(){
       id++;
     }
   });
+  
+  // Creem dinàmicament el contenidor de batalles damunt dels hexàgons
+  const battleGroup = document.createElementNS("http://www.w3.org/2000/svg","g");
+  battleGroup.id = "battleLayer";
+  svg.appendChild(battleGroup);
 }
 
 async function updateHexColors(){
@@ -257,33 +330,160 @@ async function updateActiveOrders(){
   try {
     const orderStrings = await fetchJSONP(ORDERS_JSON_URL);
     
-    // Netegem fletxes antigues
+    // 1. Netejar elements gràfics del cicle anterior (fletxes)
     arrowElements.forEach(img => img.remove());
     arrowElements = [];
+    
+    // Netejar capa de batalles SVG
+    const battleLayer = document.getElementById("battleLayer");
+    if(battleLayer) battleLayer.innerHTML = "";
 
     if (Array.isArray(orderStrings)) {
+      let activeOrders = [];
+
+      // Mapejar i estructurar totes les ordres vàlides d'origen a destí
       orderStrings.forEach(orderText => {
-        // Encaixa amb: "territori X a territori Y" (sense importar l'accent ni la d' d'atac)
         const match = orderText.match(/territori\s+(\d+)\s+a\s+territori\s+(\d+)/i);
         if (match) {
           const originID = parseInt(match[1]);
           const targetID = parseInt(match[2]);
-
           const originHex = hexData.find(h => h.id === originID);
           const targetHex = hexData.find(h => h.id === targetID);
 
           if (originHex && targetHex) {
+            activeOrders.push({
+              originID,
+              targetID,
+              originHex,
+              targetHex,
+              processed: false
+            });
+            // Dibuixem la fletxa informativa de moviment base
             placeInformativeArrow(originHex, targetHex);
           }
         }
       });
+
+      // --- MOTOR D'ANÀLISI TÀCTICA (PAS 1 I PAS 2) ---
+      let contactBattles = [];
+      let attackDefenseTargets = new Set();
+
+      // PAS 1: Cerca de "Batalles de Contacte" (Encreuament mutu simultani A->B i B->A)
+      for (let i = 0; i < activeOrders.length; i++) {
+        if (activeOrders[i].processed) continue;
+        
+        for (let j = i + 1; j < activeOrders.length; j++) {
+          if (activeOrders[j].processed) continue;
+
+          if (activeOrders[i].originID === activeOrders[j].targetID && 
+              activeOrders[i].targetID === activeOrders[j].originID) {
+            
+            // Marcar com a processades perquè ja no generin Atac-Defensa
+            activeOrders[i].processed = true;
+            activeOrders[j].processed = true;
+
+            contactBattles.push({
+              hexA: activeOrders[i].originHex,
+              hexB: activeOrders[i].targetHex,
+              idA: activeOrders[i].originID,
+              idB: activeOrders[i].targetID
+            });
+            break;
+          }
+        }
+      }
+
+      // PAS 2: Cerca d' "Atac-Defensa" (La resta de fletxes lliures que arriben a un hexàgon)
+      activeOrders.forEach(order => {
+        if (!order.processed) {
+          // El Set evita automàticament duplicats (Unificació de múltiples fletxes a un mateix destí)
+          attackDefenseTargets.add(order.targetID);
+        }
+      });
+
+      // --- RENDERITZAT I DESPLEGAMENT ANALÍTIC ---
+      renderTacticalReport(contactBattles, Array.from(attackDefenseTargets));
+      drawBattleMarkersOnMap(contactBattles, Array.from(attackDefenseTargets));
       
       const d = new Date();
-      document.getElementById("loadingIndicator").textContent = `Radar sincronitzat: Darrera actualització a les ${d.toLocaleTimeString()}`;
+      document.getElementById("loadingIndicator").textContent = `Radar analitzat correctament: ${d.toLocaleTimeString()}`;
     }
   } catch(e) {
-    document.getElementById("loadingIndicator").textContent = `⚠️ Error en llegir ordres: ${e.message}`;
+    document.getElementById("loadingIndicator").textContent = `⚠️ Error analitzador: ${e.message}`;
   }
+}
+
+// Actualitza el text de les llistes superiors de la pantalla
+function renderTacticalReport(contacts, atDefs) {
+  const contactList = document.getElementById("contactList");
+  const atDefList = document.getElementById("atDefList");
+
+  if(contacts.length === 0) {
+    contactList.innerHTML = "<li>Cap en aquest cicle</li>";
+  } else {
+    contactList.innerHTML = contacts.map(c => `<li>⚔️ Front obert: Hex ${c.idA} vs Hex ${c.idB}</li>`).join("");
+  }
+
+  if(atDefs.length === 0) {
+    atDefList.innerHTML = "<li>Cap en aquest cicle</li>";
+  } else {
+    atDefList.innerHTML = atDefs.map(id => `<li>🛡️ Setge actiu al Territori ${id}</li>`).join("");
+  }
+}
+
+// Dibuixa els indicadors gràfics (badges) damunt del mapa usant SVG
+function drawBattleMarkersOnMap(contacts, atDefs) {
+  const layer = document.getElementById("battleLayer");
+  if(!layer) return;
+
+  // Pintar batalles de contacte (Punt mitjà dels dos hexàgons)
+  contacts.forEach(c => {
+    const mx = (c.hexA.cx + c.hexB.cx) / 2;
+    const my = (c.hexA.cy + c.hexB.cy) / 2;
+    createSvgBattleBadge(layer, mx, my, "⚔️", "CONTACTE", "bg-badge-contact");
+  });
+
+  // Pintar atacs-defenses (Al bell mig de l'hexàgon triat com a objectiu)
+  atDefs.forEach(targetId => {
+    const hex = hexData.find(h => h.id === targetId);
+    if(hex) {
+      // Es desplaça una mica cap avall de la id perquè no es tapin els números del mapa
+      createSvgBattleBadge(layer, hex.cx, hex.cy + 14, "🛡️", "ATAC-DEF", "bg-badge-atdef");
+    }
+  });
+}
+
+// Funció constructora de nodes gràfics SVG per a les col·lisions
+function createSvgBattleBadge(parent, x, y, emoji, labelText, bgClass) {
+  const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
+  g.setAttribute("transform", `translate(${x}, ${y})`);
+  g.setAttribute("class", "battle-glow");
+
+  // Fons d'alerta (Píndola tàctica)
+  const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+  rect.setAttribute("x", "-30");
+  rect.setAttribute("y", "-18");
+  rect.setAttribute("width", "60");
+  rect.setAttribute("height", "24");
+  rect.setAttribute("rx", "4");
+  rect.setAttribute("class", bgClass);
+  g.appendChild(rect);
+
+  // Icona de l'estat
+  const txtEmoji = document.createElementNS("http://www.w3.org/2000/svg", "text");
+  txtEmoji.setAttribute("y", "-4");
+  txtEmoji.setAttribute("class", "emoji-battle");
+  txtEmoji.textContent = emoji;
+  g.appendChild(txtEmoji);
+
+  // Text inferior descriptiu
+  const txtLbl = document.createElementNS("http://www.w3.org/2000/svg", "text");
+  txtLbl.setAttribute("y", "4");
+  txtLbl.setAttribute("class", "text-battle");
+  txtLbl.textContent = labelText;
+  g.appendChild(txtLbl);
+
+  parent.appendChild(g);
 }
 
 function direction(origin,target){
@@ -349,12 +549,12 @@ function fullRedraw(){
 
 window.addEventListener("resize", fullRedraw);
 
-// Inicialització automàtica en carregar la pàgina
+// Arranque de seguretat inicial
 resizeMap();
 initHexGridStructure();
 setTimeout(syncRadarData, 500);
 
-// Refresc automàtic cada 5 segons per veure els canvis en viu
+// Sincronització automatitzada en segon pla cada 5 segons
 setInterval(syncRadarData, 5000);
 </script>
 
