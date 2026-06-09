@@ -1,0 +1,689 @@
+<!doctype html>
+<html lang="ca">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Mapa Estratègic — Equip Blau</title>
+
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    html,body{height:100%}
+    body{
+      background:#000;
+      color:#fff;
+      font-family:Arial,Helvetica,sans-serif;
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      justify-content:flex-start;
+      padding-top:20px;
+      gap:20px;
+    }
+
+    #titleBar{
+      font-size:28px;
+      font-weight:bold;
+      text-align:center;
+    }
+
+    #actionBar{
+      width:66%;
+      height:20px;
+      background:#333;
+      border:1px solid #666;
+      margin-top:-10px;
+      margin-bottom:10px;
+      position:relative;
+    }
+
+    #actionFill{
+      height:100%;
+      background:#0078ff;
+      width:0%;
+      transition:width 0.3s ease;
+    }
+
+    .map-container{
+      position:relative;
+      background:#1a1a1a;
+      border:1px solid #333;
+      overflow:hidden;
+    }
+
+    .map-image{
+      position:absolute;
+      inset:0;
+      width:100%;
+      height:100%;
+      object-fit:contain;
+      z-index:1;
+      pointer-events:none;
+    }
+
+    svg{
+      position:absolute;
+      inset:0;
+      width:100%;
+      height:100%;
+      z-index:10;
+    }
+
+    .hex{
+      stroke:#000;
+      stroke-width:2;
+      cursor:pointer;
+    }
+
+    .hex-red{ fill:rgba(255,0,0,0.33); }
+    .hex-blue{ fill:rgba(0,120,255,0.33); }
+    .hex-mar{ fill:rgba(120,120,120,0.33); }
+
+    .hex-hatch{
+      fill:url(#hatch-red);
+    }
+
+    .hex-label{
+      fill:#fff;
+      font-weight:bold;
+      text-anchor:middle;
+      pointer-events:none;
+      stroke:#000;
+      stroke-width:0.8;
+    }
+
+    #orders{
+      width:66%;
+      color:#7CFF7C;
+      font-family:monospace;
+      font-size:18px;
+      white-space:pre-line;
+      min-height:40px;
+    }
+
+    .order-line{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      margin-bottom:6px;
+    }
+
+    .order-btn{
+      background:#550000;
+      color:#fff;
+      border:1px solid #aa0000;
+      padding:3px 8px;
+      cursor:pointer;
+      font-size:14px;
+    }
+
+    #confirmBtn{
+      margin-top:10px;
+      padding:6px 12px;
+      background:#004400;
+      color:#aaffaa;
+      border:1px solid #66ff66;
+      cursor:pointer;
+      font-size:16px;
+      display:block;
+    }
+
+    #warning, #warningActions{
+      position:absolute;
+      top:10px;
+      left:50%;
+      transform:translateX(-50%);
+      font-size:40px;
+      font-weight:bold;
+      color:#FF4444;
+      text-shadow:0 0 10px #000;
+      opacity:0;
+      pointer-events:none;
+      z-index:999;
+    }
+
+    .blink{
+      animation: blinkAnim 0.3s linear infinite;
+    }
+
+    @keyframes blinkAnim{
+      0%{opacity:1;}
+      50%{opacity:0;}
+      100%{opacity:1;}
+    }
+
+    .attack-arrow{
+      position:absolute;
+      pointer-events:none;
+      z-index:20;
+      transform-origin:center center;
+    }
+
+    @keyframes shake {
+      0%   { transform: translate(0,0); }
+      25%  { transform: translate(1px,-1px); }
+      50%  { transform: translate(-1px,1px); }
+      75%  { transform: translate(1px,1px); }
+      100% { transform: translate(0,0); }
+    }
+    .attack-arrow--shake{
+      animation:shake 0.25s linear 1;
+    }
+
+    @keyframes glow {
+      0%   { filter: drop-shadow(0 0 0px #fff); }
+      50%  { filter: drop-shadow(0 0 12px #ffff66); }
+      100% { filter: drop-shadow(0 0 0px #fff); }
+    }
+    .attack-arrow--glow{
+      animation:glow 1.4s ease-in-out infinite;
+    }
+  </style>
+</head>
+
+<body>
+
+<audio id="moveSound" src="https://raw.githubusercontent.com/enricjimenezmercader-a11y/mapa_estrategic/main/Move.wav"></audio>
+<audio id="ordersSound" src="https://raw.githubusercontent.com/enricjimenezmercader-a11y/mapa_estrategic/main/Orders.wav"></audio>
+
+<div id="titleBar">Equip blau — Accions disponibles: ...</div>
+<div id="actionBar"><div id="actionFill"></div></div>
+
+<div class="map-container" id="mapContainer">
+  <div id="warning">Ordre repetida</div>
+  <div id="warningActions">Accions insuficients</div>
+
+  <img class="map-image"
+       src="https://github.com/enricjimenezmercader-a11y/mapa_estrategic/blob/481d1cc0765b31581a6f050a7f68d53400172e48/map_hex.jpg?raw=true"
+       alt="Mapa estratègic">
+
+  <svg id="hexGrid"></svg>
+</div>
+
+<div id="orders"></div>
+<button id="confirmBtn">Confirmar ordres</button>
+
+<script>
+const PATTERN=[5,4,5,4,5,4,5,4,5,4,5];
+const JSON_URL="https://script.google.com/macros/s/AKfycbyM44gMczZ9XQvIJhAcKaBx9CPbMNAXEgVze1ClXJIZ6VOkZJxSxPKwrmQj57_KjLyX/exec";
+
+const REAL_R=41.78;
+const REAL_GRID_WIDTH=17*REAL_R;
+const IMAGE_RATIO=1.4;
+
+let hexData=[];
+let selectedBlue=null;
+let highlightedAdjacents=[];
+let ordersSet=new Set();
+let actions=0;
+let arrowImages={};
+let clickLocked=false;
+let actionsAvailable=0;
+
+// ------------------------------
+// LECTURA JSONP REVISADA I CORREGIDA
+// ------------------------------
+async function fetchJSON(){
+  return new Promise((resolve, reject) => {
+    const callbackName = 'jsonpCallback_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+    
+    const timeout = setTimeout(() => {
+      if (window[callbackName]) {
+        delete window[callbackName];
+        try { document.head.removeChild(script); } catch(e) {}
+        reject(new Error('JSONP timeout'));
+      }
+    }, 5000);
+
+    window[callbackName] = function(data) {
+      clearTimeout(timeout);
+      delete window[callbackName];
+      try {
+        document.head.removeChild(script);
+      } catch(e) {}
+      resolve(data);
+    };
+    
+    const script = document.createElement('script');
+    script.src = JSON_URL + "?callback=" + callbackName;
+    script.type = 'text/javascript';
+    
+    script.onerror = function() {
+      clearTimeout(timeout);
+      if (window[callbackName]) {
+        delete window[callbackName];
+        try { document.head.removeChild(script); } catch(e) {}
+      }
+      reject(new Error('JSONP script error'));
+    };
+    
+    document.head.appendChild(script);
+  });
+}
+
+async function loadJSON(){
+  try {
+    const data = await fetchJSON();
+    
+    const colors = {};
+    let H3 = 0;
+
+    if (Array.isArray(data) && data.length > 0) {
+      // Llegim la fila 3 (índex 1 de l'array) per a l'Equip Blau
+      const targetRow = data[1] || data[0];
+      H3 = parseInt(targetRow["H"]) || 0;
+      
+      for (let i = 0; i < data.length; i++) {
+        const row = data[i];
+        const id = row["A"];
+        const color = row["B"];
+        
+        if (id) {
+          colors[id] = (color || "MAR").toUpperCase();
+        }
+      }
+    }
+
+    actionsAvailable = H3;
+    updateActionDisplay();
+    return colors;
+  } catch (err) {
+    console.error('Error loading JSON:', err);
+    return {};
+  }
+}
+
+async function updateAllData() {
+  try {
+    const data = await fetchJSON();
+    
+    if (Array.isArray(data) && data.length > 0) {
+      // Llegim la fila 3 (índex 1) per a l'Equip Blau
+      const targetRow = data[1] || data[0];
+      
+      // Actualitzar accions (H3)
+      const H3 = parseInt(targetRow["H"]) || 0;
+      actionsAvailable = H3;
+      updateActionDisplay();
+      
+      // Actualitzar estat de bloqueig (E3)
+      const E3 = (targetRow["E"] || "0").toString().trim();
+      const btn = document.getElementById("confirmBtn");
+      btn._sheetLocked = (E3 === "1");
+
+      if (btn._sheetLocked || btn._tempLocked) {
+        btn.disabled = true;
+        btn.style.background = "#555";
+        btn.style.color = "#999";
+        btn.style.cursor = "not-allowed";
+      } else {
+        btn.disabled = false;
+        btn.style.background = "#004400";
+        btn.style.color = "#aaffaa";
+        btn.style.cursor = "pointer";
+      }
+    }
+  } catch (err) {
+    // Silenciar errors de fons
+  }
+}
+
+setInterval(updateAllData, 3000);
+
+// ------------------------------
+
+function updateActionDisplay(){
+  const spent=usedPoints();
+  const remaining=actionsAvailable-spent;
+  document.getElementById("titleBar").textContent=
+    `Equip blau — Accions disponibles: ${actionsAvailable}`;
+  const pct=Math.min(100,(spent/actionsAvailable)*100);
+  document.getElementById("actionFill").style.width=pct+"%";
+}
+
+function resizeMap(){
+  const map=document.getElementById("mapContainer");
+  const W=window.innerWidth;
+  const H=window.innerHeight;
+  const maxW=W*(2/3);
+  const maxH=H*(2/3);
+  let width=maxW;
+  let height=width/IMAGE_RATIO;
+  if(height>maxH){
+    height=maxH;
+    width=height*IMAGE_RATIO;
+  }
+  map.style.width=width+"px";
+  map.style.height=height+"px";
+}
+
+async function drawHexGrid(){
+  const svg=document.getElementById("hexGrid");
+  const map=document.getElementById("mapContainer");
+
+  svg.innerHTML="";
+  hexData=[];
+  selectedBlue=null;
+  highlightedAdjacents=[];
+  arrowImages={};
+  ordersSet=new Set();
+  document.getElementById("orders").innerHTML="";
+
+  svg.insertAdjacentHTML("afterbegin",`
+    <defs>
+      <pattern id="hatch-red" patternUnits="userSpaceOnUse" width="6" height="6" patternTransform="rotate(45)">
+        <line x1="0" y1="0" x2="0" y2="6" stroke="rgba(255,0,0,0.5)" stroke-width="3"/>
+      </pattern>
+    </defs>
+  `);
+
+  const colors=await loadJSON();
+
+  const B=map.clientWidth;
+  const scale=B/REAL_GRID_WIDTH;
+  const R=REAL_R*scale;
+  const hexH=Math.sqrt(3)*R;
+
+  const maxRows=Math.max(...PATTERN);
+  const gridHeight=(maxRows-1)*hexH+hexH;
+  const A=17*R;
+
+  const offsetX=(B-A)/2+R;
+  const offsetY=(map.clientHeight-gridHeight)/2+hexH/2;
+
+  let id=1;
+
+  PATTERN.forEach((rowCount,col)=>{
+    for(let r=0;r<rowCount;r++){
+      const cx=offsetX+col*1.5*R;
+      const cy=offsetY+r*hexH+(col%2===0?0:hexH/2);
+
+      const pts=[];
+      for(let i=0;i<6;i++){
+        const ang=Math.PI/3*i;
+        pts.push([cx+R*Math.cos(ang),cy+R*Math.sin(ang)].join(","));
+      }
+
+      const g=document.createElementNS("http://www.w3.org/2000/svg","g");
+
+      const poly=document.createElementNS("http://www.w3.org/2000/svg","polygon");
+      poly.setAttribute("points",pts.join(" "));
+
+      const color=(colors[id]||"").toUpperCase();
+      let cls="hex hex-mar";
+      if(color.includes("RED")) cls="hex hex-red";
+      else if(color.includes("BLUE")) cls="hex hex-blue";
+
+      poly.setAttribute("class",cls);
+      poly.dataset.id=id;
+
+      g.appendChild(poly);
+
+      const label=document.createElementNS("http://www.w3.org/2000/svg","text");
+      label.setAttribute("x",cx);
+      label.setAttribute("y",cy+4);
+      label.setAttribute("class","hex-label");
+      label.textContent=id;
+      g.appendChild(label);
+
+      svg.appendChild(g);
+
+      hexData.push({id,cx,cy,color,element:poly});
+      id++;
+    }
+  });
+}
+
+function highlightAdjacent(blueHex){
+  clearHighlights();
+  selectedBlue=blueHex;
+
+  const R=REAL_R*(document.getElementById("mapContainer").clientWidth/REAL_GRID_WIDTH);
+  const maxDist=Math.sqrt(3)*R*1.01;
+
+  highlightedAdjacents=[];
+
+  hexData.forEach(h=>{
+    // L'equip blau només pot atacar territoris de l'equip VERMELL
+    if(h.color==="RED"){
+      const dx=h.cx-blueHex.cx;
+      const dy=h.cy-blueHex.cy;
+      const dist=Math.sqrt(dx*dx+dy*dy);
+      if(dist<=maxDist){
+        h.element.classList.add("hex-hatch");
+        highlightedAdjacents.push(h);
+      }
+    }
+  });
+}
+
+function clearHighlights(){
+  highlightedAdjacents.forEach(h=>h.element.classList.remove("hex-hatch"));
+  highlightedAdjacents=[];
+  selectedBlue=null;
+}
+
+function showWarning(){
+  const w=document.getElementById("warning");
+  w.classList.add("blink");
+  w.style.opacity=1;
+  setTimeout(()=>{w.style.opacity=0;w.classList.remove("blink");},2000);
+}
+
+function showWarningActions(){
+  const w=document.getElementById("warningActions");
+  w.classList.add("blink");
+  w.style.opacity=1;
+  setTimeout(()=>{w.style.opacity=0;w.classList.remove("blink");},2000);
+}
+
+function usedPoints(){ return ordersSet.size*10; }
+
+function direction(origin,target){
+  const dx=target.cx-origin.cx;
+  const dy=target.cy-origin.cy;
+
+  if(dy<0 && Math.abs(dx)<Math.abs(dy)) return "N";
+  if(dy>0 && Math.abs(dx)<Math.abs(dy)) return "S";
+  if(dx>0 && dy<0) return "NE";
+  if(dx>0 && dy>0) return "SE";
+  if(dx<0 && dy<0) return "NO";
+  if(dx<0 && dy>0) return "SO";
+
+  return "N";
+}
+
+function arrowURL(dir){
+  return {
+    "N":"https://raw.githubusercontent.com/enricjimenezmercader-a11y/mapa_estrategic/main/AT-N.svg",
+    "NE":"https://raw.githubusercontent.com/enricjimenezmercader-a11y/mapa_estrategic/main/AT-NE.svg",
+    "NO":"https://raw.githubusercontent.com/enricjimenezmercader-a11y/mapa_estrategic/main/AT-NO.svg",
+    "S":"https://raw.githubusercontent.com/enricjimenezmercader-a11y/mapa_estrategic/main/AT-S.svg",
+    "SE":"https://raw.githubusercontent.com/enricjimenezmercader-a11y/mapa_estrategic/main/AT-SE.svg",
+    "SO":"https://raw.githubusercontent.com/enricjimenezmercader-a11y/mapa_estrategic/main/AT-SO.svg"
+  }[dir];
+}
+
+function placeArrow(origin,target,key){
+  const map=document.getElementById("mapContainer");
+  const B=map.clientWidth;
+  const scale=B/REAL_GRID_WIDTH;
+  const R=REAL_R*scale;
+  const hexH=Math.sqrt(3)*R;
+
+  const dir=direction(origin,target);
+  const url=arrowURL(dir);
+
+  const img=document.createElement("img");
+  img.src=url;
+  img.className="attack-arrow attack-arrow--shake attack-arrow--glow";
+
+  const FACTOR=1.42;
+
+  const width = 2 * R * FACTOR;
+  const height = hexH * FACTOR;
+
+  img.style.width  = width + "px";
+  img.style.height = height + "px";
+  img.style.left   = (origin.cx - width/2) + "px";
+  img.style.top    = (origin.cy - height/2) + "px";
+
+  map.appendChild(img);
+  arrowImages[key]=img;
+
+  setTimeout(()=>{
+    if(img) img.classList.remove("attack-arrow--shake");
+  },260);
+}
+
+function removeArrow(key){
+  if(arrowImages[key]){
+    arrowImages[key].remove();
+    delete arrowImages[key];
+  }
+}
+
+function addOrder(originID,targetID){
+  const key=`${originID}-${targetID}`;
+
+  if(ordersSet.has(key)){
+    showWarning();
+    return;
+  }
+
+  const remaining=actionsAvailable-usedPoints();
+  if(remaining<10){
+    showWarningActions();
+    return;
+  }
+
+  ordersSet.add(key);
+
+  clickLocked = true;
+  document.body.style.cursor = "wait";
+  setTimeout(() => {
+    clickLocked = false;
+    document.body.style.cursor = "default";
+  }, 1000);
+
+  const origin=hexData.find(h=>h.id===originID);
+  const target=hexData.find(h=>h.id===targetID);
+
+  placeArrow(origin,target,key);
+
+  target.element.classList.remove("hex-hatch");
+
+  document.getElementById("moveSound").play();
+
+  const orders=document.getElementById("orders");
+
+  const line=document.createElement("div");
+  line.className="order-line";
+  line.dataset.key=key;
+
+  const text=document.createElement("span");
+  text.textContent=`Ordre d'atac, territori ${originID} a territori ${targetID}`;
+
+  const btn=document.createElement("button");
+  btn.textContent="Suspendre ordre";
+  btn.className="order-btn";
+
+  btn.onclick=()=>{
+    ordersSet.delete(key);
+    removeArrow(key);
+    line.remove();
+    updateActionDisplay();
+  };
+
+  line.appendChild(text);
+  line.appendChild(btn);
+  orders.appendChild(line);
+
+  updateActionDisplay();
+}
+
+function setupClickHandler(){
+  const svg=document.getElementById("hexGrid");
+
+  svg.addEventListener("click", e => {
+    if (clickLocked) return;
+
+    hexData.forEach(h=>h.element.classList.remove("hex-hatch"));
+
+    const poly=e.target.closest("polygon");
+    if(!poly){
+      clearHighlights();
+      return;
+    }
+
+    const id=parseInt(poly.dataset.id);
+    const hex=hexData.find(h=>h.id===id);
+
+    // Selecció de casella pròpia (Blava)
+    if(hex.color==="BLUE"){
+      highlightAdjacent(hex);
+      return;
+    }
+
+    // Assignació d'atac a casella objectiu adjacent (Vermella)
+    if(selectedBlue && highlightedAdjacents.some(h=>h.id===id)){
+      addOrder(selectedBlue.id,hex.id);
+      return;
+    }
+
+    clearHighlights();
+  });
+}
+
+function redraw(){
+  resizeMap();
+  drawHexGrid().then(()=>{
+    setupClickHandler();
+    updateActionDisplay();
+  });
+}
+
+window.addEventListener("resize",redraw);
+redraw();
+updateAllData();
+
+document.getElementById("confirmBtn").addEventListener("click", async () => {
+  const btn = document.getElementById("confirmBtn");
+
+  if (btn._sheetLocked || btn._tempLocked) return;
+
+  btn._tempLocked = true;
+  btn.disabled = true;
+  btn.style.background = "#555";
+  btn.style.color = "#999";
+  btn.style.cursor = "not-allowed";
+  document.body.style.cursor = "wait";
+
+  setTimeout(() => {
+    btn._tempLocked = false;
+    document.body.style.cursor = "default";
+    updateAllData();
+  }, 5000);
+
+  document.getElementById("ordersSound").play();
+
+  // URL específica aportada per l'usuari per a desar les ordres de l'Equip Blau
+  const url = "https://script.google.com/macros/s/AKfycbxHWftRYTI53vLTT4S275Tfqr8JctWbrQ1m3oxwYeBKpkDpnRq2UUvw3tZKknxzqX5AUw/exec";
+  const lines = document.querySelectorAll(".order-line");
+
+  for (const line of lines) {
+    const text = line.querySelector("span").textContent;
+
+    await fetch(url, {
+      method: "POST",
+      mode: "no-cors",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ orderText: text })
+    });
+
+    await new Promise(res => setTimeout(res, 150));
+  }
+});
+</script>
+
+</body>
+</html>
