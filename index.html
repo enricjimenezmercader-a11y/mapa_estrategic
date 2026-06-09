@@ -227,7 +227,7 @@ async function fetchJSON(){
     const callbackName = 'jsonpCallback_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
     
     window[callbackName] = function(data) {
-      console.log("JSONP raw rebut:", data);
+      console.log("JSONP rebut correctament");
       delete window[callbackName];
       try {
         document.head.removeChild(script);
@@ -241,7 +241,7 @@ async function fetchJSON(){
     script.type = 'text/javascript';
     
     script.onerror = function() {
-      console.error('Script error');
+      console.error('Script JSONP error');
       delete window[callbackName];
       try {
         document.head.removeChild(script);
@@ -272,19 +272,12 @@ async function loadJSON(){
 
     if (Array.isArray(data) && data.length > 0) {
       const firstRow = data[0];
-      // Llegir accions de la PRIMERA FILA, columna H
       H2 = parseInt(firstRow["H"]) || 0;
       
-      console.log("Fila 0 (header):", firstRow);
-      console.log("H2 (accions de fila 0):", H2);
-      
-      // Llegir colors de TOTES les files (a partir de la fila 1 del sheet, index 0 del JSON)
       for (let i = 0; i < data.length; i++) {
         const row = data[i];
-        const id = row["A"];           // Columna A: número hexagon
-        const color = row["B"];        // Columna B: color (red, blue, MAR)
-        
-        console.log(`Fila ${i}: A=${id}, B=${color}`);
+        const id = row["A"];
+        const color = row["B"];
         
         if (id) {
           colors[id] = (color || "MAR").toUpperCase();
@@ -292,6 +285,7 @@ async function loadJSON(){
       }
       
       console.log("Colors carregats:", colors);
+      console.log("H2 (accions):", H2);
     }
 
     actionsAvailable = H2;
@@ -303,7 +297,16 @@ async function loadJSON(){
   }
 }
 
-setInterval(fetchJSON, 1000);
+// Recarregar dades cada 2 segons sense errors
+async function updateDataPeriodically(){
+  try {
+    await loadJSON();
+  } catch(err) {
+    console.log("Error en actualització periòdica:", err);
+  }
+}
+
+setInterval(updateDataPeriodically, 2000);
   
 // ------------------------------
 // BLOQUEIG DINÀMIC PER E2
@@ -338,7 +341,7 @@ async function checkLockState() {
   }
 }
 
-setInterval(checkLockState, 1000);
+setInterval(checkLockState, 2000);
 
 // ------------------------------
 
