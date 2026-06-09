@@ -272,20 +272,26 @@ async function loadJSON(){
 
     if (Array.isArray(data) && data.length > 0) {
       const firstRow = data[0];
-      // Columna H: accions disponibles
+      // Llegir accions de la PRIMERA FILA, columna H
       H2 = parseInt(firstRow["H"]) || 0;
       
+      console.log("Fila 0 (header):", firstRow);
+      console.log("H2 (accions de fila 0):", H2);
+      
+      // Llegir colors de TOTES les files (a partir de la fila 1 del sheet, index 0 del JSON)
       for (let i = 0; i < data.length; i++) {
         const row = data[i];
         const id = row["A"];           // Columna A: número hexagon
         const color = row["B"];        // Columna B: color (red, blue, MAR)
+        
+        console.log(`Fila ${i}: A=${id}, B=${color}`);
+        
         if (id) {
           colors[id] = (color || "MAR").toUpperCase();
         }
       }
       
       console.log("Colors carregats:", colors);
-      console.log("H2 (accions):", H2);
     }
 
     actionsAvailable = H2;
