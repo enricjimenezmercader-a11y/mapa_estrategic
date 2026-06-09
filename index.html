@@ -204,7 +204,7 @@
 
 <script>
 const PATTERN=[5,4,5,4,5,4,5,4,5,4,5];
-const JSON_URL="https://script.google.com/macros/s/AKfycbwo_dw-hnb2JXXtS0E74t_nu7vbnWML0695bMUfwlnCED5D4g5kaNTp9Lrdy48Z9_sy/exec";
+const JSON_URL="https://script.google.com/macros/s/AKfycbyM44gMczZ9XQvIJhAcKaBx9CPbMNAXEgVze1ClXJIZ6VOkZJxSxPKwrmQj57_KjLyX/exec";
 
 const REAL_R=41.78;
 const REAL_GRID_WIDTH=17*REAL_R;
@@ -270,39 +270,22 @@ async function loadJSON(){
     const colors = {};
     let H2 = 0;
 
-    // Intenta amb columnes positionals si l'estructura és d'array de arrays
-    if (Array.isArray(data)) {
-      if (data.length > 0) {
-        const firstRow = data[0];
-        
-        // Si és un objecte
-        if (typeof firstRow === 'object' && !Array.isArray(firstRow)) {
-          H2 = parseInt(firstRow["ACCIONS RES"] || firstRow[7]) || 0;
-          
-          for (let i = 0; i < data.length; i++) {
-            const row = data[i];
-            const id = row["HEXAGONS"] || row[0];
-            const color = row["HEXAGONS "] || row[1];
-            if (id) {
-              colors[id] = (color || "MAR").toUpperCase();
-            }
-          }
-        } 
-        // Si és un array de arrays
-        else if (Array.isArray(firstRow)) {
-          H2 = parseInt(firstRow[7]) || 0;
-          
-          for (let i = 0; i < data.length; i++) {
-            const row = data[i];
-            if (row.length > 1) {
-              colors[row[0]] = (row[1] || "MAR").toUpperCase();
-            }
-          }
+    if (Array.isArray(data) && data.length > 0) {
+      const firstRow = data[0];
+      // Columna H: ACCIONS RES
+      H2 = parseInt(firstRow["ACCIONS RES"]) || 0;
+      
+      for (let i = 0; i < data.length; i++) {
+        const row = data[i];
+        const id = row["HEXAGONS"];           // Columna A
+        const color = row["HEXAGONS "];       // Columna B (amb espai!)
+        if (id) {
+          colors[id] = (color || "MAR").toUpperCase();
         }
-        
-        console.log("Colors carregats:", colors);
-        console.log("H2 (accions):", H2);
       }
+      
+      console.log("Colors carregats:", colors);
+      console.log("H2 (accions):", H2);
     }
 
     actionsAvailable = H2;
@@ -325,13 +308,7 @@ async function checkLockState() {
     
     if (Array.isArray(data) && data.length > 0) {
       const firstRow = data[0];
-      let E2 = "0";
-      
-      if (typeof firstRow === 'object' && !Array.isArray(firstRow)) {
-        E2 = (firstRow["ORDRES IMPAI"] || "0").toString().trim();
-      } else if (Array.isArray(firstRow)) {
-        E2 = (firstRow[4] || "0").toString().trim();
-      }
+      const E2 = (firstRow["ORDRES IMPAI"] || "0").toString().trim();
 
       const btn = document.getElementById("confirmBtn");
 
