@@ -321,13 +321,14 @@ async function updateAllData() {
         btn.style.color = "#aaffaa";
         btn.style.cursor = "pointer";
       }
+      
+      // REDIBUIXAR els hexagons amb els colors actualitzats
+      await drawHexGrid();
     }
   } catch (err) {
     // Silenciar errors
   }
 }
-
-setInterval(updateAllData, 3000);
 
 // ------------------------------
 
@@ -631,17 +632,22 @@ function setupClickHandler(){
   });
 }
 
-function redraw(){
+// Inicialitzar
+window.addEventListener("resize",()=>{
   resizeMap();
   drawHexGrid().then(()=>{
     setupClickHandler();
-    updateActionDisplay();
   });
-}
+});
 
-window.addEventListener("resize",redraw);
-redraw();
-updateAllData();
+resizeMap();
+drawHexGrid().then(()=>{
+  setupClickHandler();
+  updateActionDisplay();
+});
+
+// Actualitzar dades cada 3 segons
+setInterval(updateAllData, 3000);
 
 document.getElementById("confirmBtn").addEventListener("click", async () => {
   const btn = document.getElementById("confirmBtn");
