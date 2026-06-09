@@ -52,7 +52,7 @@
       width:100%;
       height:100%;
       z-index:10;
-      pointer-events:none; /* Mode informatiu: bloqueja interaccions de clic */
+      pointer-events:none; /* Mode informatiu bloquejat */
     }
 
     .hex{
@@ -113,10 +113,8 @@
 <script>
 const PATTERN=[5,4,5,4,5,4,5,4,5,4,5];
 
-// 1. URL per carregar l'estat dels colors dels hexàgons
+// URLs actualitzades de les teves plataformes de Google Apps Script
 const COLORS_JSON_URL="https://script.google.com/macros/s/AKfycbyM44gMczZ9XQvIJhAcKaBx9CPbMNAXEgVze1ClXJIZ6VOkZJxSxPKwrmQj57_KjLyX/exec";
-
-// 2. URL del teu Google Apps Script d'ordres globals unificat
 const ORDERS_JSON_URL="https://script.google.com/macros/s/AKfycbwp_Qy6vzBUuo2jK0gtI-9hdUY3mFZ41BPIf6VZqyGwPpEBZh0KnUGqOdTiBgZXm4YF1A/exec";
 
 const REAL_R=41.78;
@@ -126,39 +124,37 @@ const IMAGE_RATIO=1.4;
 let hexData=[];
 let arrowElements=[]; 
 
-// Funció genèrica de lectura JSONP segura per evitar problemes de CORS
+// Motor de lectura JSONP robust i lliure d'errors de timeout/scope
 async function fetchJSONP(url){
   return new Promise((resolve, reject) => {
-    const callbackName = 'jsonpCallback_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+    const callbackName = 'jsonp_' + Date.now() + '_' + Math.random().toString(36).substring(2, 9);
+    const script = document.createElement('script');
     
-    const timeout = setTimeout(() => {
-      if (window[callbackName]) {
-        delete window[window[callbackName]];
-        try { document.head.removeChild(script); } catch(e) {}
-        reject(new Error('Timeout carregant dades'));
-      }
-    }, 5000);
+    const timerId = setTimeout(() => {
+      cleanup();
+      reject(new Error('El servidor de Google triga massa a respondre.'));
+    }, 8000);
+
+    function cleanup() {
+      clearTimeout(timerId);
+      if (window[callbackName]) delete window[callbackName];
+      if (script.parentNode) script.parentNode.removeChild(script);
+    }
 
     window[callbackName] = function(data) {
-      clearTimeout(timeout);
-      delete window[callbackName];
-      try { document.head.removeChild(script); } catch(e) {}
+      cleanup();
       resolve(data);
     };
-    
-    const script = document.createElement('script');
-    script.src = url + (url.includes('?') ? '&' : '?') + "callback=" + callbackName;
+
+    const separator = url.includes('?') ? '&' : '?';
+    script.src = url + separator + "callback=" + callbackName;
     script.type = 'text/javascript';
-    
+
     script.onerror = function() {
-      clearTimeout(timeout);
-      if (window[callbackName]) {
-        delete window[callbackName];
-        try { document.head.removeChild(script); } catch(e) {}
-      }
-      reject(new Error('Error de connexió'));
+      cleanup();
+      reject(new Error('Accés denegat (Revisa els permisos "Cualquiera" de l\'Script)'));
     };
-    
+
     document.head.appendChild(script);
   });
 }
@@ -179,7 +175,6 @@ function resizeMap(){
   map.style.height=height+"px";
 }
 
-// Inicialitza la graella geomètrica dels hexàgons
 function initHexGridStructure(){
   const svg=document.getElementById("hexGrid");
   const map=document.getElementById("mapContainer");
@@ -235,7 +230,6 @@ function initHexGridStructure(){
   });
 }
 
-// Sincronitza l'estat dels colors de fons
 async function updateHexColors(){
   try {
     const data = await fetchJSONP(COLORS_JSON_URL);
@@ -255,22 +249,20 @@ async function updateHexColors(){
       });
     }
   } catch(e) {
-    console.log("Error sincronitzant colors mapa:", e);
+    console.log("Error carregant colors:", e.message);
   }
 }
 
-// Sincronitza les ordres reals i dibuixa les fletxes vectorials
 async function updateActiveOrders(){
   try {
-    // Netejar fletxes del cicle anterior
+    const orderStrings = await fetchJSONP(ORDERS_JSON_URL);
+    
+    // Si hem rebut les dades correctament, esborrem les fletxes velles i pintem les noves
     arrowElements.forEach(img => img.remove());
     arrowElements = [];
 
-    const orderStrings = await fetchJSONP(ORDERS_JSON_URL);
-    
     if (Array.isArray(orderStrings)) {
       orderStrings.forEach(orderText => {
-        // Filtra el patró de text "territori X a territori Y"
         const match = orderText.match(/territori\s+(\d+)\s+a\s+territori\s+(\d+)/i);
         if (match) {
           const originID = parseInt(match[1]);
@@ -289,7 +281,7 @@ async function updateActiveOrders(){
       document.getElementById("loadingIndicator").textContent = `Radar sincronitzat: Darrera actualització a les ${d.toLocaleTimeString()}`;
     }
   } catch(e) {
-    console.log("Error buscant noves ordres:", e);
+    document.getElementById("loadingIndicator").textContent = `⚠️ Error de radar: ${e.message}`;
   }
 }
 
@@ -343,7 +335,6 @@ function placeInformativeArrow(origin,target){
   arrowElements.push(img);
 }
 
-// Unificació del bucle de refresc global
 async function syncRadarData(){
   await updateHexColors();
   await updateActiveOrders();
@@ -355,15 +346,14 @@ function fullRedraw(){
   syncRadarData();
 }
 
-// Controladors de pantalla dinàmics
 window.addEventListener("resize", fullRedraw);
 
-// Càrrega i renderitzat inicial
+// Inicialització automàtica
 resizeMap();
 initHexGridStructure();
 setTimeout(syncRadarData, 500);
 
-// Rellotge automàtic actiu cada 5000 mil·lisegons
+// Refresc automàtic fixat cada 5 segons
 setInterval(syncRadarData, 5000);
 </script>
 
