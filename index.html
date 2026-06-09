@@ -227,7 +227,6 @@ async function fetchJSON(){
     const callbackName = 'jsonpCallback_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
     
     window[callbackName] = function(data) {
-      console.log("JSONP rebut correctament");
       delete window[callbackName];
       try {
         document.head.removeChild(script);
@@ -241,7 +240,6 @@ async function fetchJSON(){
     script.type = 'text/javascript';
     
     script.onerror = function() {
-      console.error('Script JSONP error');
       delete window[callbackName];
       try {
         document.head.removeChild(script);
@@ -283,9 +281,6 @@ async function loadJSON(){
           colors[id] = (color || "MAR").toUpperCase();
         }
       }
-      
-      console.log("Colors carregats:", colors);
-      console.log("H2 (accions):", H2);
     }
 
     actionsAvailable = H2;
@@ -297,30 +292,22 @@ async function loadJSON(){
   }
 }
 
-// Recarregar dades cada 2 segons sense errors
-async function updateDataPeriodically(){
-  try {
-    await loadJSON();
-  } catch(err) {
-    console.log("Error en actualització periòdica:", err);
-  }
-}
-
-setInterval(updateDataPeriodically, 2000);
-  
-// ------------------------------
-// BLOQUEIG DINÀMIC PER E2
-// ------------------------------
-async function checkLockState() {
+// Funció única que actualitza TODO cada 3 segons
+async function updateAllData() {
   try {
     const data = await fetchJSON();
     
     if (Array.isArray(data) && data.length > 0) {
       const firstRow = data[0];
+      
+      // Actualitzar accions
+      const H2 = parseInt(firstRow["H"]) || 0;
+      actionsAvailable = H2;
+      updateActionDisplay();
+      
+      // Actualitzar lock state
       const E2 = (firstRow["E"] || "0").toString().trim();
-
       const btn = document.getElementById("confirmBtn");
-
       btn._sheetLocked = (E2 === "1");
 
       if (btn._sheetLocked || btn._tempLocked) {
@@ -335,13 +322,12 @@ async function checkLockState() {
         btn.style.cursor = "pointer";
       }
     }
-
   } catch (err) {
-    console.log("Error checkLockState:", err);
+    // Silenciar errors
   }
 }
 
-setInterval(checkLockState, 2000);
+setInterval(updateAllData, 3000);
 
 // ------------------------------
 
@@ -655,7 +641,7 @@ function redraw(){
 
 window.addEventListener("resize",redraw);
 redraw();
-checkLockState();
+updateAllData();
 
 document.getElementById("confirmBtn").addEventListener("click", async () => {
   const btn = document.getElementById("confirmBtn");
@@ -672,7 +658,7 @@ document.getElementById("confirmBtn").addEventListener("click", async () => {
   setTimeout(() => {
     btn._tempLocked = false;
     document.body.style.cursor = "default";
-    checkLockState();
+    updateAllData();
   }, 5000);
 
   document.getElementById("ordersSound").play();
