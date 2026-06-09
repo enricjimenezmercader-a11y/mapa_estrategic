@@ -3,13 +3,13 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Mapa Estratègic — Retícula Hexagonal</title>
+  <title>Mapa Informatiu Global — Estat de la Guerra</title>
 
   <style>
     *{box-sizing:border-box;margin:0;padding:0}
     html,body{height:100%}
     body{
-      background:#000;
+      background:#05050a;
       color:#fff;
       font-family:Arial,Helvetica,sans-serif;
       display:flex;
@@ -24,29 +24,15 @@
       font-size:28px;
       font-weight:bold;
       text-align:center;
-    }
-
-    #actionBar{
-      width:66%;
-      height:20px;
-      background:#333;
-      border:1px solid #666;
-      margin-top:-10px;
-      margin-bottom:10px;
-      position:relative;
-    }
-
-    #actionFill{
-      height:100%;
-      background:#00cc00;
-      width:0%;
-      transition:width 0.3s ease;
+      letter-spacing:1px;
+      text-shadow: 0 0 10px rgba(255,255,255,0.2);
     }
 
     .map-container{
       position:relative;
-      background:#1a1a1a;
-      border:1px solid #333;
+      background:#111;
+      border:2px solid #333;
+      box-shadow: 0 0 20px rgba(0,0,0,0.8);
       overflow:hidden;
     }
 
@@ -66,89 +52,25 @@
       width:100%;
       height:100%;
       z-index:10;
+      pointer-events:none; /* Mode informatiu: bloqueja interaccions de clic */
     }
 
     .hex{
       stroke:#000;
       stroke-width:2;
-      cursor:pointer;
     }
 
-    .hex-red{ fill:rgba(255,0,0,0.33); }
-    .hex-blue{ fill:rgba(0,120,255,0.33); }
-    .hex-mar{ fill:rgba(120,120,120,0.33); }
-
-    .hex-hatch{
-      fill:url(#hatch-red);
-    }
+    .hex-red{ fill:rgba(255,0,0,0.3); }
+    .hex-blue{ fill:rgba(0,120,255,0.3); }
+    .hex-mar{ fill:rgba(120,120,120,0.25); }
 
     .hex-label{
       fill:#fff;
       font-weight:bold;
       text-anchor:middle;
-      pointer-events:none;
       stroke:#000;
       stroke-width:0.8;
-    }
-
-    #orders{
-      width:66%;
-      color:#7CFF7C;
-      font-family:monospace;
-      font-size:18px;
-      white-space:pre-line;
-      min-height:40px;
-    }
-
-    .order-line{
-      display:flex;
-      justify-content:space-between;
-      align-items:center;
-      margin-bottom:6px;
-    }
-
-    .order-btn{
-      background:#550000;
-      color:#fff;
-      border:1px solid #aa0000;
-      padding:3px 8px;
-      cursor:pointer;
-      font-size:14px;
-    }
-
-    #confirmBtn{
-      margin-top:10px;
-      padding:6px 12px;
-      background:#004400;
-      color:#aaffaa;
-      border:1px solid #66ff66;
-      cursor:pointer;
-      font-size:16px;
-      display:block;
-    }
-
-    #warning, #warningActions{
-      position:absolute;
-      top:10px;
-      left:50%;
-      transform:translateX(-50%);
-      font-size:40px;
-      font-weight:bold;
-      color:#FF4444;
-      text-shadow:0 0 10px #000;
-      opacity:0;
-      pointer-events:none;
-      z-index:999;
-    }
-
-    .blink{
-      animation: blinkAnim 0.3s linear infinite;
-    }
-
-    @keyframes blinkAnim{
-      0%{opacity:1;}
-      50%{opacity:0;}
-      100%{opacity:1;}
+      font-size:12px;
     }
 
     .attack-arrow{
@@ -158,40 +80,29 @@
       transform-origin:center center;
     }
 
-    @keyframes shake {
-      0%   { transform: translate(0,0); }
-      25%  { transform: translate(1px,-1px); }
-      50%  { transform: translate(-1px,1px); }
-      75%  { transform: translate(1px,1px); }
-      100% { transform: translate(0,0); }
-    }
-    .attack-arrow--shake{
-      animation:shake 0.25s linear 1;
-    }
-
     @keyframes glow {
-      0%   { filter: drop-shadow(0 0 0px #fff); }
-      50%  { filter: drop-shadow(0 0 12px #ffff66); }
-      100% { filter: drop-shadow(0 0 0px #fff); }
+      0%   { filter: drop-shadow(0 0 2px #fff); opacity: 0.85; }
+      50%  { filter: drop-shadow(0 0 14px #ffff66); opacity: 1; }
+      100% { filter: drop-shadow(0 0 2px #fff); opacity: 0.85; }
     }
     .attack-arrow--glow{
-      animation:glow 1.4s ease-in-out infinite;
+      animation:glow 2s ease-in-out infinite;
+    }
+    
+    #loadingIndicator {
+      font-size: 14px;
+      color: #888;
+      font-family: monospace;
     }
   </style>
 </head>
 
 <body>
 
-<audio id="moveSound" src="https://raw.githubusercontent.com/enricjimenezmercader-a11y/mapa_estrategic/main/Move.wav"></audio>
-<audio id="ordersSound" src="https://raw.githubusercontent.com/enricjimenezmercader-a11y/mapa_estrategic/main/Orders.wav"></audio>
-
-<div id="titleBar">Equip vermell — Accions disponibles: ...</div>
-<div id="actionBar"><div id="actionFill"></div></div>
+<div id="titleBar">PANEL INFORMATIU GLOBAL — RADAR TÀCTIC</div>
+<div id="loadingIndicator">Sincronitzant dades amb el quarter general...</div>
 
 <div class="map-container" id="mapContainer">
-  <div id="warning">Ordre repetida</div>
-  <div id="warningActions">Accions insuficients</div>
-
   <img class="map-image"
        src="https://github.com/enricjimenezmercader-a11y/mapa_estrategic/blob/481d1cc0765b31581a6f050a7f68d53400172e48/map_hex.jpg?raw=true"
        alt="Mapa estratègic">
@@ -199,53 +110,44 @@
   <svg id="hexGrid"></svg>
 </div>
 
-<div id="orders"></div>
-<button id="confirmBtn">Confirmar ordres</button>
-
 <script>
 const PATTERN=[5,4,5,4,5,4,5,4,5,4,5];
-const JSON_URL="https://script.google.com/macros/s/AKfycbyM44gMczZ9XQvIJhAcKaBx9CPbMNAXEgVze1ClXJIZ6VOkZJxSxPKwrmQj57_KjLyX/exec";
+
+// 1. URL per carregar l'estat dels colors dels hexàgons
+const COLORS_JSON_URL="https://script.google.com/macros/s/AKfycbyM44gMczZ9XQvIJhAcKaBx9CPbMNAXEgVze1ClXJIZ6VOkZJxSxPKwrmQj57_KjLyX/exec";
+
+// 2. URL del teu Google Apps Script d'ordres globals unificat
+const ORDERS_JSON_URL="https://script.google.com/macros/s/AKfycbwp_Qy6vzBUuo2jK0gtI-9hdUY3mFZ41BPIf6VZqyGwPpEBZh0KnUGqOdTiBgZXm4YF1A/exec";
 
 const REAL_R=41.78;
 const REAL_GRID_WIDTH=17*REAL_R;
 const IMAGE_RATIO=1.4;
 
 let hexData=[];
-let selectedRed=null;
-let highlightedAdjacents=[];
-let ordersSet=new Set();
-let actions=0;
-let arrowImages={};
-let clickLocked=false;
-let actionsAvailable=0;
+let arrowElements=[]; 
 
-// ------------------------------
-// LECTURA JSONP REVISADA I CORREGIDA
-// ------------------------------
-async function fetchJSON(){
+// Funció genèrica de lectura JSONP segura per evitar problemes de CORS
+async function fetchJSONP(url){
   return new Promise((resolve, reject) => {
     const callbackName = 'jsonpCallback_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
     
-    // Control de timeout integrat de forma segura
     const timeout = setTimeout(() => {
       if (window[callbackName]) {
-        delete window[callbackName];
+        delete window[window[callbackName]];
         try { document.head.removeChild(script); } catch(e) {}
-        reject(new Error('JSONP timeout'));
+        reject(new Error('Timeout carregant dades'));
       }
     }, 5000);
 
     window[callbackName] = function(data) {
       clearTimeout(timeout);
       delete window[callbackName];
-      try {
-        document.head.removeChild(script);
-      } catch(e) {}
+      try { document.head.removeChild(script); } catch(e) {}
       resolve(data);
     };
     
     const script = document.createElement('script');
-    script.src = JSON_URL + "?callback=" + callbackName;
+    script.src = url + (url.includes('?') ? '&' : '?') + "callback=" + callbackName;
     script.type = 'text/javascript';
     
     script.onerror = function() {
@@ -254,97 +156,19 @@ async function fetchJSON(){
         delete window[callbackName];
         try { document.head.removeChild(script); } catch(e) {}
       }
-      reject(new Error('JSONP script error'));
+      reject(new Error('Error de connexió'));
     };
     
     document.head.appendChild(script);
   });
 }
 
-async function loadJSON(){
-  try {
-    const data = await fetchJSON();
-    
-    const colors = {};
-    let H2 = 0;
-
-    if (Array.isArray(data) && data.length > 0) {
-      const firstRow = data[0];
-      H2 = parseInt(firstRow["H"]) || 0;
-      
-      for (let i = 0; i < data.length; i++) {
-        const row = data[i];
-        const id = row["A"];
-        const color = row["B"];
-        
-        if (id) {
-          colors[id] = (color || "MAR").toUpperCase();
-        }
-      }
-    }
-
-    actionsAvailable = H2;
-    updateActionDisplay();
-    return colors;
-  } catch (err) {
-    console.error('Error loading JSON:', err);
-    return {};
-  }
-}
-
-async function updateAllData() {
-  try {
-    const data = await fetchJSON();
-    
-    if (Array.isArray(data) && data.length > 0) {
-      const firstRow = data[0];
-      
-      // Actualitzar accions
-      const H2 = parseInt(firstRow["H"]) || 0;
-      actionsAvailable = H2;
-      updateActionDisplay();
-      
-      // Actualitzar estat de bloqueig
-      const E2 = (firstRow["E"] || "0").toString().trim();
-      const btn = document.getElementById("confirmBtn");
-      btn._sheetLocked = (E2 === "1");
-
-      if (btn._sheetLocked || btn._tempLocked) {
-        btn.disabled = true;
-        btn.style.background = "#555";
-        btn.style.color = "#999";
-        btn.style.cursor = "not-allowed";
-      } else {
-        btn.disabled = false;
-        btn.style.background = "#004400";
-        btn.style.color = "#aaffaa";
-        btn.style.cursor = "pointer";
-      }
-    }
-  } catch (err) {
-    // Silenciar errors de fons
-  }
-}
-
-setInterval(updateAllData, 3000);
-
-// ------------------------------
-
-function updateActionDisplay(){
-  const spent=usedPoints();
-  const remaining=actionsAvailable-spent;
-  document.getElementById("titleBar").textContent=
-    `Equip vermell — Accions disponibles: ${actionsAvailable}`;
-  const pct=Math.min(100,(spent/actionsAvailable)*100);
-  document.getElementById("actionFill").style.width=pct+"%";
-}
-
 function resizeMap(){
   const map=document.getElementById("mapContainer");
   const W=window.innerWidth;
   const H=window.innerHeight;
-  const maxW=W*(2/3);
-  const maxH=H*(2/3);
+  const maxW=W*(0.85);
+  const maxH=H*(0.80);
   let width=maxW;
   let height=width/IMAGE_RATIO;
   if(height>maxH){
@@ -355,27 +179,13 @@ function resizeMap(){
   map.style.height=height+"px";
 }
 
-async function drawHexGrid(){
+// Inicialitza la graella geomètrica dels hexàgons
+function initHexGridStructure(){
   const svg=document.getElementById("hexGrid");
   const map=document.getElementById("mapContainer");
 
   svg.innerHTML="";
   hexData=[];
-  selectedRed=null;
-  highlightedAdjacents=[];
-  arrowImages={};
-  ordersSet=new Set();
-  document.getElementById("orders").innerHTML="";
-
-  svg.insertAdjacentHTML("afterbegin",`
-    <defs>
-      <pattern id="hatch-red" patternUnits="userSpaceOnUse" width="6" height="6" patternTransform="rotate(45)">
-        <line x1="0" y1="0" x2="0" y2="6" stroke="rgba(255,0,0,0.5)" stroke-width="3"/>
-      </pattern>
-    </defs>
-  `);
-
-  const colors=await loadJSON();
 
   const B=map.clientWidth;
   const scale=B/REAL_GRID_WIDTH;
@@ -406,15 +216,8 @@ async function drawHexGrid(){
 
       const poly=document.createElementNS("http://www.w3.org/2000/svg","polygon");
       poly.setAttribute("points",pts.join(" "));
-
-      const color=(colors[id]||"").toUpperCase();
-      let cls="hex hex-mar";
-      if(color.includes("RED")) cls="hex hex-red";
-      else if(color.includes("BLUE")) cls="hex hex-blue";
-
-      poly.setAttribute("class",cls);
+      poly.setAttribute("class","hex hex-mar"); 
       poly.dataset.id=id;
-
       g.appendChild(poly);
 
       const label=document.createElementNS("http://www.w3.org/2000/svg","text");
@@ -426,67 +229,79 @@ async function drawHexGrid(){
 
       svg.appendChild(g);
 
-      hexData.push({id,cx,cy,color,element:poly});
+      hexData.push({id,cx,cy,color:"MAR",element:poly});
       id++;
     }
   });
 }
 
-function highlightAdjacent(redHex){
-  clearHighlights();
-  selectedRed=redHex;
-
-  const R=REAL_R*(document.getElementById("mapContainer").clientWidth/REAL_GRID_WIDTH);
-  const maxDist=Math.sqrt(3)*R*1.01;
-
-  highlightedAdjacents=[];
-
-  hexData.forEach(h=>{
-    if(h.color==="BLUE"){
-      const dx=h.cx-redHex.cx;
-      const dy=h.cy-redHex.cy;
-      const dist=Math.sqrt(dx*dx+dy*dy);
-      if(dist<=maxDist){
-        h.element.classList.add("hex-hatch");
-        highlightedAdjacents.push(h);
-      }
+// Sincronitza l'estat dels colors de fons
+async function updateHexColors(){
+  try {
+    const data = await fetchJSONP(COLORS_JSON_URL);
+    if (Array.isArray(data)) {
+      data.forEach(row => {
+        const id = parseInt(row["A"]);
+        const color = (row["B"] || "MAR").toUpperCase();
+        
+        const hex = hexData.find(h => h.id === id);
+        if(hex) {
+          hex.color = color;
+          let cls = "hex hex-mar";
+          if(color.includes("RED")) cls = "hex hex-red";
+          else if(color.includes("BLUE")) cls = "hex hex-blue";
+          hex.element.setAttribute("class", cls);
+        }
+      });
     }
-  });
+  } catch(e) {
+    console.log("Error sincronitzant colors mapa:", e);
+  }
 }
 
-function clearHighlights(){
-  highlightedAdjacents.forEach(h=>h.element.classList.remove("hex-hatch"));
-  highlightedAdjacents=[];
-  selectedRed=null;
-}
+// Sincronitza les ordres reals i dibuixa les fletxes vectorials
+async function updateActiveOrders(){
+  try {
+    // Netejar fletxes del cicle anterior
+    arrowElements.forEach(img => img.remove());
+    arrowElements = [];
 
-function showWarning(){
-  const w=document.getElementById("warning");
-  w.classList.add("blink");
-  w.style.opacity=1;
-  setTimeout(()=>{w.style.opacity=0;w.classList.remove("blink");},2000);
-}
+    const orderStrings = await fetchJSONP(ORDERS_JSON_URL);
+    
+    if (Array.isArray(orderStrings)) {
+      orderStrings.forEach(orderText => {
+        // Filtra el patró de text "territori X a territori Y"
+        const match = orderText.match(/territori\s+(\d+)\s+a\s+territori\s+(\d+)/i);
+        if (match) {
+          const originID = parseInt(match[1]);
+          const targetID = parseInt(match[2]);
 
-function showWarningActions(){
-  const w=document.getElementById("warningActions");
-  w.classList.add("blink");
-  w.style.opacity=1;
-  setTimeout(()=>{w.style.opacity=0;w.classList.remove("blink");},2000);
-}
+          const originHex = hexData.find(h => h.id === originID);
+          const targetHex = hexData.find(h => h.id === targetID);
 
-function usedPoints(){ return ordersSet.size*10; }
+          if (originHex && targetHex) {
+            placeInformativeArrow(originHex, targetHex);
+          }
+        }
+      });
+      
+      const d = new Date();
+      document.getElementById("loadingIndicator").textContent = `Radar sincronitzat: Darrera actualització a les ${d.toLocaleTimeString()}`;
+    }
+  } catch(e) {
+    console.log("Error buscant noves ordres:", e);
+  }
+}
 
 function direction(origin,target){
   const dx=target.cx-origin.cx;
   const dy=target.cy-origin.cy;
-
   if(dy<0 && Math.abs(dx)<Math.abs(dy)) return "N";
   if(dy>0 && Math.abs(dx)<Math.abs(dy)) return "S";
   if(dx>0 && dy<0) return "NE";
   if(dx>0 && dy>0) return "SE";
   if(dx<0 && dy<0) return "NO";
   if(dx<0 && dy>0) return "SO";
-
   return "N";
 }
 
@@ -501,7 +316,7 @@ function arrowURL(dir){
   }[dir];
 }
 
-function placeArrow(origin,target,key){
+function placeInformativeArrow(origin,target){
   const map=document.getElementById("mapContainer");
   const B=map.clientWidth;
   const scale=B/REAL_GRID_WIDTH;
@@ -513,10 +328,9 @@ function placeArrow(origin,target,key){
 
   const img=document.createElement("img");
   img.src=url;
-  img.className="attack-arrow attack-arrow--shake attack-arrow--glow";
+  img.className="attack-arrow attack-arrow--glow"; 
 
   const FACTOR=1.42;
-
   const width = 2 * R * FACTOR;
   const height = hexH * FACTOR;
 
@@ -526,158 +340,31 @@ function placeArrow(origin,target,key){
   img.style.top    = (origin.cy - height/2) + "px";
 
   map.appendChild(img);
-  arrowImages[key]=img;
-
-  setTimeout(()=>{
-    if(img) img.classList.remove("attack-arrow--shake");
-  },260);
+  arrowElements.push(img);
 }
 
-function removeArrow(key){
-  if(arrowImages[key]){
-    arrowImages[key].remove();
-    delete arrowImages[key];
-  }
+// Unificació del bucle de refresc global
+async function syncRadarData(){
+  await updateHexColors();
+  await updateActiveOrders();
 }
 
-function addOrder(originID,targetID){
-  const key=`${originID}-${targetID}`;
-
-  if(ordersSet.has(key)){
-    showWarning();
-    return;
-  }
-
-  const remaining=actionsAvailable-usedPoints();
-  if(remaining<10){
-    showWarningActions();
-    return;
-  }
-
-  ordersSet.add(key);
-
-  clickLocked = true;
-  document.body.style.cursor = "wait";
-  setTimeout(() => {
-    clickLocked = false;
-    document.body.style.cursor = "default";
-  }, 1000);
-
-  const origin=hexData.find(h=>h.id===originID);
-  const target=hexData.find(h=>h.id===targetID);
-
-  placeArrow(origin,target,key);
-
-  target.element.classList.remove("hex-hatch");
-
-  document.getElementById("moveSound").play();
-
-  const orders=document.getElementById("orders");
-
-  const line=document.createElement("div");
-  line.className="order-line";
-  line.dataset.key=key;
-
-  const text=document.createElement("span");
-  text.textContent=`Ordre d'atac, territori ${originID} a territori ${targetID}`;
-
-  const btn=document.createElement("button");
-  btn.textContent="Suspendre ordre";
-  btn.className="order-btn";
-
-  btn.onclick=()=>{
-    ordersSet.delete(key);
-    removeArrow(key);
-    line.remove();
-    updateActionDisplay();
-  };
-
-  line.appendChild(text);
-  line.appendChild(btn);
-  orders.appendChild(line);
-
-  updateActionDisplay();
-}
-
-function setupClickHandler(){
-  const svg=document.getElementById("hexGrid");
-
-  svg.addEventListener("click", e => {
-    if (clickLocked) return;
-
-    hexData.forEach(h=>h.element.classList.remove("hex-hatch"));
-
-    const poly=e.target.closest("polygon");
-    if(!poly){
-      clearHighlights();
-      return;
-    }
-
-    const id=parseInt(poly.dataset.id);
-    const hex=hexData.find(h=>h.id===id);
-
-    if(hex.color==="RED"){
-      highlightAdjacent(hex);
-      return;
-    }
-
-    if(selectedRed && highlightedAdjacents.some(h=>h.id===id)){
-      addOrder(selectedRed.id,hex.id);
-      return;
-    }
-
-    clearHighlights();
-  });
-}
-
-function redraw(){
+function fullRedraw(){
   resizeMap();
-  drawHexGrid().then(()=>{
-    setupClickHandler();
-    updateActionDisplay();
-  });
+  initHexGridStructure();
+  syncRadarData();
 }
 
-window.addEventListener("resize",redraw);
-redraw();
-updateAllData();
+// Controladors de pantalla dinàmics
+window.addEventListener("resize", fullRedraw);
 
-document.getElementById("confirmBtn").addEventListener("click", async () => {
-  const btn = document.getElementById("confirmBtn");
+// Càrrega i renderitzat inicial
+resizeMap();
+initHexGridStructure();
+setTimeout(syncRadarData, 500);
 
-  if (btn._sheetLocked || btn._tempLocked) return;
-
-  btn._tempLocked = true;
-  btn.disabled = true;
-  btn.style.background = "#555";
-  btn.style.color = "#999";
-  btn.style.cursor = "not-allowed";
-  document.body.style.cursor = "wait";
-
-  setTimeout(() => {
-    btn._tempLocked = false;
-    document.body.style.cursor = "default";
-    updateAllData();
-  }, 5000);
-
-  document.getElementById("ordersSound").play();
-
-  const url = "https://script.google.com/macros/s/AKfycbzMGXDTpJXy2jGjGxPT5g27kOntPOEj6aO-ap_8KIPqi1iyR-FQknxpNva-QqqTXxt_/exec";
-  const lines = document.querySelectorAll(".order-line");
-
-  for (const line of lines) {
-    const text = line.querySelector("span").textContent;
-
-    await fetch(url, {
-      method: "POST",
-      mode: "no-cors",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ orderText: text })
-    });
-
-    await new Promise(res => setTimeout(res, 150));
-  }
-});
+// Rellotge automàtic actiu cada 5000 mil·lisegons
+setInterval(syncRadarData, 5000);
 </script>
 
 </body>
