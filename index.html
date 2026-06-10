@@ -272,7 +272,6 @@ const COLORS_JSON_URL="https://script.google.com/macros/s/AKfycbyM44gMczZ9XQvIJh
 const ORDERS_JSON_URL="https://script.google.com/macros/s/AKfycbzDdC4yHTVFzNdsSRJE7yfiRRvOiCPssSyVBEDPV92gSksgOnwfIVSUVVRkGSbzy_EBDw/exec";
 const EXPLOSION_IMG_URL="https://github.com/enricjimenezmercader-a11y/mapa_estrategic/blob/894cd2a4b1d3605c654d4eaaa5862f5d90b6c2c4/explosion.png?raw=true";
 
-// URL d'Apps Script actualitzada correctament per a la tramesa de dades
 const WEB_APP_RESOLVE_URL = "https://script.google.com/macros/s/AKfycbx7LXHMqQ4FTdA4qATvtE1vZ5o1iYp0nfco75TTLoc3MaGmX5omUol_u7k65rTn8C4o8g/exec";
 
 const REAL_R=41.78;
@@ -282,6 +281,9 @@ const IMAGE_RATIO=1.4;
 let hexData=[];
 let arrowElements=[]; 
 let activeBattleDetails = null;
+
+// Llista de control local per recordar quines batalles ja han estat resoltes
+let resolvedBattlesLog = [];
 
 async function fetchJSONP(url){
   return new Promise((resolve, reject) => {
@@ -424,21 +426,27 @@ function submitBattleResolution() {
   const winner = document.getElementById("winnerSide").value;
   const battleLetter = activeBattleDetails.letter;
 
-  // 1. Eliminar visualment l'explosió i la lletra de manera immediata
-  const explosionGroup = document.getElementById(`expGroup-${battleLetter}`);
-  if (explosionGroup) {
-    explosionGroup.remove();
-  }
-
-  // 2. Definir cotes associades per poder fer neteja selectiva de fletxes
   let cotesImplicades = [];
+  let uniqueBattleKey = "";
+
   if (activeBattleDetails.type === "contact") {
     cotesImplicades.push(activeBattleDetails.info.idA.toString(), activeBattleDetails.info.idB.toString());
+    // Clau unica de control combinant les dues cotes de contacte (Ex: "contact-12-15")
+    uniqueBattleKey = `contact-${activeBattleDetails.info.idA}-${activeBattleDetails.info.idB}`;
   } else if (activeBattleDetails.type === "atdef") {
     cotesImplicades.push(activeBattleDetails.targetId.toString());
+    // Clau unica per assalts (Ex: "atdef-24")
+    uniqueBattleKey = `atdef-${activeBattleDetails.targetId}`;
   }
 
-  // 3. Esborrar les fletxes HTML que coincideixen amb aquesta acció militar
+  // Afegim la clau al registre local de resoltes perquè mai es torni a pintar automàticament
+  resolvedBattlesLog.push(uniqueBattleKey);
+
+  // 1. Eliminar immediatament l'explosió i lletra del mapa
+  const explosionGroup = document.getElementById(`expGroup-${battleLetter}`);
+  if (explosionGroup) explosionGroup.remove();
+
+  // 2. Eliminar immediatament les fletxes de la pantalla
   arrowElements = arrowElements.filter(arrow => {
     const origin = arrow.dataset.origin;
     const target = arrow.dataset.target;
@@ -454,12 +462,12 @@ function submitBattleResolution() {
     return true; 
   });
 
-  // 4. Ocultar el botó inferior utilitzat
+  // 3. Eliminar / amagar el botó de manera immediata
   if(activeBattleDetails.btnElement) {
-    activeBattleDetails.btnElement.style.display = "none";
+    activeBattleDetails.btnElement.remove();
   }
 
-  // 5. Tramesa asíncrona estructurada cap al Google Apps Script (Google Sheets)
+  // 4. Tramesa asíncrona de dades a Google Sheets
   const formData = new FormData();
   formData.append("tipus", activeBattleDetails.type);
   formData.append("lletra", battleLetter);
@@ -474,8 +482,8 @@ function submitBattleResolution() {
     mode: "no-cors",
     body: formData
   }).then(() => {
-    console.log(`Dades enviades correctament al registre central per a la batalla (${battleLetter})`);
-  }).catch(err => console.error("Error durant la tramesa del fitxer de dades:", err));
+    console.log(`Dades guardades amb èxit al Google Sheets per (${battleLetter})`);
+  }).catch(err => console.error("Error enviant dades:", err));
 
   closeResolutionModal();
 }
@@ -523,7 +531,6 @@ async function updateActiveOrders(){
 
           if (originHex && targetHex) {
             activeOrders.push({ originID, targetID, originHex, targetHex, processed: false });
-            placeInformativeArrow(originHex, targetHex);
           }
         }
       });
@@ -538,13 +545,42 @@ async function updateActiveOrders(){
           if (activeOrders[i].originID === activeOrders[j].targetID && activeOrders[i].targetID === activeOrders[j].originID) {
             activeOrders[i].processed = true;
             activeOrders[j].processed = true;
-            contactBattles.push({ hexA: activeOrders[i].originHex, hexB: activeOrders[i].targetHex, idA: activeOrders[i].originID, idB: activeOrders[i].targetID });
+            
+            // FILTRE: Només afegir la batalla de contacte si no ha estat resolta localment
+            const key = `contact-${activeOrders[i].originID}-${activeOrders[i].targetID}`;
+            const keyInverse = `contact-${activeOrders[i].targetID}-${activeOrders[i].originID}`;
+            if (!resolvedBattlesLog.includes(key) && !resolvedBattlesLog.includes(keyInverse)) {
+              contactBattles.push({ hexA: activeOrders[i].originHex, hexB: activeOrders[i].targetHex, idA: activeOrders[i].originID, idB: activeOrders[i].targetID });
+            }
             break;
           }
         }
       }
 
-      activeOrders.forEach(order => { if (!order.processed) attackDefenseTargets.add(order.targetID); });
+      activeOrders.forEach(order => { 
+        if (!order.processed) {
+          // FILTRE: Només afegir l'assalt si la cota objectiu no ha estat resolta localment
+          const key = `atdef-${order.targetID}`;
+          if (!resolvedBattlesLog.includes(key)) {
+            attackDefenseTargets.add(order.targetID);
+          }
+        } 
+      });
+
+      // Pintar les fletxes només de les ordres que NO pertanyen a batalles ja resoltes
+      activeOrders.forEach(order => {
+        const contactKey = `contact-${order.originID}-${order.targetID}`;
+        const contactKeyInverse = `contact-${order.targetID}-${order.originID}`;
+        const atdefKey = `atdef-${order.targetID}`;
+
+        let isResolved = resolvedBattlesLog.includes(atdefKey) || 
+                         resolvedBattlesLog.includes(contactKey) || 
+                         resolvedBattlesLog.includes(contactKeyInverse);
+
+        if (!isResolved) {
+          placeInformativeArrow(order.originHex, order.targetHex);
+        }
+      });
 
       buildTacticalInterface(contactBattles, Array.from(attackDefenseTargets));
       const d = new Date();
