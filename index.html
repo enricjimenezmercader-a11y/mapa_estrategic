@@ -397,7 +397,7 @@ async function updateActiveOrders(){
         }
       });
 
-      // Dibuixem les fletxes aplicant la condició de contacte
+      // Pintem les fletxes
       activeOrders.forEach(order => {
          placeInformativeArrow(order.originHex, order.targetHex, order.isContactBattle);
       });
@@ -501,7 +501,7 @@ function arrowURL(dir){
   }[dir];
 }
 
-// CORRECCIÓ FINAL DELS COMPONENTES DE DESPLAÇAMENT EN CONTACTE DIRECTE
+// DESPLAÇAMENT EMPÍRIC APROXIMAT: RETROCEDINT RESPECTE AL DESTÍ
 function placeInformativeArrow(origin,target, isContact){
   const map=document.getElementById("mapContainer");
   const B=map.clientWidth;
@@ -527,21 +527,20 @@ function placeInformativeArrow(origin,target, isContact){
   let posY = origin.cy;
 
   if (isContact) {
-    // 1. Vector distància real entre els centres dels dos hexàgons
+    // 1. Vector de línia entre els dos centres
     const dx = target.cx - origin.cx;
     const dy = target.cy - origin.cy;
     const dist = Math.sqrt(dx * dx + dy * dy);
     
-    // 2. Vectors directors normalitzats
+    // Vector unitari orientat des d'origen cap al destí
     const ux = dx / dist;
     const uy = dy / dist;
 
-    // 3. DESPLAÇAMENT GEOMÈTRIC TOTALMENT PRECÍS:
-    // Com que els fitxers tenen el dibuix centrat a la caixa, per moure la punta 
-    // exactament fins a la meitat del camí divisori hem d'avançar la imatge cap al destí 
-    // exactament la meitat de la distància total dels centres (dist / 2).
-    posX = origin.cx + (ux * (dist / 2));
-    posY = origin.cy + (uy * (dist / 2));
+    // 2. Mètode de retrocés manual aproximat (20 píxels):
+    // Ens situem al centre de l'hexàgon destí i reculem 20 píxels cap enrere.
+    const RETROCES_PX = 20; 
+    posX = target.cx - (ux * RETROCES_PX);
+    posY = target.cy - (uy * RETROCES_PX);
   }
 
   img.style.left   = (posX - width/2) + "px";
