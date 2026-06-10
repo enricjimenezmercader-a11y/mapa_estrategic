@@ -397,7 +397,7 @@ async function updateActiveOrders(){
         }
       });
 
-      // Pintem les fletxes
+      // Pintem les fletxes aplicant la lògica corregida
       activeOrders.forEach(order => {
          placeInformativeArrow(order.originHex, order.targetHex, order.isContactBattle);
       });
@@ -501,7 +501,7 @@ function arrowURL(dir){
   }[dir];
 }
 
-// DESPLAÇAMENT EMPÍRIC APROXIMAT: RETROCEDINT RESPECTE AL DESTÍ
+// LÒGICA ORIGINAL CORREGIDA: S'UBICA AL DESTÍ I RETROCEDEIX 20PX CAP A L'ORIGEN
 function placeInformativeArrow(origin,target, isContact){
   const map=document.getElementById("mapContainer");
   const B=map.clientWidth;
@@ -523,22 +523,22 @@ function placeInformativeArrow(origin,target, isContact){
   img.style.width  = width + "px";
   img.style.height = height + "px";
   
-  let posX = origin.cx;
-  let posY = origin.cy;
+  // La posició base NATIUA és el centre de l'hexàgon DESTÍ (target)
+  let posX = target.cx;
+  let posY = target.cy;
 
   if (isContact) {
-    // 1. Vector de línia entre els dos centres
+    // Vector de direcció des de l'origen cap al destí
     const dx = target.cx - origin.cx;
     const dy = target.cy - origin.cy;
     const dist = Math.sqrt(dx * dx + dy * dy);
     
-    // Vector unitari orientat des d'origen cap al destí
     const ux = dx / dist;
     const uy = dy / dist;
 
-    // 2. Mètode de retrocés manual aproximat (20 píxels):
-    // Ens situem al centre de l'hexàgon destí i reculem 20 píxels cap enrere.
-    const RETROCES_PX = 20; 
+    // RETROCÉS DE 20PX RESPECTE AL CENTRE DEL DESTÍ (CAP A L'ORIGEN)
+    // Es resta el vector director multiplicat pels píxels per tirar-la enrere
+    const RETROCES_PX = 20;
     posX = target.cx - (ux * RETROCES_PX);
     posY = target.cy - (uy * RETROCES_PX);
   }
