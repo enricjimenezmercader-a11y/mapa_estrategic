@@ -34,41 +34,6 @@
       font-family: monospace;
     }
 
-    /* Panell d'anàlisi tàctica */
-    .analysis-panel {
-      width: 85%;
-      max-width: 1000px;
-      background: rgba(15, 15, 30, 0.85);
-      border: 1px solid #334;
-      border-radius: 6px;
-      padding: 12px 20px;
-      display: flex;
-      justify-content: space-around;
-      gap: 20px;
-      box-shadow: 0 4px 15px rgba(0,0,0,0.5);
-    }
-    .analysis-sector {
-      flex: 1;
-    }
-    .analysis-sector h3 {
-      font-size: 14px;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-      margin-bottom: 6px;
-      padding-bottom: 4px;
-      border-bottom: 1px solid #445;
-    }
-    .sector-contact h3 { color: #ff5555; }
-    .sector-at-def h3 { color: #ffcc00; }
-    .analysis-list {
-      font-family: monospace;
-      font-size: 12px;
-      color: #ccc;
-      list-style: none;
-      max-height: 50px;
-      overflow-y: auto;
-    }
-
     .map-container{
       position:relative;
       background:#111;
@@ -114,19 +79,59 @@
       font-size:12px;
     }
 
-    /* MODIFICACIÓ: Fletxes sense brillantor i amb transparència al 50% */
     .attack-arrow{
       position:absolute;
       pointer-events:none;
       z-index:20;
       transform-origin:center center;
-      opacity: 0.5; /* Transparència del 50% */
+      opacity: 0.5;
     }
 
-    /* Estil per a l'explosió estàtica */
     .explosion-static {
       filter: drop-shadow(0 0 4px #ff5500);
     }
+
+    /* Estil per a les lletres identificatives en negre sobre l'explosió */
+    .explosion-letter {
+      fill: #000000;
+      font-family: Arial, Helvetica, sans-serif;
+      font-weight: 900;
+      text-anchor: middle;
+      dominant-baseline: central;
+      pointer-events: none;
+    }
+
+    /* Contenidor inferior de botons rectangualars */
+    #battleButtonsContainer {
+      width: 85%;
+      max-width: 1000px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-top: 10px;
+      padding-bottom: 30px;
+    }
+
+    .battle-btn {
+      background: #151525;
+      color: #fff;
+      border: 1px solid #334;
+      padding: 12px 20px;
+      font-size: 14px;
+      font-weight: bold;
+      text-align: left;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: background 0.2s, border-color 0.2s;
+    }
+
+    .battle-btn:hover {
+      background: #202035;
+      border-color: #556;
+    }
+    
+    .btn-contact { border-left: 4px solid #ff5555; }
+    .btn-atdef { border-left: 4px solid #ffcc00; }
   </style>
 </head>
 
@@ -135,17 +140,6 @@
 <div id="titleBar">PANEL INFORMATIU GLOBAL — RADAR TÀCTIC</div>
 <div id="loadingIndicator">Sincronitzant dades amb el quarter general...</div>
 
-<div class="analysis-panel">
-  <div class="analysis-sector sector-contact">
-    <h3>⚔️ Batalles de Contacte (Encreuaments directes)</h3>
-    <ul class="analysis-list" id="contactList"><li>Cap en aquest cicle</li></ul>
-  </div>
-  <div class="analysis-sector sector-at-def">
-    <h3>🛡️ Assalts Atac-Defensa (Hexàgons Objectiu)</h3>
-    <ul class="analysis-list" id="atDefList"><li>Cap en aquest cicle</li></ul>
-  </div>
-</div>
-
 <div class="map-container" id="mapContainer">
   <img class="map-image"
        src="https://github.com/enricjimenezmercader-a11y/mapa_estrategic/blob/481d1cc0765b31581a6f050a7f68d53400172e48/map_hex.jpg?raw=true"
@@ -153,6 +147,8 @@
 
   <svg id="hexGrid"></svg>
 </div>
+
+<div id="battleButtonsContainer"></div>
 
 <script>
 const PATTERN=[5,4,5,4,5,4,5,4,5,4,5];
@@ -366,8 +362,8 @@ async function updateActiveOrders(){
         }
       });
 
-      renderTacticalReport(contactBattles, Array.from(attackDefenseTargets));
-      drawBattleMarkersOnMap(contactBattles, Array.from(attackDefenseTargets));
+      // Executa la creació dels botons ordonats i els marcadors amb lletres consecutives
+      buildTacticalInterface(contactBattles, Array.from(attackDefenseTargets));
       
       const d = new Date();
       document.getElementById("loadingIndicator").textContent = `Radar analitzat correctament: ${d.toLocaleTimeString()}`;
@@ -377,60 +373,85 @@ async function updateActiveOrders(){
   }
 }
 
-function renderTacticalReport(contacts, atDefs) {
-  const contactList = document.getElementById("contactList");
-  const atDefList = document.getElementById("atDefList");
-
-  if(contacts.length === 0) {
-    contactList.innerHTML = "<li>Cap en aquest cicle</li>";
-  } else {
-    contactList.innerHTML = contacts.map(c => `<li>⚔️ Front obert: Hex ${c.idA} vs Hex ${c.idB}</li>`).join("");
-  }
-
-  if(atDefs.length === 0) {
-    atDefList.innerHTML = "<li>Cap en aquest cicle</li>";
-  } else {
-    atDefList.innerHTML = atDefs.map(id => `<li>🛡️ Setge actiu al Territori ${id}</li>`).join("");
-  }
-}
-
-function drawBattleMarkersOnMap(contacts, atDefs) {
+// Funció unificada que genera lletres, botons inferiors i elements gràfics
+function buildTacticalInterface(contacts, atDefs) {
+  const btnContainer = document.getElementById("battleButtonsContainer");
   const layer = document.getElementById("battleLayer");
-  if(!layer) return;
+  
+  btnContainer.innerHTML = "";
+  if(layer) layer.innerHTML = "";
 
   const map = document.getElementById("mapContainer");
   const scale = map.clientWidth / REAL_GRID_WIDTH;
   const R = REAL_R * scale;
-  
   const explosionSize = R * 1.5; 
 
-  // 1. Pintar explosions de contacte (Punt mitjà real dels dos centres)
+  let letterIndex = 0;
+  
+  // Funció auxiliar per obtenir la lletra de l'abecedari (A, B, C...)
+  function getLetter(index) {
+    return String.fromCharCode(65 + index); // 65 és el codi ASCII de la 'A'
+  }
+
+  // 1. Processar primer de tot les batalles de contacte
   contacts.forEach(c => {
+    const letter = getLetter(letterIndex++);
     const mx = (c.hexA.cx + c.hexB.cx) / 2;
     const my = (c.hexA.cy + c.hexB.cy) / 2;
-    createSvgExplosion(layer, mx, my, explosionSize);
+
+    // Marcador visual al mapa (Explosió + Lletra en Negre)
+    createSvgExplosionWithLetter(layer, mx, my, explosionSize, letter);
+
+    // Creació de botó rectangular inferior
+    const btn = document.createElement("button");
+    btn.className = "battle-btn btn-contact";
+    btn.textContent = `(${letter}) Batalla de contacte entre cota ${c.idA} i ${c.idB}`;
+    btnContainer.appendChild(btn);
   });
 
-  // 2. Pintar explosions d'atac-defensa (Al centre exacte de l'hexàgon)
+  // 2. Processar després els assalts d'atac-defensa
   atDefs.forEach(targetId => {
     const hex = hexData.find(h => h.id === targetId);
     if(hex) {
-      createSvgExplosion(layer, hex.cx, hex.cy, explosionSize);
+      const letter = getLetter(letterIndex++);
+
+      // Marcador visual al mapa (Explosió + Lletra en Negre)
+      createSvgExplosionWithLetter(layer, hex.cx, hex.cy, explosionSize, letter);
+
+      // Creació de botó rectangular inferior
+      const btn = document.createElement("button");
+      btn.className = "battle-btn btn-atdef";
+      btn.textContent = `(${letter}) Assalt atac-defensa a cota ${targetId}`;
+      btnContainer.appendChild(btn);
     }
   });
 }
 
-function createSvgExplosion(parent, x, y, size) {
+// Genera el node de la imatge i el text SVG per sobre en un únic subgrup
+function createSvgExplosionWithLetter(parent, x, y, size, letter) {
+  const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
+
+  // Imatge de l'explosió (Angle 0)
   const img = document.createElementNS("http://www.w3.org/2000/svg", "image");
   img.setAttributeNS("http://www.w3.org/1999/xlink", "href", EXPLOSION_IMG_URL);
-  
   img.setAttribute("x", x - (size / 2));
   img.setAttribute("y", y - (size / 2));
   img.setAttribute("width", size);
   img.setAttribute("height", size);
   img.setAttribute("class", "explosion-static");
-  
-  parent.appendChild(img);
+  g.appendChild(img);
+
+  // Text amb la lletra identificativa (Color negre i centrat exactament a la bomba)
+  const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
+  text.setAttribute("x", x);
+  text.setAttribute("y", y);
+  text.setAttribute("class", "explosion-letter");
+  // Mida dinàmica del text en base al radi de l'hexàgon per evitar desbordaments
+  text.setAttribute("font-size", `${size * 0.35}px`); 
+  text.textContent = letter;
+  g.appendChild(text);
+
+  parent.appendChild(g);
 }
 
 function direction(origin,target){
@@ -468,7 +489,7 @@ function placeInformativeArrow(origin,target){
 
   const img=document.createElement("img");
   img.src=url;
-  img.className="attack-arrow"; // Classe neta sense animació
+  img.className="attack-arrow"; 
 
   const FACTOR=1.42;
   const width = 2 * R * FACTOR;
