@@ -130,29 +130,10 @@
       animation:glow 2s ease-in-out infinite;
     }
 
-    /* Estils de les etiquetes de batalles i explosions a l'SVG */
-    .battle-glow {
-      animation: battlePulse 1.5s ease-in-out infinite alternate;
+    /* Estil per a l'explosió estàtica */
+    .explosion-static {
       transform-origin: center;
-    }
-    @keyframes battlePulse {
-      0% { transform: scale(0.92); filter: drop-shadow(0 0 2px rgba(255,100,100,0.5)); }
-      100% { transform: scale(1.08); filter: drop-shadow(0 0 12px #ff5500); }
-    }
-    
-    .bg-badge-contact { fill: #cc0000; stroke: #ff9999; stroke-width: 1.5; }
-    .bg-badge-atdef { fill: #d4a373; stroke: #ffffcc; stroke-width: 1.5; }
-    
-    .text-battle {
-      fill: #ffffff;
-      font-family: Arial, sans-serif;
-      font-weight: bold;
-      font-size: 10px;
-      text-anchor: middle;
-    }
-    .emoji-battle {
-      font-size: 14px;
-      text-anchor: middle;
+      filter: drop-shadow(0 0 4px #ff5500);
     }
   </style>
 </head>
@@ -364,7 +345,6 @@ async function updateActiveOrders(){
       let contactBattles = [];
       let attackDefenseTargets = new Set();
 
-      // PAS 1: Cerca de "Batalles de Contacte"
       for (let i = 0; i < activeOrders.length; i++) {
         if (activeOrders[i].processed) continue;
         
@@ -388,7 +368,6 @@ async function updateActiveOrders(){
         }
       }
 
-      // PAS 2: Cerca d' "Atac-Defensa"
       activeOrders.forEach(order => {
         if (!order.processed) {
           attackDefenseTargets.add(order.targetID);
@@ -431,73 +410,41 @@ function drawBattleMarkersOnMap(contacts, atDefs) {
   const scale = map.clientWidth / REAL_GRID_WIDTH;
   const R = REAL_R * scale;
   
-  // Definim una mida proporcional per a l'explosió en base al radi de l'hexàgon
   const explosionSize = R * 1.5; 
 
-  // 1. Pintar batalles de contacte (Punt mitjà dels dos hexàgons)
+  // 1. Pintar explosions de contacte (Punt mitjà real dels dos centres)
   contacts.forEach(c => {
     const mx = (c.hexA.cx + c.hexB.cx) / 2;
     const my = (c.hexA.cy + c.hexB.cy) / 2;
-    
-    // Inserim la imatge de l'explosió
     createSvgExplosion(layer, mx, my, explosionSize);
-    // Mantenim el badge informatiu text per sobre si es desitja
-    createSvgBattleBadge(layer, mx, my - (explosionSize/2), "⚔️", "CONTACTE", "bg-badge-contact");
   });
 
-  // 2. Pintar atacs-defenses (Al bell mig de l'hexàgon triat com a objectiu)
+  // 2. Pintar explosions d'atac-defensa (Al centre exacte de l'hexàgon)
   atDefs.forEach(targetId => {
     const hex = hexData.find(h => h.id === targetId);
     if(hex) {
-      // Inserim la imatge de l'explosió al centre exacte
       createSvgExplosion(layer, hex.cx, hex.cy, explosionSize);
-      // Desplacem el text una mica cap avall perquè convisqui amb la imatge
-      createSvgBattleBadge(layer, hex.cx, hex.cy + (explosionSize/2), "🛡️", "ATAC-DEF", "bg-badge-atdef");
     }
   });
 }
 
-// Funció que crea el node SVG per carregar el PNG de l'explosió correctament alineat al centre
+// Genera la imatge de l'explosió amb rotació aleatòria (0-360º) respecte al seu propi centre
 function createSvgExplosion(parent, x, y, size) {
+  const randomAngle = Math.floor(Math.random() * 361);
+  
   const img = document.createElementNS("http://www.w3.org/2000/svg", "image");
   img.setAttributeNS("http://www.w3.org/1999/xlink", "href", EXPLOSION_IMG_URL);
   
-  // Centrem la imatge restant la meitat de la seva amplada i alçada
   img.setAttribute("x", x - (size / 2));
   img.setAttribute("y", y - (size / 2));
   img.setAttribute("width", size);
   img.setAttribute("height", size);
-  img.setAttribute("class", "battle-glow");
+  img.setAttribute("class", "explosion-static");
+  
+  // Apliquem la rotació usant l'atribut transform de SVG apuntant al centre de la imatge
+  img.setAttribute("transform", `rotate(${randomAngle}, ${x}, ${y})`);
   
   parent.appendChild(img);
-}
-
-function createSvgBattleBadge(parent, x, y, emoji, labelText, bgClass) {
-  const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
-  g.setAttribute("transform", `translate(${x}, ${y})`);
-
-  const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
-  rect.setAttribute("x", "-30");
-  rect.setAttribute("y", "-18");
-  rect.setAttribute("width", "60");
-  rect.setAttribute("height", "24");
-  rect.setAttribute("rx", "4");
-  rect.setAttribute("class", bgClass);
-  g.appendChild(rect);
-
-  const txtEmoji = document.createElementNS("http://www.w3.org/2000/svg", "text");
-  txtEmoji.setAttribute("y", "-4");
-  txtEmoji.setAttribute("class", "emoji-battle");
-  txtEmoji.textContent = emoji;
-  g.appendChild(txtEmoji);
-
-  const txtLbl = document.createElementNS("http://www.w3.org/2000/svg", "text");
-  txtLbl.setAttribute("y", "4");
-  txtLbl.setAttribute("class", "text-battle");
-  txtLbl.textContent = labelText;
-  g.appendChild(txtLbl);
-
-  parent.appendChild(g);
 }
 
 function direction(origin,target){
