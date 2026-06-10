@@ -131,7 +131,6 @@
     .btn-contact { border-left: 4px solid #ff5555; }
     .btn-atdef { border-left: 4px solid #ffcc00; }
 
-    /* MODIFICACIÓ: Finestres emergents per resoldre la batalla al centre de la pantalla */
     .modal-overlay {
       position: fixed;
       inset: 0;
@@ -207,10 +206,6 @@
       cursor: pointer;
     }
 
-    .form-group select:focus {
-      border-color: #668;
-    }
-
     .btn-resolve {
       background: #00aa55;
       color: #fff;
@@ -277,13 +272,16 @@ const COLORS_JSON_URL="https://script.google.com/macros/s/AKfycbyM44gMczZ9XQvIJh
 const ORDERS_JSON_URL="https://script.google.com/macros/s/AKfycbzDdC4yHTVFzNdsSRJE7yfiRRvOiCPssSyVBEDPV92gSksgOnwfIVSUVVRkGSbzy_EBDw/exec";
 const EXPLOSION_IMG_URL="https://github.com/enricjimenezmercader-a11y/mapa_estrategic/blob/894cd2a4b1d3605c654d4eaaa5862f5d90b6c2c4/explosion.png?raw=true";
 
+// URL d'Apps Script actualitzada correctament per a la tramesa de dades
+const WEB_APP_RESOLVE_URL = "https://script.google.com/macros/s/AKfycbx7LXHMqQ4FTdA4qATvtE1vZ5o1iYp0nfco75TTLoc3MaGmX5omUol_u7k65rTn8C4o8g/exec";
+
 const REAL_R=41.78;
 const REAL_GRID_WIDTH=17*REAL_R;
 const IMAGE_RATIO=1.4;
 
 let hexData=[];
 let arrowElements=[]; 
-let activeBattleDetails = null; // Guarda temporalment quina batalla s'està editant
+let activeBattleDetails = null;
 
 async function fetchJSONP(url){
   return new Promise((resolve, reject) => {
@@ -394,24 +392,16 @@ function initHexGridStructure(){
   svg.appendChild(battleGroup);
 }
 
-// MODIFICACIÓ: Omplir els selectors numèrics del 0 al 10 automàticament al carregar la pàgina
 function populateSelectorOptions() {
   const reds = document.getElementById("lossesRed");
   const blues = document.getElementById("lossesBlue");
-  reds.innerHTML = "";
-  blues.innerHTML = "";
+  reds.innerHTML = ""; blues.innerHTML = "";
   for(let i = 0; i <= 10; i++) {
-    const optR = document.createElement("option");
-    optR.value = i; optR.textContent = i;
-    reds.appendChild(optR);
-
-    const optB = document.createElement("option");
-    optB.value = i; optB.textContent = i;
-    blues.appendChild(optB);
+    const optR = document.createElement("option"); optR.value = i; optR.textContent = i; reds.appendChild(optR);
+    const optB = document.createElement("option"); optB.value = i; optB.textContent = i; blues.appendChild(optB);
   }
 }
 
-// MODIFICACIÓ: Obre la finestra modal passant-li el títol de la batalla seleccionada
 function openResolutionModal(titleText, battleInfo) {
   document.getElementById("modalBattleTitle").textContent = titleText;
   document.getElementById("lossesRed").value = 0;
@@ -426,15 +416,67 @@ function closeResolutionModal() {
   activeBattleDetails = null;
 }
 
-// MODIFICACIÓ: Acció en prémer "Resoldre"
 function submitBattleResolution() {
+  if (!activeBattleDetails) return;
+
   const rLoss = document.getElementById("lossesRed").value;
   const bLoss = document.getElementById("lossesBlue").value;
   const winner = document.getElementById("winnerSide").value;
-  
-  console.log("Batalla resolta:", activeBattleDetails);
-  alert(`Ordre de resolució executada:\nBaixes Vermell: ${rLoss}\nBaixes Blau: ${bLoss}\nVencedor: ${winner}`);
-  
+  const battleLetter = activeBattleDetails.letter;
+
+  // 1. Eliminar visualment l'explosió i la lletra de manera immediata
+  const explosionGroup = document.getElementById(`expGroup-${battleLetter}`);
+  if (explosionGroup) {
+    explosionGroup.remove();
+  }
+
+  // 2. Definir cotes associades per poder fer neteja selectiva de fletxes
+  let cotesImplicades = [];
+  if (activeBattleDetails.type === "contact") {
+    cotesImplicades.push(activeBattleDetails.info.idA.toString(), activeBattleDetails.info.idB.toString());
+  } else if (activeBattleDetails.type === "atdef") {
+    cotesImplicades.push(activeBattleDetails.targetId.toString());
+  }
+
+  // 3. Esborrar les fletxes HTML que coincideixen amb aquesta acció militar
+  arrowElements = arrowElements.filter(arrow => {
+    const origin = arrow.dataset.origin;
+    const target = arrow.dataset.target;
+    
+    if (activeBattleDetails.type === "contact" && cotesImplicades.includes(origin) && cotesImplicades.includes(target)) {
+      arrow.remove();
+      return false; 
+    }
+    if (activeBattleDetails.type === "atdef" && target === activeBattleDetails.targetId.toString()) {
+      arrow.remove();
+      return false;
+    }
+    return true; 
+  });
+
+  // 4. Ocultar el botó inferior utilitzat
+  if(activeBattleDetails.btnElement) {
+    activeBattleDetails.btnElement.style.display = "none";
+  }
+
+  // 5. Tramesa asíncrona estructurada cap al Google Apps Script (Google Sheets)
+  const formData = new FormData();
+  formData.append("tipus", activeBattleDetails.type);
+  formData.append("lletra", battleLetter);
+  formData.append("descripcio", document.getElementById("modalBattleTitle").textContent);
+  formData.append("baixes_vermell", rLoss);
+  formData.append("baixes_blau", bLoss);
+  formData.append("vencedor", winner);
+  formData.append("cotes", cotesImplicades.join("-"));
+
+  fetch(WEB_APP_RESOLVE_URL, {
+    method: "POST",
+    mode: "no-cors",
+    body: formData
+  }).then(() => {
+    console.log(`Dades enviades correctament al registre central per a la batalla (${battleLetter})`);
+  }).catch(err => console.error("Error durant la tramesa del fitxer de dades:", err));
+
   closeResolutionModal();
 }
 
@@ -445,7 +487,6 @@ async function updateHexColors(){
       data.forEach(row => {
         const id = parseInt(row["A"]);
         const color = (row["B"] || "MAR").toUpperCase();
-        
         const hex = hexData.find(h => h.id === id);
         if(hex) {
           hex.color = color;
@@ -456,9 +497,7 @@ async function updateHexColors(){
         }
       });
     }
-  } catch(e) {
-    console.log("Error carregant colors:", e.message);
-  }
+  } catch(e) { console.log("Error colors:", e.message); }
 }
 
 async function updateActiveOrders(){
@@ -483,13 +522,7 @@ async function updateActiveOrders(){
           const targetHex = hexData.find(h => h.id === targetID);
 
           if (originHex && targetHex) {
-            activeOrders.push({
-              originID,
-              targetID,
-              originHex,
-              targetHex,
-              processed: false
-            });
+            activeOrders.push({ originID, targetID, originHex, targetHex, processed: false });
             placeInformativeArrow(originHex, targetHex);
           }
         }
@@ -500,41 +533,24 @@ async function updateActiveOrders(){
 
       for (let i = 0; i < activeOrders.length; i++) {
         if (activeOrders[i].processed) continue;
-        
         for (let j = i + 1; j < activeOrders.length; j++) {
           if (activeOrders[j].processed) continue;
-
-          if (activeOrders[i].originID === activeOrders[j].targetID && 
-              activeOrders[i].targetID === activeOrders[j].originID) {
-            
+          if (activeOrders[i].originID === activeOrders[j].targetID && activeOrders[i].targetID === activeOrders[j].originID) {
             activeOrders[i].processed = true;
             activeOrders[j].processed = true;
-
-            contactBattles.push({
-              hexA: activeOrders[i].originHex,
-              hexB: activeOrders[i].targetHex,
-              idA: activeOrders[i].originID,
-              idB: activeOrders[i].targetID
-            });
+            contactBattles.push({ hexA: activeOrders[i].originHex, hexB: activeOrders[i].targetHex, idA: activeOrders[i].originID, idB: activeOrders[i].targetID });
             break;
           }
         }
       }
 
-      activeOrders.forEach(order => {
-        if (!order.processed) {
-          attackDefenseTargets.add(order.targetID);
-        }
-      });
+      activeOrders.forEach(order => { if (!order.processed) attackDefenseTargets.add(order.targetID); });
 
       buildTacticalInterface(contactBattles, Array.from(attackDefenseTargets));
-      
       const d = new Date();
       document.getElementById("loadingIndicator").textContent = `Radar analitzat correctament: ${d.toLocaleTimeString()}`;
     }
-  } catch(e) {
-    document.getElementById("loadingIndicator").textContent = `⚠️ Error analitzador: ${e.message}`;
-  }
+  } catch(e) { document.getElementById("loadingIndicator").textContent = `⚠️ Error analitzador: ${e.message}`; }
 }
 
 function buildTacticalInterface(contacts, atDefs) {
@@ -550,12 +566,9 @@ function buildTacticalInterface(contacts, atDefs) {
   const explosionSize = R * 1.5; 
 
   let letterIndex = 0;
-  
-  function getLetter(index) {
-    return String.fromCharCode(65 + index);
-  }
+  function getLetter(index) { return String.fromCharCode(65 + index); }
 
-  // 1. Processar batalles de contacte
+  // 1. Batalles de contacte
   contacts.forEach(c => {
     const letter = getLetter(letterIndex++);
     const mx = (c.hexA.cx + c.hexB.cx) / 2;
@@ -568,18 +581,15 @@ function buildTacticalInterface(contacts, atDefs) {
     const btnText = `(${letter}) Batalla de contacte entre cota ${c.idA} i ${c.idB}`;
     btn.textContent = btnText;
     
-    // MODIFICACIÓ: Assignar esdeveniment click per obrir el panell de control central
-    btn.onclick = () => openResolutionModal(btnText, { type: "contact", info: c });
-    
+    btn.onclick = () => openResolutionModal(btnText, { type: "contact", info: c, letter: letter, btnElement: btn });
     btnContainer.appendChild(btn);
   });
 
-  // 2. Processar assalts d'atac-defensa
+  // 2. Assalts d'atac-defensa
   atDefs.forEach(targetId => {
     const hex = hexData.find(h => h.id === targetId);
     if(hex) {
       const letter = getLetter(letterIndex++);
-
       createSvgExplosionWithLetter(layer, hex.cx, hex.cy, explosionSize, letter);
 
       const btn = document.createElement("button");
@@ -587,9 +597,7 @@ function buildTacticalInterface(contacts, atDefs) {
       const btnText = `(${letter}) Assalt atac-defensa a cota ${targetId}`;
       btn.textContent = btnText;
       
-      // MODIFICACIÓ: Assignar esdeveniment click per obrir el panell de control central
-      btn.onclick = () => openResolutionModal(btnText, { type: "atdef", targetId: targetId });
-      
+      btn.onclick = () => openResolutionModal(btnText, { type: "atdef", targetId: targetId, letter: letter, btnElement: btn });
       btnContainer.appendChild(btn);
     }
   });
@@ -597,6 +605,7 @@ function buildTacticalInterface(contacts, atDefs) {
 
 function createSvgExplosionWithLetter(parent, x, y, size, letter) {
   const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
+  g.id = `expGroup-${letter}`;
 
   const img = document.createElementNS("http://www.w3.org/2000/svg", "image");
   img.setAttributeNS("http://www.w3.org/1999/xlink", "href", EXPLOSION_IMG_URL);
@@ -619,14 +628,9 @@ function createSvgExplosionWithLetter(parent, x, y, size, letter) {
 }
 
 function direction(origin,target){
-  const dx=target.cx-origin.cx;
-  const dy=target.cy-origin.cy;
-  if(dy<0 && Math.abs(dx)<Math.abs(dy)) return "N";
-  if(dy>0 && Math.abs(dx)<Math.abs(dy)) return "S";
-  if(dx>0 && dy<0) return "NE";
-  if(dx>0 && dy>0) return "SE";
-  if(dx<0 && dy<0) return "NO";
-  if(dx<0 && dy>0) return "SO";
+  const dx=target.cx-origin.cx; const dy=target.cy-origin.cy;
+  if(dy<0 && Math.abs(dx)<Math.abs(dy)) return "N"; if(dy>0 && Math.abs(dx)<Math.abs(dy)) return "S";
+  if(dx>0 && dy<0) return "NE"; if(dx>0 && dy>0) return "SE"; if(dx<0 && dy<0) return "NO"; if(dx<0 && dy>0) return "SO";
   return "N";
 }
 
@@ -643,26 +647,19 @@ function arrowURL(dir){
 
 function placeInformativeArrow(origin,target){
   const map=document.getElementById("mapContainer");
-  const B=map.clientWidth;
-  const scale=B/REAL_GRID_WIDTH;
-  const R=REAL_R*scale;
-  const hexH=Math.sqrt(3)*R;
-
-  const dir=direction(origin,target);
-  const url=arrowURL(dir);
+  const B=map.clientWidth; const scale=B/REAL_GRID_WIDTH; const R=REAL_R*scale; const hexH=Math.sqrt(3)*R;
+  const dir=direction(origin,target); const url=arrowURL(dir);
 
   const img=document.createElement("img");
   img.src=url;
   img.className="attack-arrow"; 
+  
+  img.dataset.origin = origin.id;
+  img.dataset.target = target.id;
 
-  const FACTOR=1.42;
-  const width = 2 * R * FACTOR;
-  const height = hexH * FACTOR;
-
-  img.style.width  = width + "px";
-  img.style.height = height + "px";
-  img.style.left   = (origin.cx - width/2) + "px";
-  img.style.top    = (origin.cy - height/2) + "px";
+  const FACTOR=1.42; const width = 2 * R * FACTOR; const height = hexH * FACTOR;
+  img.style.width = width + "px"; img.style.height = height + "px";
+  img.style.left = (origin.cx - width/2) + "px"; img.style.top = (origin.cy - height/2) + "px";
 
   map.appendChild(img);
   arrowElements.push(img);
@@ -673,19 +670,13 @@ async function syncRadarData(){
   await updateActiveOrders();
 }
 
-function fullRedraw(){
-  resizeMap();
-  initHexGridStructure();
-  syncRadarData();
-}
-
+function fullRedraw(){ resizeMap(); initHexGridStructure(); syncRadarData(); }
 window.addEventListener("resize", fullRedraw);
 
 populateSelectorOptions();
 resizeMap();
 initHexGridStructure();
 setTimeout(syncRadarData, 500);
-
 setInterval(syncRadarData, 5000);
 </script>
 
