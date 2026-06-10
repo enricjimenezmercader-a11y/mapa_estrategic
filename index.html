@@ -91,7 +91,6 @@
       filter: drop-shadow(0 0 4px #ff5500);
     }
 
-    /* Estil per a les lletres identificatives en negre sobre l'explosió */
     .explosion-letter {
       fill: #000000;
       font-family: Arial, Helvetica, sans-serif;
@@ -101,7 +100,6 @@
       pointer-events: none;
     }
 
-    /* Contenidor inferior de botons rectangulars */
     #battleButtonsContainer {
       width: 85%;
       max-width: 1000px;
@@ -112,13 +110,12 @@
       padding-bottom: 30px;
     }
 
-    /* MODIFICACIÓ: Botons un 20% més petits en padding i tipografia */
     .battle-btn {
       background: #151525;
       color: #fff;
       border: 1px solid #334;
-      padding: 8px 14px; /* Abans: 12px 20px */
-      font-size: 12px;     /* Abans: 14px */
+      padding: 8px 14px;
+      font-size: 12px;
       font-weight: bold;
       text-align: left;
       border-radius: 4px;
@@ -133,6 +130,101 @@
     
     .btn-contact { border-left: 4px solid #ff5555; }
     .btn-atdef { border-left: 4px solid #ffcc00; }
+
+    /* MODIFICACIÓ: Finestres emergents per resoldre la batalla al centre de la pantalla */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.75);
+      backdrop-filter: blur(3px);
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s ease;
+    }
+
+    .modal-overlay.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .modal-box {
+      background: #101020;
+      border: 2px solid #445;
+      box-shadow: 0 0 25px rgba(0,0,0,0.7);
+      width: 90%;
+      max-width: 420px;
+      border-radius: 6px;
+      padding: 20px;
+      position: relative;
+    }
+
+    .modal-title {
+      font-size: 16px;
+      font-weight: bold;
+      margin-bottom: 15px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid #334;
+      color: #ffcc00;
+    }
+
+    .modal-close {
+      position: absolute;
+      top: 12px;
+      right: 15px;
+      background: none;
+      border: none;
+      color: #888;
+      font-size: 18px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    .modal-close:hover { color: #fff; }
+
+    .form-group {
+      margin-bottom: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .form-group label {
+      font-size: 13px;
+      color: #ccc;
+    }
+
+    .form-group select {
+      background: #1c1c30;
+      color: #fff;
+      border: 1px solid #445;
+      padding: 8px;
+      border-radius: 4px;
+      font-size: 14px;
+      outline: none;
+      cursor: pointer;
+    }
+
+    .form-group select:focus {
+      border-color: #668;
+    }
+
+    .btn-resolve {
+      background: #00aa55;
+      color: #fff;
+      border: none;
+      padding: 10px;
+      width: 100%;
+      border-radius: 4px;
+      font-weight: bold;
+      font-size: 14px;
+      cursor: pointer;
+      margin-top: 10px;
+      transition: background 0.2s;
+    }
+    .btn-resolve:hover { background: #00cc66; }
   </style>
 </head>
 
@@ -151,6 +243,33 @@
 
 <div id="battleButtonsContainer"></div>
 
+<div class="modal-overlay" id="resolutionModal">
+  <div class="modal-box">
+    <button class="modal-close" onclick="closeResolutionModal()">×</button>
+    <div class="modal-title" id="modalBattleTitle">Resolució de Batalla</div>
+    
+    <div class="form-group">
+      <label for="lossesRed">Baixes bàndol vermell:</label>
+      <select id="lossesRed"></select>
+    </div>
+
+    <div class="form-group">
+      <label for="lossesBlue">Baixes bàndol blau:</label>
+      <select id="lossesBlue"></select>
+    </div>
+
+    <div class="form-group">
+      <label for="winnerSide">Vencedor:</label>
+      <select id="winnerSide">
+        <option value="Bàndol blau">Bàndol blau</option>
+        <option value="Bàndol vermell">Bàndol vermell</option>
+      </select>
+    </div>
+
+    <button class="btn-resolve" onclick="submitBattleResolution()">Resoldre</button>
+  </div>
+</div>
+
 <script>
 const PATTERN=[5,4,5,4,5,4,5,4,5,4,5];
 
@@ -164,6 +283,7 @@ const IMAGE_RATIO=1.4;
 
 let hexData=[];
 let arrowElements=[]; 
+let activeBattleDetails = null; // Guarda temporalment quina batalla s'està editant
 
 async function fetchJSONP(url){
   return new Promise((resolve, reject) => {
@@ -272,6 +392,50 @@ function initHexGridStructure(){
   const battleGroup = document.createElementNS("http://www.w3.org/2000/svg","g");
   battleGroup.id = "battleLayer";
   svg.appendChild(battleGroup);
+}
+
+// MODIFICACIÓ: Omplir els selectors numèrics del 0 al 10 automàticament al carregar la pàgina
+function populateSelectorOptions() {
+  const reds = document.getElementById("lossesRed");
+  const blues = document.getElementById("lossesBlue");
+  reds.innerHTML = "";
+  blues.innerHTML = "";
+  for(let i = 0; i <= 10; i++) {
+    const optR = document.createElement("option");
+    optR.value = i; optR.textContent = i;
+    reds.appendChild(optR);
+
+    const optB = document.createElement("option");
+    optB.value = i; optB.textContent = i;
+    blues.appendChild(optB);
+  }
+}
+
+// MODIFICACIÓ: Obre la finestra modal passant-li el títol de la batalla seleccionada
+function openResolutionModal(titleText, battleInfo) {
+  document.getElementById("modalBattleTitle").textContent = titleText;
+  document.getElementById("lossesRed").value = 0;
+  document.getElementById("lossesBlue").value = 0;
+  document.getElementById("winnerSide").selectedIndex = 0;
+  activeBattleDetails = battleInfo;
+  document.getElementById("resolutionModal").classList.add("active");
+}
+
+function closeResolutionModal() {
+  document.getElementById("resolutionModal").classList.remove("active");
+  activeBattleDetails = null;
+}
+
+// MODIFICACIÓ: Acció en prémer "Resoldre"
+function submitBattleResolution() {
+  const rLoss = document.getElementById("lossesRed").value;
+  const bLoss = document.getElementById("lossesBlue").value;
+  const winner = document.getElementById("winnerSide").value;
+  
+  console.log("Batalla resolta:", activeBattleDetails);
+  alert(`Ordre de resolució executada:\nBaixes Vermell: ${rLoss}\nBaixes Blau: ${bLoss}\nVencedor: ${winner}`);
+  
+  closeResolutionModal();
 }
 
 async function updateHexColors(){
@@ -401,7 +565,12 @@ function buildTacticalInterface(contacts, atDefs) {
 
     const btn = document.createElement("button");
     btn.className = "battle-btn btn-contact";
-    btn.textContent = `(${letter}) Batalla de contacte entre cota ${c.idA} i ${c.idB}`;
+    const btnText = `(${letter}) Batalla de contacte entre cota ${c.idA} i ${c.idB}`;
+    btn.textContent = btnText;
+    
+    // MODIFICACIÓ: Assignar esdeveniment click per obrir el panell de control central
+    btn.onclick = () => openResolutionModal(btnText, { type: "contact", info: c });
+    
     btnContainer.appendChild(btn);
   });
 
@@ -415,7 +584,12 @@ function buildTacticalInterface(contacts, atDefs) {
 
       const btn = document.createElement("button");
       btn.className = "battle-btn btn-atdef";
-      btn.textContent = `(${letter}) Assalt atac-defensa a cota ${targetId}`;
+      const btnText = `(${letter}) Assalt atac-defensa a cota ${targetId}`;
+      btn.textContent = btnText;
+      
+      // MODIFICACIÓ: Assignar esdeveniment click per obrir el panell de control central
+      btn.onclick = () => openResolutionModal(btnText, { type: "atdef", targetId: targetId });
+      
       btnContainer.appendChild(btn);
     }
   });
@@ -437,10 +611,7 @@ function createSvgExplosionWithLetter(parent, x, y, size, letter) {
   text.setAttribute("x", x);
   text.setAttribute("y", y);
   text.setAttribute("class", "explosion-letter");
-  
-  // MODIFICACIÓ: Mida de la lletra reduïda al 70% respecte a l'anterior (era size * 0.35)
   text.setAttribute("font-size", `${size * 0.245}px`); 
-  
   text.textContent = letter;
   g.appendChild(text);
 
@@ -510,6 +681,7 @@ function fullRedraw(){
 
 window.addEventListener("resize", fullRedraw);
 
+populateSelectorOptions();
 resizeMap();
 initHexGridStructure();
 setTimeout(syncRadarData, 500);
