@@ -353,13 +353,13 @@ async function updateActiveOrders(){
               originHex,
               targetHex,
               processed: false,
-              isContactBattle: false // Propietat nova per controlar el desplaçament de fletxa
+              isContactBattle: false
             });
           }
         }
       });
 
-      // --- MOTOR D'ANÀLISI TÀCTICA (PAS 1 I PAS 2) ---
+      // --- MOTOR D'ANÀLISI TÀCTICA ---
       let contactBattles = [];
       let attackDefenseTargets = new Set();
 
@@ -376,7 +376,6 @@ async function updateActiveOrders(){
             activeOrders[i].processed = true;
             activeOrders[j].processed = true;
             
-            // Marquem les dues ordres com a fletxes de contacte
             activeOrders[i].isContactBattle = true;
             activeOrders[j].isContactBattle = true;
 
@@ -398,7 +397,7 @@ async function updateActiveOrders(){
         }
       });
 
-      // MODIFICACIÓ: Dibuixem les fletxes DESPRÉS de l'anàlisi per saber quines s'han de desplaçar
+      // Dibuixem les fletxes amb l'estat actualitzat
       activeOrders.forEach(order => {
          placeInformativeArrow(order.originHex, order.targetHex, order.isContactBattle);
       });
@@ -502,7 +501,7 @@ function arrowURL(dir){
   }[dir];
 }
 
-// MODIFICACIÓ: Afegit el paràmetre 'isContact' per recalcular la posició
+// CORRECCIÓ DE POSICIONAMENT MIL·LIMÈTRIC PER ENCREUAMENTS
 function placeInformativeArrow(origin,target, isContact){
   const map=document.getElementById("mapContainer");
   const B=map.clientWidth;
@@ -524,18 +523,27 @@ function placeInformativeArrow(origin,target, isContact){
   img.style.width  = width + "px";
   img.style.height = height + "px";
   
-  // Posició inicial base (centre de l'hexàgon origen)
   let posX = origin.cx;
   let posY = origin.cy;
 
-  // LÒGICA NOVA: Si és batalla de contacte, desplaça la fletxa cap enrere exactament la meitat del camí
   if (isContact) {
+    // 1. Trobem el punt mitjà exacte entre els dos centres (la frontera comuna)
+    const midX = (origin.cx + target.cx) / 2;
+    const midY = (origin.cy + target.cy) / 2;
+    
+    // 2. Calculem el vector unitari de direcció des de l'origen al destí
     const dx = target.cx - origin.cx;
     const dy = target.cy - origin.cy;
-    
-    // Es resta el 50% de la distància (vector / 2)
-    posX = origin.cx - (dx / 2);
-    posY = origin.cy - (dy / 2);
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    const ux = dx / dist;
+    const uy = dy / dist;
+
+    // 3. Modificador de punta: Ajustem la posició segons com està dibuixada la imatge SVG.
+    // Com que els teus fitxers SVG tenen la punta orientada cap al davant,
+    // desplaçar el centre de la imatge una distància igual a la meitat de la seva amplada (width/2)
+    // cap enrere respecte al punt mitjà farà que la punta quedi clavada exactament a la línia divisòria.
+    posX = midX - (ux * (width / 2));
+    posY = midY - (uy * (height / 2));
   }
 
   img.style.left   = (posX - width/2) + "px";
