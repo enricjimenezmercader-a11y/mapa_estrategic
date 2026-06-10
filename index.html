@@ -272,8 +272,8 @@ const COLORS_JSON_URL="https://script.google.com/macros/s/AKfycbyM44gMczZ9XQvIJh
 const ORDERS_JSON_URL="https://script.google.com/macros/s/AKfycbzDdC4yHTVFzNdsSRJE7yfiRRvOiCPssSyVBEDPV92gSksgOnwfIVSUVVRkGSbzy_EBDw/exec";
 const EXPLOSION_IMG_URL="https://github.com/enricjimenezmercader-a11y/mapa_estrategic/blob/894cd2a4b1d3605c654d4eaaa5862f5d90b6c2c4/explosion.png?raw=true";
 
-// URL d'Apps Script vinculada per fer tramesa de dades i actualització de color
-const WEB_APP_RESOLVE_URL = "https://script.google.com/macros/s/AKfycbx7LXHMqQ4FTdA4qATvtE1vZ5o1iYp0nfco75TTLoc3MaGmX5omUol_u7k65rTn8C4o8g/exec";
+// URL ACTUALITZADA DE L'APPS SCRIPT DEL SERVER
+const WEB_APP_RESOLVE_URL = "https://script.google.com/macros/s/AKfycbwaUU2qtxNhaa3a-xPX7IuPcu-Kh4xtEu7CogJ6AUYkVxN_9ziF4yNglZCVzFutzIEQnQ/exec";
 
 const REAL_R=41.78;
 const REAL_GRID_WIDTH=17*REAL_R;
@@ -282,8 +282,6 @@ const IMAGE_RATIO=1.4;
 let hexData=[];
 let arrowElements=[]; 
 let activeBattleDetails = null;
-
-// Llista de control local per recordar quines batalles ja han estat resoltes
 let resolvedBattlesLog = [];
 
 async function fetchJSONP(url){
@@ -322,82 +320,44 @@ async function fetchJSONP(url){
 
 function resizeMap(){
   const map=document.getElementById("mapContainer");
-  const W=window.innerWidth;
-  const H=window.innerHeight;
-  const maxW=W*(0.85);
-  const maxH=H*(0.65);
-  let width=maxW;
-  let height=width/IMAGE_RATIO;
-  if(height>maxH){
-    height=maxH;
-    width=height*IMAGE_RATIO;
-  }
-  map.style.width=width+"px";
-  map.style.height=height+"px";
+  const W=window.innerWidth; const H=window.innerHeight;
+  const maxW=W*(0.85); const maxH=H*(0.65);
+  let width=maxW; let height=width/IMAGE_RATIO;
+  if(height>maxH){ height=maxH; width=height*IMAGE_RATIO; }
+  map.style.width=width+"px"; map.style.height=height+"px";
 }
 
 function initHexGridStructure(){
   const svg=document.getElementById("hexGrid");
   const map=document.getElementById("mapContainer");
-
-  svg.innerHTML="";
-  hexData=[];
-
-  const B=map.clientWidth;
-  const scale=B/REAL_GRID_WIDTH;
-  const R=REAL_R*scale;
-  const hexH=Math.sqrt(3)*R;
-
-  const maxRows=Math.max(...PATTERN);
-  const gridHeight=(maxRows-1)*hexH+hexH;
-  const A=17*R;
-
-  const offsetX=(B-A)/2+R;
-  const offsetY=(map.clientHeight-gridHeight)/2+hexH/2;
-
+  svg.innerHTML=""; hexData=[];
+  const B=map.clientWidth; const scale=B/REAL_GRID_WIDTH; const R=REAL_R*scale; const hexH=Math.sqrt(3)*R;
+  const maxRows=Math.max(...PATTERN); const gridHeight=(maxRows-1)*hexH+hexH; const A=17*R;
+  const offsetX=(B-A)/2+R; const offsetY=(map.clientHeight-gridHeight)/2+hexH/2;
   let id=1;
 
   PATTERN.forEach((rowCount,col)=>{
     for(let r=0;r<rowCount;r++){
-      const cx=offsetX+col*1.5*R;
-      const cy=offsetY+r*hexH+(col%2===0?0:hexH/2);
-
+      const cx=offsetX+col*1.5*R; const cy=offsetY+r*hexH+(col%2===0?0:hexH/2);
       const pts=[];
-      for(let i=0;i<6;i++){
-        const ang=Math.PI/3*i;
-        pts.push([cx+R*Math.cos(ang),cy+R*Math.sin(ang)].join(","));
-      }
-
+      for(let i=0;i<6;i++){ const ang=Math.PI/3*i; pts.push([cx+R*Math.cos(ang),cy+R*Math.sin(ang)].join(",")); }
       const g=document.createElementNS("http://www.w3.org/2000/svg","g");
-
       const poly=document.createElementNS("http://www.w3.org/2000/svg","polygon");
-      poly.setAttribute("points",pts.join(" "));
-      poly.setAttribute("class","hex hex-mar"); 
-      poly.dataset.id=id;
+      poly.setAttribute("points",pts.join(" ")); poly.setAttribute("class","hex hex-mar"); poly.dataset.id=id;
       g.appendChild(poly);
-
       const label=document.createElementNS("http://www.w3.org/2000/svg","text");
-      label.setAttribute("x",cx);
-      label.setAttribute("y",cy+4);
-      label.setAttribute("class","hex-label");
-      label.textContent=id;
+      label.setAttribute("x",cx); label.setAttribute("y",cy+4); label.setAttribute("class","hex-label"); label.textContent=id;
       g.appendChild(label);
-
       svg.appendChild(g);
-
-      hexData.push({id,cx,cy,color:"MAR",element:poly});
-      id++;
+      hexData.push({id,cx,cy,color:"MAR",element:poly}); id++;
     }
   });
-  
   const battleGroup = document.createElementNS("http://www.w3.org/2000/svg","g");
-  battleGroup.id = "battleLayer";
-  svg.appendChild(battleGroup);
+  battleGroup.id = "battleLayer"; svg.appendChild(battleGroup);
 }
 
 function populateSelectorOptions() {
-  const reds = document.getElementById("lossesRed");
-  const blues = document.getElementById("lossesBlue");
+  const reds = document.getElementById("lossesRed"); const blues = document.getElementById("lossesBlue");
   reds.innerHTML = ""; blues.innerHTML = "";
   for(let i = 0; i <= 10; i++) {
     const optR = document.createElement("option"); optR.value = i; optR.textContent = i; reds.appendChild(optR);
@@ -407,17 +367,12 @@ function populateSelectorOptions() {
 
 function openResolutionModal(titleText, battleInfo) {
   document.getElementById("modalBattleTitle").textContent = titleText;
-  document.getElementById("lossesRed").value = 0;
-  document.getElementById("lossesBlue").value = 0;
-  document.getElementById("winnerSide").selectedIndex = 0;
-  activeBattleDetails = battleInfo;
+  document.getElementById("lossesRed").value = 0; document.getElementById("lossesBlue").value = 0;
+  document.getElementById("winnerSide").selectedIndex = 0; activeBattleDetails = battleInfo;
   document.getElementById("resolutionModal").classList.add("active");
 }
 
-function closeResolutionModal() {
-  document.getElementById("resolutionModal").classList.remove("active");
-  activeBattleDetails = null;
-}
+function closeResolutionModal() { document.getElementById("resolutionModal").classList.remove("active"); activeBattleDetails = null; }
 
 function submitBattleResolution() {
   if (!activeBattleDetails) return;
@@ -438,53 +393,44 @@ function submitBattleResolution() {
     uniqueBattleKey = `atdef-${activeBattleDetails.targetId}`;
   }
 
-  // Registrar la clau localment perquè la neteja sigui permanent als autorefrescos
   resolvedBattlesLog.push(uniqueBattleKey);
 
-  // 1. Eliminar visualment l'explosió i la lletra del mapa a l'instant
+  // Neteja de la interfície instantània
   const explosionGroup = document.getElementById(`expGroup-${battleLetter}`);
   if (explosionGroup) explosionGroup.remove();
 
-  // 2. Eliminar visualment les fletxes tàctiques de la pantalla
   arrowElements = arrowElements.filter(arrow => {
-    const origin = arrow.dataset.origin;
-    const target = arrow.dataset.target;
-    
-    if (activeBattleDetails.type === "contact" && cotesImplicades.includes(origin) && cotesImplicades.includes(target)) {
-      arrow.remove();
-      return false; 
-    }
-    if (activeBattleDetails.type === "atdef" && target === activeBattleDetails.targetId.toString()) {
-      arrow.remove();
-      return false;
-    }
+    const origin = arrow.dataset.origin; const target = arrow.dataset.target;
+    if (activeBattleDetails.type === "contact" && cotesImplicades.includes(origin) && cotesImplicades.includes(target)) { arrow.remove(); return false; }
+    if (activeBattleDetails.type === "atdef" && target === activeBattleDetails.targetId.toString()) { arrow.remove(); return false; }
     return true; 
   });
 
-  // 3. Eliminar físicament el botó de la llista inferior
-  if(activeBattleDetails.btnElement) {
-    activeBattleDetails.btnElement.remove();
-  }
+  if(activeBattleDetails.btnElement) activeBattleDetails.btnElement.remove();
 
-  // 4. Preparar paràmetres codificats directament en la URL per evitar que el navegador els esborri
-  const params = new URLSearchParams();
-  params.append("tipus", activeBattleDetails.type);
-  params.append("lletra", battleLetter);
-  params.append("descripcio", document.getElementById("modalBattleTitle").textContent);
-  params.append("baixes_vermell", rLoss);
-  params.append("baixes_blau", bLoss);
-  params.append("vencedor", winner);
-  params.append("cotes", cotesImplicades.join("-"));
+  // EXECUCIÓ DIRECTA DE L'ORDRE REESCRIPTORA EN COINCIDIR AMB EL BOTÓ RESOLDRE
+  const callbackName = 'jsonp_save_' + Date.now();
+  window[callbackName] = function(response) {
+    console.log("Ordre processada per Google:", response);
+    delete window[callbackName];
+    const scr = document.getElementById(callbackName);
+    if (scr) scr.remove();
+  };
 
-  const finalUrl = WEB_APP_RESOLVE_URL + "?" + params.toString();
+  const finalUrl = WEB_APP_RESOLVE_URL + 
+                   "?tipus=" + encodeURIComponent(activeBattleDetails.type) +
+                   "&lletra=" + encodeURIComponent(battleLetter) +
+                   "&descripcio=" + encodeURIComponent(document.getElementById("modalBattleTitle").textContent) +
+                   "&baixes_vermell=" + encodeURIComponent(rLoss) +
+                   "&baixes_blau=" + encodeURIComponent(bLoss) +
+                   "&vencedor=" + encodeURIComponent(winner) +
+                   "&cotes=" + encodeURIComponent(cotesImplicades.join("-")) +
+                   "&callback=" + callbackName;
 
-  // 5. Enviar dades asíncronament a Google Apps Script
-  fetch(finalUrl, {
-    method: "POST",
-    mode: "no-cors"
-  }).then(() => {
-    console.log(`Tramesa enviada al Sheets correctament per a la batalla (${battleLetter})`);
-  }).catch(err => console.error("Error d'enviament de xarxa:", err));
+  const scriptInject = document.createElement("script");
+  scriptInject.id = callbackName;
+  scriptInject.src = finalUrl;
+  document.head.appendChild(scriptInject);
 
   closeResolutionModal();
 }
@@ -494,14 +440,11 @@ async function updateHexColors(){
     const data = await fetchJSONP(COLORS_JSON_URL);
     if (Array.isArray(data)) {
       data.forEach(row => {
-        const id = parseInt(row["A"]);
-        const color = (row["B"] || "MAR").toUpperCase();
+        const id = parseInt(row["A"]); const color = (row["B"] || "MAR").toUpperCase();
         const hex = hexData.find(h => h.id === id);
         if(hex) {
-          hex.color = color;
-          let cls = "hex hex-mar";
-          if(color.includes("RED")) cls = "hex hex-red";
-          else if(color.includes("BLUE")) cls = "hex hex-blue";
+          hex.color = color; let cls = "hex hex-mar";
+          if(color.includes("RED")) cls = "hex hex-red"; else if(color.includes("BLUE")) cls = "hex hex-blue";
           hex.element.setAttribute("class", cls);
         }
       });
@@ -512,41 +455,27 @@ async function updateHexColors(){
 async function updateActiveOrders(){
   try {
     const orderStrings = await fetchJSONP(ORDERS_JSON_URL);
-    
-    arrowElements.forEach(img => img.remove());
-    arrowElements = [];
-    
-    const battleLayer = document.getElementById("battleLayer");
-    if(battleLayer) battleLayer.innerHTML = "";
+    arrowElements.forEach(img => img.remove()); arrowElements = [];
+    const battleLayer = document.getElementById("battleLayer"); if(battleLayer) battleLayer.innerHTML = "";
 
     if (Array.isArray(orderStrings)) {
       let activeOrders = [];
-
       orderStrings.forEach(orderText => {
         const match = orderText.match(/territori\s+(\d+)\s+a\s+territori\s+(\d+)/i);
         if (match) {
-          const originID = parseInt(match[1]);
-          const targetID = parseInt(match[2]);
-          const originHex = hexData.find(h => h.id === originID);
-          const targetHex = hexData.find(h => h.id === targetID);
-
-          if (originHex && targetHex) {
-            activeOrders.push({ originID, targetID, originHex, targetHex, processed: false });
-          }
+          const originID = parseInt(match[1]); const targetID = parseInt(match[2]);
+          const originHex = hexData.find(h => h.id === originID); const targetHex = hexData.find(h => h.id === targetID);
+          if (originHex && targetHex) activeOrders.push({ originID, targetID, originHex, targetHex, processed: false });
         }
       });
 
-      let contactBattles = [];
-      let attackDefenseTargets = new Set();
-
+      let contactBattles = []; let attackDefenseTargets = new Set();
       for (let i = 0; i < activeOrders.length; i++) {
         if (activeOrders[i].processed) continue;
         for (let j = i + 1; j < activeOrders.length; j++) {
           if (activeOrders[j].processed) continue;
           if (activeOrders[i].originID === activeOrders[j].targetID && activeOrders[i].targetID === activeOrders[j].originID) {
-            activeOrders[i].processed = true;
-            activeOrders[j].processed = true;
-            
+            activeOrders[i].processed = true; activeOrders[j].processed = true;
             const key = `contact-${activeOrders[i].originID}-${activeOrders[i].targetID}`;
             const keyInverse = `contact-${activeOrders[i].targetID}-${activeOrders[i].originID}`;
             if (!resolvedBattlesLog.includes(key) && !resolvedBattlesLog.includes(keyInverse)) {
@@ -560,77 +489,43 @@ async function updateActiveOrders(){
       activeOrders.forEach(order => { 
         if (!order.processed) {
           const key = `atdef-${order.targetID}`;
-          if (!resolvedBattlesLog.includes(key)) {
-            attackDefenseTargets.add(order.targetID);
-          }
+          if (!resolvedBattlesLog.includes(key)) attackDefenseTargets.add(order.targetID);
         } 
       });
 
       activeOrders.forEach(order => {
-        const contactKey = `contact-${order.originID}-${order.targetID}`;
-        const contactKeyInverse = `contact-${order.targetID}-${order.originID}`;
-        const atdefKey = `atdef-${order.targetID}`;
-
-        let isResolved = resolvedBattlesLog.includes(atdefKey) || 
-                         resolvedBattlesLog.includes(contactKey) || 
-                         resolvedBattlesLog.includes(contactKeyInverse);
-
-        if (!isResolved) {
-          placeInformativeArrow(order.originHex, order.targetHex);
-        }
+        const contactKey = `contact-${order.originID}-${order.targetID}`; const contactKeyInverse = `contact-${order.targetID}-${order.originID}`; const atdefKey = `atdef-${order.targetID}`;
+        let isResolved = resolvedBattlesLog.includes(atdefKey) || resolvedBattlesLog.includes(contactKey) || resolvedBattlesLog.includes(contactKeyInverse);
+        if (!isResolved) placeInformativeArrow(order.originHex, order.targetHex);
       });
 
       buildTacticalInterface(contactBattles, Array.from(attackDefenseTargets));
-      const d = new Date();
-      document.getElementById("loadingIndicator").textContent = `Radar analitzat correctament: ${d.toLocaleTimeString()}`;
+      const d = new Date(); document.getElementById("loadingIndicator").textContent = `Radar analitzat correctament: ${d.toLocaleTimeString()}`;
     }
   } catch(e) { document.getElementById("loadingIndicator").textContent = `⚠️ Error analitzador: ${e.message}`; }
 }
 
 function buildTacticalInterface(contacts, atDefs) {
-  const btnContainer = document.getElementById("battleButtonsContainer");
-  const layer = document.getElementById("battleLayer");
-  
-  btnContainer.innerHTML = "";
-  if(layer) layer.innerHTML = "";
+  const btnContainer = document.getElementById("battleButtonsContainer"); const layer = document.getElementById("battleLayer");
+  btnContainer.innerHTML = ""; if(layer) layer.innerHTML = "";
+  const map = document.getElementById("mapContainer"); const scale = map.clientWidth / REAL_GRID_WIDTH; const R = REAL_R * scale; const explosionSize = R * 1.5; 
+  let letterIndex = 0; function getLetter(index) { return String.fromCharCode(65 + index); }
 
-  const map = document.getElementById("mapContainer");
-  const scale = map.clientWidth / REAL_GRID_WIDTH;
-  const R = REAL_R * scale;
-  const explosionSize = R * 1.5; 
-
-  let letterIndex = 0;
-  function getLetter(index) { return String.fromCharCode(65 + index); }
-
-  // 1. Batalles de contacte
   contacts.forEach(c => {
-    const letter = getLetter(letterIndex++);
-    const mx = (c.hexA.cx + c.hexB.cx) / 2;
-    const my = (c.hexA.cy + c.hexB.cy) / 2;
-
+    const letter = getLetter(letterIndex++); const mx = (c.hexA.cx + c.hexB.cx) / 2; const my = (c.hexA.cy + c.hexB.cy) / 2;
     createSvgExplosionWithLetter(layer, mx, my, explosionSize, letter);
-
-    const btn = document.createElement("button");
-    btn.className = "battle-btn btn-contact";
-    const btnText = `(${letter}) Batalla de contacte entre cota ${c.idA} i ${c.idB}`;
-    btn.textContent = btnText;
-    
+    const btn = document.createElement("button"); btn.className = "battle-btn btn-contact";
+    const btnText = `(${letter}) Batalla de contacte entre cota ${c.idA} i ${c.idB}`; btn.textContent = btnText;
     btn.onclick = () => openResolutionModal(btnText, { type: "contact", info: c, letter: letter, btnElement: btn });
     btnContainer.appendChild(btn);
   });
 
-  // 2. Assalts d'atac-defensa
   atDefs.forEach(targetId => {
     const hex = hexData.find(h => h.id === targetId);
     if(hex) {
-      const letter = getLetter(letterIndex++);
-      createSvgExplosionWithLetter(layer, hex.cx, hex.cy, explosionSize, letter);
-
-      const btn = document.createElement("button");
-      btn.className = "battle-btn btn-atdef";
-      const btnText = `(${letter}) Assalt atac-defensa a cota ${targetId}`;
-      btn.textContent = btnText;
-      
+      const letter = getLetter(letterIndex++); createSvgExplosionWithLetter(layer, hex.cx, hex.cy, explosionSize, letter);
+      const btn = document.createElement("button"); btn.className = "battle-btn btn-atdef";
+      const btnText = `(${letter}) Assalt atac-defensa a cota ${targetId}`; btn.textContent = btnText;
       btn.onclick = () => openResolutionModal(btnText, { type: "atdef", targetId: targetId, letter: letter, btnElement: btn });
       btnContainer.appendChild(btn);
     }
@@ -638,27 +533,14 @@ function buildTacticalInterface(contacts, atDefs) {
 }
 
 function createSvgExplosionWithLetter(parent, x, y, size, letter) {
-  const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
-  g.id = `expGroup-${letter}`;
-
+  const g = document.createElementNS("http://www.w3.org/2000/svg", "g"); g.id = `expGroup-${letter}`;
   const img = document.createElementNS("http://www.w3.org/2000/svg", "image");
   img.setAttributeNS("http://www.w3.org/1999/xlink", "href", EXPLOSION_IMG_URL);
-  img.setAttribute("x", x - (size / 2));
-  img.setAttribute("y", y - (size / 2));
-  img.setAttribute("width", size);
-  img.setAttribute("height", size);
-  img.setAttribute("class", "explosion-static");
+  img.setAttribute("x", x - (size / 2)); img.setAttribute("y", y - (size / 2)); img.setAttribute("width", size); img.setAttribute("height", size); img.setAttribute("class", "explosion-static");
   g.appendChild(img);
-
   const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
-  text.setAttribute("x", x);
-  text.setAttribute("y", y);
-  text.setAttribute("class", "explosion-letter");
-  text.setAttribute("font-size", `${size * 0.245}px`); 
-  text.textContent = letter;
-  g.appendChild(text);
-
-  parent.appendChild(g);
+  text.setAttribute("x", x); text.setAttribute("y", y); text.setAttribute("class", "explosion-letter"); text.setAttribute("font-size", `${size * 0.245}px`); text.textContent = letter;
+  g.appendChild(text); parent.appendChild(g);
 }
 
 function direction(origin,target){
@@ -683,35 +565,20 @@ function placeInformativeArrow(origin,target){
   const map=document.getElementById("mapContainer");
   const B=map.clientWidth; const scale=B/REAL_GRID_WIDTH; const R=REAL_R*scale; const hexH=Math.sqrt(3)*R;
   const dir=direction(origin,target); const url=arrowURL(dir);
-
-  const img=document.createElement("img");
-  img.src=url;
-  img.className="attack-arrow"; 
-  
-  img.dataset.origin = origin.id;
-  img.dataset.target = target.id;
-
+  const img=document.createElement("img"); img.src=url; img.className="attack-arrow"; 
+  img.dataset.origin = origin.id; img.dataset.target = target.id;
   const FACTOR=1.42; const width = 2 * R * FACTOR; const height = hexH * FACTOR;
   img.style.width = width + "px"; img.style.height = height + "px";
   img.style.left = (origin.cx - width/2) + "px"; img.style.top = (origin.cy - height/2) + "px";
-
-  map.appendChild(img);
-  arrowElements.push(img);
+  map.appendChild(img); arrowElements.push(img);
 }
 
-async function syncRadarData(){
-  await updateHexColors();
-  await updateActiveOrders();
-}
-
+async function syncRadarData(){ await updateHexColors(); await updateActiveOrders(); }
 function fullRedraw(){ resizeMap(); initHexGridStructure(); syncRadarData(); }
 window.addEventListener("resize", fullRedraw);
 
-populateSelectorOptions();
-resizeMap();
-initHexGridStructure();
-setTimeout(syncRadarData, 500);
-setInterval(syncRadarData, 5000);
+populateSelectorOptions(); resizeMap(); initHexGridStructure();
+setTimeout(syncRadarData, 500); setInterval(syncRadarData, 5000);
 </script>
 
 </body>
