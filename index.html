@@ -132,7 +132,6 @@
 
     /* Estil per a l'explosió estàtica corregida */
     .explosion-static {
-      /* S'ha eliminat la rotació forçada de 180º */
       filter: drop-shadow(0 0 4px #ff5500);
     }
   </style>
@@ -280,6 +279,8 @@ function initHexGridStructure(){
     }
   });
   
+  // MODIFICACIÓ: Moguem la capa de batalles al final de tot per assegurar-nos que és
+  // l'últim element creat dins de l'SVG i, per tant, es dibuixi per sobre de tota la resta.
   const battleGroup = document.createElementNS("http://www.w3.org/2000/svg","g");
   battleGroup.id = "battleLayer";
   svg.appendChild(battleGroup);
@@ -428,23 +429,19 @@ function drawBattleMarkersOnMap(contacts, atDefs) {
   });
 }
 
-// Genera la imatge de l'explosió amb rotació aleatòria (0-360º) respecte al seu propi centre
+// Genera la imatge de l'explosió COMPLETAMENT RECTA (angle 0) i centrada
 function createSvgExplosion(parent, x, y, size) {
-  // Genera un angle aleatori entre 0 i 360
-  const randomAngle = Math.floor(Math.random() * 361);
-  
   const img = document.createElementNS("http://www.w3.org/2000/svg", "image");
   img.setAttributeNS("http://www.w3.org/1999/xlink", "href", EXPLOSION_IMG_URL);
   
-  // Centrem la imatge restant la meitat de la seva amplada i alçada
+  // Centrem la imatge actuant sobre els eixos X i Y basant-nos en la seva mida
   img.setAttribute("x", x - (size / 2));
   img.setAttribute("y", y - (size / 2));
   img.setAttribute("width", size);
   img.setAttribute("height", size);
   img.setAttribute("class", "explosion-static");
   
-  // CORRECCIÓ: Apliquem la rotació aleatòria correctament referenciada al centre (x,y)
-  img.setAttribute("transform", `rotate(${randomAngle}, ${x}, ${y})`);
+  // MODIFICACIÓ: Eliminada totalment la línia d'atribut transform amb la rotació
   
   parent.appendChild(img);
 }
