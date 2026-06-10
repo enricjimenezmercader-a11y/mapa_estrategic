@@ -397,7 +397,7 @@ async function updateActiveOrders(){
         }
       });
 
-      // Dibuixem les fletxes amb l'estat actualitzat
+      // Renderitzem les fletxes amb el nou estat de col·lisió calculat
       activeOrders.forEach(order => {
          placeInformativeArrow(order.originHex, order.targetHex, order.isContactBattle);
       });
@@ -501,7 +501,7 @@ function arrowURL(dir){
   }[dir];
 }
 
-// CORRECCIÓ DE POSICIONAMENT MIL·LIMÈTRIC PER ENCREUAMENTS
+// FUNCIÓ DE POSICIONAMENT GEOMÈTRIC DE LES FLETXES
 function placeInformativeArrow(origin,target, isContact){
   const map=document.getElementById("mapContainer");
   const B=map.clientWidth;
@@ -527,23 +527,21 @@ function placeInformativeArrow(origin,target, isContact){
   let posY = origin.cy;
 
   if (isContact) {
-    // 1. Trobem el punt mitjà exacte entre els dos centres (la frontera comuna)
-    const midX = (origin.cx + target.cx) / 2;
-    const midY = (origin.cy + target.cy) / 2;
-    
-    // 2. Calculem el vector unitari de direcció des de l'origen al destí
+    // 1. Vector de distància des del centre de l'origen fins al destí
     const dx = target.cx - origin.cx;
     const dy = target.cy - origin.cy;
     const dist = Math.sqrt(dx * dx + dy * dy);
+    
+    // 2. Vector unitari (direcció normalitzada del moviment)
     const ux = dx / dist;
     const uy = dy / dist;
 
-    // 3. Modificador de punta: Ajustem la posició segons com està dibuixada la imatge SVG.
-    // Com que els teus fitxers SVG tenen la punta orientada cap al davant,
-    // desplaçar el centre de la imatge una distància igual a la meitat de la seva amplada (width/2)
-    // cap enrere respecte al punt mitjà farà que la punta quedi clavada exactament a la línia divisòria.
-    posX = midX - (ux * (width / 2));
-    posY = midY - (uy * (height / 2));
+    // 3. Càlcul del desplaçament exacte cap endavant:
+    // Com que la fletxa té una longitud visual equivalent al segment sencer entre centres,
+    // si avancem el punt d'ancoratge central un 25% de la distància total (dist / 4),
+    // la punta frontal del fitxer impactarà mil·limètricament sobre la frontera comuna (el 50%).
+    posX = origin.cx + (ux * (dist / 4));
+    posY = origin.cy + (uy * (dist / 4));
   }
 
   img.style.left   = (posX - width/2) + "px";
