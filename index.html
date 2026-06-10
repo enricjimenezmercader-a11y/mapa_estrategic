@@ -232,7 +232,7 @@ function resizeMap(){
   const W=window.innerWidth;
   const H=window.innerHeight;
   const maxW=W*(0.85);
-  const maxH=H*(0.65); // Reduït una mica per fer espai còmode al panell superior
+  const maxH=H*(0.65); 
   let width=maxW;
   let height=width/IMAGE_RATIO;
   if(height>maxH){
@@ -297,7 +297,6 @@ function initHexGridStructure(){
     }
   });
   
-  // Creem dinàmicament el contenidor de batalles damunt dels hexàgons
   const battleGroup = document.createElementNS("http://www.w3.org/2000/svg","g");
   battleGroup.id = "battleLayer";
   svg.appendChild(battleGroup);
@@ -330,18 +329,17 @@ async function updateActiveOrders(){
   try {
     const orderStrings = await fetchJSONP(ORDERS_JSON_URL);
     
-    // 1. Netejar elements gràfics del cicle anterior (fletxes)
+    // 1. Netejar elements gràfics del cicle anterior
     arrowElements.forEach(img => img.remove());
     arrowElements = [];
     
-    // Netejar capa de batalles SVG
     const battleLayer = document.getElementById("battleLayer");
     if(battleLayer) battleLayer.innerHTML = "";
 
     if (Array.isArray(orderStrings)) {
-      let activeOrders = [];
+      let parsedOrders = [];
 
-      // Mapejar i estructurar totes les ordres vàlides d'origen a destí
+      // Mapejar i estructurar totes les ordres vàlides
       orderStrings.forEach(orderText => {
         const match = orderText.match(/territori\s+(\d+)\s+a\s+territori\s+(\d+)/i);
         if (match) {
@@ -351,57 +349,63 @@ async function updateActiveOrders(){
           const targetHex = hexData.find(h => h.id === targetID);
 
           if (originHex && targetHex) {
-            activeOrders.push({
+            parsedOrders.push({
               originID,
               targetID,
               originHex,
               targetHex,
-              processed: false
+              isContact: false // Per defecte
             });
-            // Dibuixem la fletxa informativa de moviment base
-            placeInformativeArrow(originHex, targetHex);
           }
         }
       });
 
-      // --- MOTOR D'ANÀLISI TÀCTICA (PAS 1 I PAS 2) ---
+      // --- MOTOR D'ANÀLISI TÀCTICA MILLORAT ---
       let contactBattles = [];
       let attackDefenseTargets = new Set();
 
-      // PAS 1: Cerca de "Batalles de Contacte" (Encreuament mutu simultani A->B i B->A)
-      for (let i = 0; i < activeOrders.length; i++) {
-        if (activeOrders[i].processed) continue;
-        
-        for (let j = i + 1; j < activeOrders.length; j++) {
-          if (activeOrders[j].processed) continue;
-
-          if (activeOrders[i].originID === activeOrders[j].targetID && 
-              activeOrders[i].targetID === activeOrders[j].originID) {
+      // PAS 1: Cerca de "Batalles de Contacte" i marcatge per a no sol·lapament
+      for (let i = 0; i < parsedOrders.length; i++) {
+        for (let j = i + 1; j < parsedOrders.length; j++) {
+          if (parsedOrders[i].originID === parsedOrders[j].targetID && 
+              parsedOrders[i].targetID === parsedOrders[j].originID) {
             
-            // Marcar com a processades perquè ja no generin Atac-Defensa
-            activeOrders[i].processed = true;
-            activeOrders[j].processed = true;
+            // Marcar ambdues ordres com a contacte
+            parsedOrders[i].isContact = true;
+            parsedOrders[j].isContact = true;
 
-            contactBattles.push({
-              hexA: activeOrders[i].originHex,
-              hexB: activeOrders[i].targetHex,
-              idA: activeOrders[i].originID,
-              idB: activeOrders[i].targetID
-            });
-            break;
+            // Evitem duplicats a la llista textual
+            const alreadyAdded = contactBattles.some(b => 
+              (b.idA === parsedOrders[i].originID && b.idB === parsedOrders[i].targetID) ||
+              (b.idA === parsedOrders[i].targetID && b.idB === parsedOrders[i].originID)
+            );
+
+            if(!alreadyAdded) {
+              contactBattles.push({
+                hexA: parsedOrders[i].originHex,
+                hexB: parsedOrders[i].targetHex,
+                idA: parsedOrders[i].originID,
+                idB: parsedOrders[i].targetID
+              });
+            }
           }
         }
       }
 
-      // PAS 2: Cerca d' "Atac-Defensa" (La resta de fletxes lliures que arriben a un hexàgon)
-      activeOrders.forEach(order => {
-        if (!order.processed) {
-          // El Set evita automàticament duplicats (Unificació de múltiples fletxes a un mateix destí)
+      // PAS 2 i Dibuix de fletxes intel·ligents
+      parsedOrders.forEach(order => {
+        if (order.isContact) {
+          // PAS 1 (Visual): Dibuixem fletxa reduïda i desplaçada cap a l'interior
+          placeInformativeArrow(order.originHex, order.targetHex, true);
+        } else {
+          // PAS 2 (Anàlisi): La fletxa arriba al destí -> Atac-Defensa
           attackDefenseTargets.add(order.targetID);
+          // PAS 2 (Visual): Dibuixem fletxa estàndard de centre a centre
+          placeInformativeArrow(order.originHex, order.targetHex, false);
         }
       });
 
-      // --- RENDERITZAT I DESPLEGAMENT ANALÍTIC ---
+      // --- RENDERITZAT D'INFORMES I MARCADORS ---
       renderTacticalReport(contactBattles, Array.from(attackDefenseTargets));
       drawBattleMarkersOnMap(contactBattles, Array.from(attackDefenseTargets));
       
@@ -413,7 +417,6 @@ async function updateActiveOrders(){
   }
 }
 
-// Actualitza el text de les llistes superiors de la pantalla
 function renderTacticalReport(contacts, atDefs) {
   const contactList = document.getElementById("contactList");
   const atDefList = document.getElementById("atDefList");
@@ -431,12 +434,11 @@ function renderTacticalReport(contacts, atDefs) {
   }
 }
 
-// Dibuixa els indicadors gràfics (badges) damunt del mapa usant SVG
 function drawBattleMarkersOnMap(contacts, atDefs) {
   const layer = document.getElementById("battleLayer");
   if(!layer) return;
 
-  // Pintar batalles de contacte (Punt mitjà dels dos hexàgons)
+  // Pintar batalles de contacte (Punt mitjà exactament sobre el límit comú)
   contacts.forEach(c => {
     const mx = (c.hexA.cx + c.hexB.cx) / 2;
     const my = (c.hexA.cy + c.hexB.cy) / 2;
@@ -447,19 +449,16 @@ function drawBattleMarkersOnMap(contacts, atDefs) {
   atDefs.forEach(targetId => {
     const hex = hexData.find(h => h.id === targetId);
     if(hex) {
-      // Es desplaça una mica cap avall de la id perquè no es tapin els números del mapa
       createSvgBattleBadge(layer, hex.cx, hex.cy + 14, "🛡️", "ATAC-DEF", "bg-badge-atdef");
     }
   });
 }
 
-// Funció constructora de nodes gràfics SVG per a les col·lisions
 function createSvgBattleBadge(parent, x, y, emoji, labelText, bgClass) {
   const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
   g.setAttribute("transform", `translate(${x}, ${y})`);
   g.setAttribute("class", "battle-glow");
 
-  // Fons d'alerta (Píndola tàctica)
   const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
   rect.setAttribute("x", "-30");
   rect.setAttribute("y", "-18");
@@ -469,14 +468,12 @@ function createSvgBattleBadge(parent, x, y, emoji, labelText, bgClass) {
   rect.setAttribute("class", bgClass);
   g.appendChild(rect);
 
-  // Icona de l'estat
   const txtEmoji = document.createElementNS("http://www.w3.org/2000/svg", "text");
   txtEmoji.setAttribute("y", "-4");
   txtEmoji.setAttribute("class", "emoji-battle");
   txtEmoji.textContent = emoji;
   g.appendChild(txtEmoji);
 
-  // Text inferior descriptiu
   const txtLbl = document.createElementNS("http://www.w3.org/2000/svg", "text");
   txtLbl.setAttribute("y", "4");
   txtLbl.setAttribute("class", "text-battle");
@@ -509,7 +506,8 @@ function arrowURL(dir){
   }[dir];
 }
 
-function placeInformativeArrow(origin,target){
+// Funció de renderitzat de fletxes modificada per gestionar el no-sol·lapament
+function placeInformativeArrow(origin, target, isContact = false){
   const map=document.getElementById("mapContainer");
   const B=map.clientWidth;
   const scale=B/REAL_GRID_WIDTH;
@@ -523,14 +521,36 @@ function placeInformativeArrow(origin,target){
   img.src=url;
   img.className="attack-arrow attack-arrow--glow"; 
 
-  const FACTOR=1.42;
-  const width = 2 * R * FACTOR;
-  const height = hexH * FACTOR;
+  // --- NOVA GEOMETRIA PER A CONTACTE VS ESTÀNDARD ---
+  const BASE_FACTOR = 1.42;
+  
+  // Si és contacte, reduïm el tamany de la fletxa a la meitat (0.5) 
+  // perquè només cobreixi des del centre al límit, no de centre a centre.
+  const sizeMultiplier = isContact ? 0.5 : 1.0;
+  
+  const width = 2 * R * BASE_FACTOR * sizeMultiplier;
+  const height = hexH * BASE_FACTOR * sizeMultiplier;
 
   img.style.width  = width + "px";
   img.style.height = height + "px";
-  img.style.left   = (origin.cx - width/2) + "px";
-  img.style.top    = (origin.cy - height/2) + "px";
+
+  // Càlcul del nou centre geomètric de la fletxa
+  let arrowCenterX, arrowCenterY;
+
+  if (isContact) {
+    // Si és contacte, col·loquem el centre de la fletxa a una quarta part (0.25)
+    // del camí cap a l'objectiu. Com que té tamany 0.5, la punta tocarà el límit.
+    arrowCenterX = (3 * origin.cx + target.cx) / 4;
+    arrowCenterY = (3 * origin.cy + target.cy) / 4;
+  } else {
+    // Fletxa estàndard: centrada al territori d'origen, punta al centre de l'objectiu
+    arrowCenterX = origin.cx;
+    arrowCenterY = origin.cy;
+  }
+
+  // Posicionament final basat en el centre calculat
+  img.style.left   = (arrowCenterX - width/2) + "px";
+  img.style.top    = (arrowCenterY - height/2) + "px";
 
   map.appendChild(img);
   arrowElements.push(img);
@@ -549,12 +569,10 @@ function fullRedraw(){
 
 window.addEventListener("resize", fullRedraw);
 
-// Arranque de seguretat inicial
 resizeMap();
 initHexGridStructure();
 setTimeout(syncRadarData, 500);
 
-// Sincronització automatitzada en segon pla cada 5 segons
 setInterval(syncRadarData, 5000);
 </script>
 
