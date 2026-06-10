@@ -272,6 +272,7 @@ const COLORS_JSON_URL="https://script.google.com/macros/s/AKfycbyM44gMczZ9XQvIJh
 const ORDERS_JSON_URL="https://script.google.com/macros/s/AKfycbzDdC4yHTVFzNdsSRJE7yfiRRvOiCPssSyVBEDPV92gSksgOnwfIVSUVVRkGSbzy_EBDw/exec";
 const EXPLOSION_IMG_URL="https://github.com/enricjimenezmercader-a11y/mapa_estrategic/blob/894cd2a4b1d3605c654d4eaaa5862f5d90b6c2c4/explosion.png?raw=true";
 
+// URL d'Apps Script vinculada per fer tramesa de dades i actualització de color
 const WEB_APP_RESOLVE_URL = "https://script.google.com/macros/s/AKfycbx7LXHMqQ4FTdA4qATvtE1vZ5o1iYp0nfco75TTLoc3MaGmX5omUol_u7k65rTn8C4o8g/exec";
 
 const REAL_R=41.78;
@@ -431,22 +432,20 @@ function submitBattleResolution() {
 
   if (activeBattleDetails.type === "contact") {
     cotesImplicades.push(activeBattleDetails.info.idA.toString(), activeBattleDetails.info.idB.toString());
-    // Clau unica de control combinant les dues cotes de contacte (Ex: "contact-12-15")
     uniqueBattleKey = `contact-${activeBattleDetails.info.idA}-${activeBattleDetails.info.idB}`;
   } else if (activeBattleDetails.type === "atdef") {
     cotesImplicades.push(activeBattleDetails.targetId.toString());
-    // Clau unica per assalts (Ex: "atdef-24")
     uniqueBattleKey = `atdef-${activeBattleDetails.targetId}`;
   }
 
-  // Afegim la clau al registre local de resoltes perquè mai es torni a pintar automàticament
+  // Registrar la clau localment perquè la neteja sigui permanent als autorefrescos
   resolvedBattlesLog.push(uniqueBattleKey);
 
-  // 1. Eliminar immediatament l'explosió i lletra del mapa
+  // 1. Eliminar visualment l'explosió i la lletra del mapa a l'instant
   const explosionGroup = document.getElementById(`expGroup-${battleLetter}`);
   if (explosionGroup) explosionGroup.remove();
 
-  // 2. Eliminar immediatament les fletxes de la pantalla
+  // 2. Eliminar visualment les fletxes tàctiques de la pantalla
   arrowElements = arrowElements.filter(arrow => {
     const origin = arrow.dataset.origin;
     const target = arrow.dataset.target;
@@ -462,28 +461,30 @@ function submitBattleResolution() {
     return true; 
   });
 
-  // 3. Eliminar / amagar el botó de manera immediata
+  // 3. Eliminar físicament el botó de la llista inferior
   if(activeBattleDetails.btnElement) {
     activeBattleDetails.btnElement.remove();
   }
 
-  // 4. Tramesa asíncrona de dades a Google Sheets
-  const formData = new FormData();
-  formData.append("tipus", activeBattleDetails.type);
-  formData.append("lletra", battleLetter);
-  formData.append("descripcio", document.getElementById("modalBattleTitle").textContent);
-  formData.append("baixes_vermell", rLoss);
-  formData.append("baixes_blau", bLoss);
-  formData.append("vencedor", winner);
-  formData.append("cotes", cotesImplicades.join("-"));
+  // 4. Preparar paràmetres codificats directament en la URL per evitar que el navegador els esborri
+  const params = new URLSearchParams();
+  params.append("tipus", activeBattleDetails.type);
+  params.append("lletra", battleLetter);
+  params.append("descripcio", document.getElementById("modalBattleTitle").textContent);
+  params.append("baixes_vermell", rLoss);
+  params.append("baixes_blau", bLoss);
+  params.append("vencedor", winner);
+  params.append("cotes", cotesImplicades.join("-"));
 
-  fetch(WEB_APP_RESOLVE_URL, {
+  const finalUrl = WEB_APP_RESOLVE_URL + "?" + params.toString();
+
+  // 5. Enviar dades asíncronament a Google Apps Script
+  fetch(finalUrl, {
     method: "POST",
-    mode: "no-cors",
-    body: formData
+    mode: "no-cors"
   }).then(() => {
-    console.log(`Dades guardades amb èxit al Google Sheets per (${battleLetter})`);
-  }).catch(err => console.error("Error enviant dades:", err));
+    console.log(`Tramesa enviada al Sheets correctament per a la batalla (${battleLetter})`);
+  }).catch(err => console.error("Error d'enviament de xarxa:", err));
 
   closeResolutionModal();
 }
@@ -546,7 +547,6 @@ async function updateActiveOrders(){
             activeOrders[i].processed = true;
             activeOrders[j].processed = true;
             
-            // FILTRE: Només afegir la batalla de contacte si no ha estat resolta localment
             const key = `contact-${activeOrders[i].originID}-${activeOrders[i].targetID}`;
             const keyInverse = `contact-${activeOrders[i].targetID}-${activeOrders[i].originID}`;
             if (!resolvedBattlesLog.includes(key) && !resolvedBattlesLog.includes(keyInverse)) {
@@ -559,7 +559,6 @@ async function updateActiveOrders(){
 
       activeOrders.forEach(order => { 
         if (!order.processed) {
-          // FILTRE: Només afegir l'assalt si la cota objectiu no ha estat resolta localment
           const key = `atdef-${order.targetID}`;
           if (!resolvedBattlesLog.includes(key)) {
             attackDefenseTargets.add(order.targetID);
@@ -567,7 +566,6 @@ async function updateActiveOrders(){
         } 
       });
 
-      // Pintar les fletxes només de les ordres que NO pertanyen a batalles ja resoltes
       activeOrders.forEach(order => {
         const contactKey = `contact-${order.originID}-${order.targetID}`;
         const contactKeyInverse = `contact-${order.targetID}-${order.originID}`;
