@@ -397,7 +397,7 @@ async function updateActiveOrders(){
         }
       });
 
-      // Renderitzem les fletxes amb el nou estat de col·lisió calculat
+      // Dibuixem les fletxes aplicant la condició de contacte
       activeOrders.forEach(order => {
          placeInformativeArrow(order.originHex, order.targetHex, order.isContactBattle);
       });
@@ -501,7 +501,7 @@ function arrowURL(dir){
   }[dir];
 }
 
-// FUNCIÓ DE POSICIONAMENT GEOMÈTRIC DE LES FLETXES
+// CORRECCIÓ FINAL DELS COMPONENTES DE DESPLAÇAMENT EN CONTACTE DIRECTE
 function placeInformativeArrow(origin,target, isContact){
   const map=document.getElementById("mapContainer");
   const B=map.clientWidth;
@@ -527,21 +527,21 @@ function placeInformativeArrow(origin,target, isContact){
   let posY = origin.cy;
 
   if (isContact) {
-    // 1. Vector de distància des del centre de l'origen fins al destí
+    // 1. Vector distància real entre els centres dels dos hexàgons
     const dx = target.cx - origin.cx;
     const dy = target.cy - origin.cy;
     const dist = Math.sqrt(dx * dx + dy * dy);
     
-    // 2. Vector unitari (direcció normalitzada del moviment)
+    // 2. Vectors directors normalitzats
     const ux = dx / dist;
     const uy = dy / dist;
 
-    // 3. Càlcul del desplaçament exacte cap endavant:
-    // Com que la fletxa té una longitud visual equivalent al segment sencer entre centres,
-    // si avancem el punt d'ancoratge central un 25% de la distància total (dist / 4),
-    // la punta frontal del fitxer impactarà mil·limètricament sobre la frontera comuna (el 50%).
-    posX = origin.cx + (ux * (dist / 4));
-    posY = origin.cy + (uy * (dist / 4));
+    // 3. DESPLAÇAMENT GEOMÈTRIC TOTALMENT PRECÍS:
+    // Com que els fitxers tenen el dibuix centrat a la caixa, per moure la punta 
+    // exactament fins a la meitat del camí divisori hem d'avançar la imatge cap al destí 
+    // exactament la meitat de la distància total dels centres (dist / 2).
+    posX = origin.cx + (ux * (dist / 2));
+    posY = origin.cy + (uy * (dist / 2));
   }
 
   img.style.left   = (posX - width/2) + "px";
