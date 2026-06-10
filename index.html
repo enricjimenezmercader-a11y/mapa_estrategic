@@ -114,23 +114,16 @@
       font-size:12px;
     }
 
+    /* MODIFICACIÓ: Fletxes sense brillantor i amb transparència al 50% */
     .attack-arrow{
       position:absolute;
       pointer-events:none;
       z-index:20;
       transform-origin:center center;
+      opacity: 0.5; /* Transparència del 50% */
     }
 
-    @keyframes glow {
-      0%   { filter: drop-shadow(0 0 2px #fff); opacity: 0.85; }
-      50%  { filter: drop-shadow(0 0 14px #ffff66); opacity: 1; }
-      100% { filter: drop-shadow(0 0 2px #fff); opacity: 0.85; }
-    }
-    .attack-arrow--glow{
-      animation:glow 2s ease-in-out infinite;
-    }
-
-    /* Estil per a l'explosió estàtica corregida */
+    /* Estil per a l'explosió estàtica */
     .explosion-static {
       filter: drop-shadow(0 0 4px #ff5500);
     }
@@ -279,8 +272,6 @@ function initHexGridStructure(){
     }
   });
   
-  // MODIFICACIÓ: Moguem la capa de batalles al final de tot per assegurar-nos que és
-  // l'últim element creat dins de l'SVG i, per tant, es dibuixi per sobre de tota la resta.
   const battleGroup = document.createElementNS("http://www.w3.org/2000/svg","g");
   battleGroup.id = "battleLayer";
   svg.appendChild(battleGroup);
@@ -429,19 +420,15 @@ function drawBattleMarkersOnMap(contacts, atDefs) {
   });
 }
 
-// Genera la imatge de l'explosió COMPLETAMENT RECTA (angle 0) i centrada
 function createSvgExplosion(parent, x, y, size) {
   const img = document.createElementNS("http://www.w3.org/2000/svg", "image");
   img.setAttributeNS("http://www.w3.org/1999/xlink", "href", EXPLOSION_IMG_URL);
   
-  // Centrem la imatge actuant sobre els eixos X i Y basant-nos en la seva mida
   img.setAttribute("x", x - (size / 2));
   img.setAttribute("y", y - (size / 2));
   img.setAttribute("width", size);
   img.setAttribute("height", size);
   img.setAttribute("class", "explosion-static");
-  
-  // MODIFICACIÓ: Eliminada totalment la línia d'atribut transform amb la rotació
   
   parent.appendChild(img);
 }
@@ -481,7 +468,7 @@ function placeInformativeArrow(origin,target){
 
   const img=document.createElement("img");
   img.src=url;
-  img.className="attack-arrow attack-arrow--glow"; 
+  img.className="attack-arrow"; // Classe neta sense animació
 
   const FACTOR=1.42;
   const width = 2 * R * FACTOR;
