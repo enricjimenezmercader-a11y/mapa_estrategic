@@ -101,7 +101,7 @@
       pointer-events: none;
     }
 
-    /* Contenidor inferior de botons rectangualars */
+    /* Contenidor inferior de botons rectangulars */
     #battleButtonsContainer {
       width: 85%;
       max-width: 1000px;
@@ -112,12 +112,13 @@
       padding-bottom: 30px;
     }
 
+    /* MODIFICACIÓ: Botons un 20% més petits en padding i tipografia */
     .battle-btn {
       background: #151525;
       color: #fff;
       border: 1px solid #334;
-      padding: 12px 20px;
-      font-size: 14px;
+      padding: 8px 14px; /* Abans: 12px 20px */
+      font-size: 12px;     /* Abans: 14px */
       font-weight: bold;
       text-align: left;
       border-radius: 4px;
@@ -362,7 +363,6 @@ async function updateActiveOrders(){
         }
       });
 
-      // Executa la creació dels botons ordonats i els marcadors amb lletres consecutives
       buildTacticalInterface(contactBattles, Array.from(attackDefenseTargets));
       
       const d = new Date();
@@ -373,7 +373,6 @@ async function updateActiveOrders(){
   }
 }
 
-// Funció unificada que genera lletres, botons inferiors i elements gràfics
 function buildTacticalInterface(contacts, atDefs) {
   const btnContainer = document.getElementById("battleButtonsContainer");
   const layer = document.getElementById("battleLayer");
@@ -388,37 +387,32 @@ function buildTacticalInterface(contacts, atDefs) {
 
   let letterIndex = 0;
   
-  // Funció auxiliar per obtenir la lletra de l'abecedari (A, B, C...)
   function getLetter(index) {
-    return String.fromCharCode(65 + index); // 65 és el codi ASCII de la 'A'
+    return String.fromCharCode(65 + index);
   }
 
-  // 1. Processar primer de tot les batalles de contacte
+  // 1. Processar batalles de contacte
   contacts.forEach(c => {
     const letter = getLetter(letterIndex++);
     const mx = (c.hexA.cx + c.hexB.cx) / 2;
     const my = (c.hexA.cy + c.hexB.cy) / 2;
 
-    // Marcador visual al mapa (Explosió + Lletra en Negre)
     createSvgExplosionWithLetter(layer, mx, my, explosionSize, letter);
 
-    // Creació de botó rectangular inferior
     const btn = document.createElement("button");
     btn.className = "battle-btn btn-contact";
     btn.textContent = `(${letter}) Batalla de contacte entre cota ${c.idA} i ${c.idB}`;
     btnContainer.appendChild(btn);
   });
 
-  // 2. Processar després els assalts d'atac-defensa
+  // 2. Processar assalts d'atac-defensa
   atDefs.forEach(targetId => {
     const hex = hexData.find(h => h.id === targetId);
     if(hex) {
       const letter = getLetter(letterIndex++);
 
-      // Marcador visual al mapa (Explosió + Lletra en Negre)
       createSvgExplosionWithLetter(layer, hex.cx, hex.cy, explosionSize, letter);
 
-      // Creació de botó rectangular inferior
       const btn = document.createElement("button");
       btn.className = "battle-btn btn-atdef";
       btn.textContent = `(${letter}) Assalt atac-defensa a cota ${targetId}`;
@@ -427,11 +421,9 @@ function buildTacticalInterface(contacts, atDefs) {
   });
 }
 
-// Genera el node de la imatge i el text SVG per sobre en un únic subgrup
 function createSvgExplosionWithLetter(parent, x, y, size, letter) {
   const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
 
-  // Imatge de l'explosió (Angle 0)
   const img = document.createElementNS("http://www.w3.org/2000/svg", "image");
   img.setAttributeNS("http://www.w3.org/1999/xlink", "href", EXPLOSION_IMG_URL);
   img.setAttribute("x", x - (size / 2));
@@ -441,13 +433,14 @@ function createSvgExplosionWithLetter(parent, x, y, size, letter) {
   img.setAttribute("class", "explosion-static");
   g.appendChild(img);
 
-  // Text amb la lletra identificativa (Color negre i centrat exactament a la bomba)
   const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
   text.setAttribute("x", x);
   text.setAttribute("y", y);
   text.setAttribute("class", "explosion-letter");
-  // Mida dinàmica del text en base al radi de l'hexàgon per evitar desbordaments
-  text.setAttribute("font-size", `${size * 0.35}px`); 
+  
+  // MODIFICACIÓ: Mida de la lletra reduïda al 70% respecte a l'anterior (era size * 0.35)
+  text.setAttribute("font-size", `${size * 0.245}px`); 
+  
   text.textContent = letter;
   g.appendChild(text);
 
