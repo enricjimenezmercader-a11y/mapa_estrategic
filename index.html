@@ -34,6 +34,58 @@
       font-family: monospace;
     }
 
+    /* Contenidor principal que alinea els marcadors i el mapa horitzontalment */
+    .main-layout {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 95%;
+      max-width: 1400px;
+      gap: 20px;
+    }
+
+    /* Estils compartits per als quadres de resum */
+    .team-panel {
+      width: 220px;
+      background: #101020;
+      border: 2px solid #334;
+      border-radius: 6px;
+      padding: 15px;
+      box-shadow: 0 0 15px rgba(0,0,0,0.5);
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .panel-title {
+      font-size: 16px;
+      font-weight: bold;
+      text-align: center;
+      padding-bottom: 6px;
+      border-bottom: 1px solid #334;
+      letter-spacing: 0.5px;
+    }
+
+    .panel-red { border-color: #ff4444; }
+    .panel-red .panel-title { color: #ff5555; }
+    
+    .panel-blue { border-color: #0078ff; }
+    .panel-blue .panel-title { color: #3399ff; }
+
+    .stat-line {
+      display: flex;
+      justify-content: space-between;
+      font-size: 13px;
+      color: #ccc;
+    }
+
+    .stat-value {
+      font-weight: bold;
+      color: #fff;
+      font-family: monospace;
+      font-size: 14px;
+    }
+
     .map-container{
       position:relative;
       background:#111;
@@ -123,11 +175,7 @@
       transition: background 0.2s, border-color 0.2s;
     }
 
-    .battle-btn:hover {
-      background: #202035;
-      border-color: #556;
-    }
-    
+    .battle-btn:hover { background: #202035; border-color: #556; }
     .btn-contact { border-left: 4px solid #ff5555; }
     .btn-atdef { border-left: 4px solid #ffcc00; }
 
@@ -145,10 +193,7 @@
       transition: opacity 0.2s ease;
     }
 
-    .modal-overlay.active {
-      opacity: 1;
-      pointer-events: auto;
-    }
+    .modal-overlay.active { opacity: 1; pointer-events: auto; }
 
     .modal-box {
       background: #101020;
@@ -190,10 +235,7 @@
       gap: 6px;
     }
 
-    .form-group label {
-      font-size: 13px;
-      color: #ccc;
-    }
+    .form-group label { font-size: 13px; color: #ccc; }
 
     .form-group select {
       background: #1c1c30;
@@ -228,12 +270,31 @@
 <div id="titleBar">PANEL INFORMATIU GLOBAL — RADAR TÀCTIC</div>
 <div id="loadingIndicator">Sincronitzant dades amb el quarter general...</div>
 
-<div class="map-container" id="mapContainer">
-  <img class="map-image"
-       src="https://github.com/enricjimenezmercader-a11y/mapa_estrategic/blob/481d1cc0765b31581a6f050a7f68d53400172e48/map_hex.jpg?raw=true"
-       alt="Mapa estratègic">
+<div class="main-layout">
+  
+  <div class="team-panel panel-red">
+    <div class="panel-title">EQUIP VERMELL</div>
+    <div class="stat-line">Accions: <span class="stat-value" id="v_accions">-</span></div>
+    <div class="stat-line">Territoris: <span class="stat-value" id="v_territoris">-</span></div>
+    <div class="stat-line">Unitats destruïdes: <span class="stat-value" id="v_destruides">-</span></div>
+    <div class="stat-line">Unitats perdudes: <span class="stat-value" id="v_perdudes">-</span></div>
+  </div>
 
-  <svg id="hexGrid"></svg>
+  <div class="map-container" id="mapContainer">
+    <img class="map-image"
+         src="https://github.com/enricjimenezmercader-a11y/mapa_estrategic/blob/481d1cc0765b31581a6f050a7f68d53400172e48/map_hex.jpg?raw=true"
+         alt="Mapa estratègic">
+    <svg id="hexGrid"></svg>
+  </div>
+
+  <div class="team-panel panel-blue">
+    <div class="panel-title">EQUIP BLAU</div>
+    <div class="stat-line">Accions: <span class="stat-value" id="b_accions">-</span></div>
+    <div class="stat-line">Territoris: <span class="stat-value" id="b_territoris">-</span></div>
+    <div class="stat-line">Unitats destruïdes: <span class="stat-value" id="b_destruides">-</span></div>
+    <div class="stat-line">Unitats perdudes: <span class="stat-value" id="b_perdudes">-</span></div>
+  </div>
+
 </div>
 
 <div id="battleButtonsContainer"></div>
@@ -272,7 +333,6 @@ const COLORS_JSON_URL="https://script.google.com/macros/s/AKfycbyM44gMczZ9XQvIJh
 const ORDERS_JSON_URL="https://script.google.com/macros/s/AKfycbzDdC4yHTVFzNdsSRJE7yfiRRvOiCPssSyVBEDPV92gSksgOnwfIVSUVVRkGSbzy_EBDw/exec";
 const EXPLOSION_IMG_URL="https://github.com/enricjimenezmercader-a11y/mapa_estrategic/blob/894cd2a4b1d3605c654d4eaaa5862f5d90b6c2c4/explosion.png?raw=true";
 
-// URL ACTUALITZADA DE L'APPS SCRIPT DEL SERVER
 const WEB_APP_RESOLVE_URL = "https://script.google.com/macros/s/AKfycbwaUU2qtxNhaa3a-xPX7IuPcu-Kh4xtEu7CogJ6AUYkVxN_9ziF4yNglZCVzFutzIEQnQ/exec";
 
 const REAL_R=41.78;
@@ -309,11 +369,7 @@ async function fetchJSONP(url){
     script.src = url + separator + "callback=" + callbackName;
     script.type = 'text/javascript';
 
-    script.onerror = function() {
-      cleanup();
-      reject(new Error('Error de connexió de xarxa'));
-    };
-
+    script.onerror = function() { cleanup(); reject(new Error('Error de connexió de xarxa')); };
     document.head.appendChild(script);
   });
 }
@@ -321,7 +377,7 @@ async function fetchJSONP(url){
 function resizeMap(){
   const map=document.getElementById("mapContainer");
   const W=window.innerWidth; const H=window.innerHeight;
-  const maxW=W*(0.85); const maxH=H*(0.65);
+  const maxW=W*(0.60); const maxH=H*(0.65); // Reduït el maxW al 60% per deixar espai als marges per als quadres
   let width=maxW; let height=width/IMAGE_RATIO;
   if(height>maxH){ height=maxH; width=height*IMAGE_RATIO; }
   map.style.width=width+"px"; map.style.height=height+"px";
@@ -395,7 +451,6 @@ function submitBattleResolution() {
 
   resolvedBattlesLog.push(uniqueBattleKey);
 
-  // Neteja de la interfície instantània
   const explosionGroup = document.getElementById(`expGroup-${battleLetter}`);
   if (explosionGroup) explosionGroup.remove();
 
@@ -408,7 +463,6 @@ function submitBattleResolution() {
 
   if(activeBattleDetails.btnElement) activeBattleDetails.btnElement.remove();
 
-  // EXECUCIÓ DIRECTA DE L'ORDRE REESCRIPTORA EN COINCIDIR AMB EL BOTÓ RESOLDRE
   const callbackName = 'jsonp_save_' + Date.now();
   window[callbackName] = function(response) {
     console.log("Ordre processada per Google:", response);
@@ -435,11 +489,14 @@ function submitBattleResolution() {
   closeResolutionModal();
 }
 
+// ACTUALITZACIÓ SIMULTÀNIA DE COLORS I QUADRES DE RESUM DE FORMA DINÀMICA
 async function updateHexColors(){
   try {
-    const data = await fetchJSONP(COLORS_JSON_URL);
-    if (Array.isArray(data)) {
-      data.forEach(row => {
+    const dataObj = await fetchJSONP(COLORS_JSON_URL);
+    
+    // 1. Processar Hexàgons si l'estructura és correcta
+    if (dataObj && Array.isArray(dataObj.hexagons)) {
+      dataObj.hexagons.forEach(row => {
         const id = parseInt(row["A"]); const color = (row["B"] || "MAR").toUpperCase();
         const hex = hexData.find(h => h.id === id);
         if(hex) {
@@ -449,7 +506,25 @@ async function updateHexColors(){
         }
       });
     }
-  } catch(e) { console.log("Error colors:", e.message); }
+
+    // 2. Injectar dades dinàmiques als marcadors laterals (sense icones)
+    if (dataObj && dataObj.marcadors) {
+      const m = dataObj.marcadors;
+      
+      // Equip Vermell (Esquerra)
+      document.getElementById("v_accions").textContent = m.vermell_accions !== undefined ? m.vermell_accions : "-";
+      document.getElementById("v_territoris").textContent = m.vermell_territoris !== undefined ? m.vermell_territoris : "-";
+      document.getElementById("v_destruides").textContent = m.vermell_destruides !== undefined ? m.vermell_destruides : "-";
+      document.getElementById("v_perdudes").textContent = m.vermell_perdudes !== undefined ? m.vermell_perdudes : "-";
+
+      // Equip Blau (Dreta)
+      document.getElementById("b_accions").textContent = m.blau_accions !== undefined ? m.blau_accions : "-";
+      document.getElementById("b_territoris").textContent = m.blau_territoris !== undefined ? m.blau_territoris : "-";
+      document.getElementById("b_destruides").textContent = m.blau_destruides !== undefined ? m.blau_destruides : "-";
+      document.getElementById("b_perdudes").textContent = m.blau_perdudes !== undefined ? m.blau_perdudes : "-";
+    }
+
+  } catch(e) { console.log("Error sincronització marcadors/colors:", e.message); }
 }
 
 async function updateActiveOrders(){
