@@ -65,6 +65,18 @@
       transition: width 0.8s ease-in-out;
     }
 
+    /* ESTIL DEL SUBTÍTOL DINÀMIC DEL TORN (75% del títol principal = 21px) */
+    #turnIndicator {
+      font-size: 21px;
+      font-weight: bold;
+      text-align: center;
+      color: #ffffff;
+      letter-spacing: 0.5px;
+      margin-top: -5px;
+      margin-bottom: 5px;
+      text-shadow: 0 0 8px rgba(255,255,255,0.15);
+    }
+
     .main-layout {
       display: flex;
       align-items: center;
@@ -164,7 +176,6 @@
       dominant-baseline: central; pointer-events: none;
     }
 
-    /* CAPA I TEXT DE LA MARCA D'AIGUA CORREGIDA AMB L'ANGLE DE LA DIAGONAL ELECTA */
     .watermark-overlay {
       position: absolute;
       inset: 0;
@@ -173,25 +184,22 @@
       justify-content: center;
       z-index: 25;
       pointer-events: none;
-      background: rgba(0, 0, 0, 0.35); /* Una mica més fosc el fons per fer contrast */
+      background: rgba(0, 0, 0, 0.35);
     }
 
     .watermark-text {
       font-size: 34px;
       font-weight: 900;
-      color: rgba(255, 255, 255, 0.28); /* Menys transparent (abans era 0.12) */
+      color: rgba(255, 255, 255, 0.28);
       text-transform: uppercase;
       letter-spacing: 2px;
       white-space: nowrap;
-      
-      /* Ajust geomètric exacte per a un aspect-ratio de 1.4: atan(1/1.4) = ~35.54 graus */
       transform: rotate(-35.54deg);
-      
       user-select: none;
       border: 4px dashed rgba(255, 255, 255, 0.15);
       padding: 12px 40px;
       text-shadow: 0 0 15px rgba(0,0,0,0.6);
-      width: 90%; /* Força que ocupi l'amplada relativa del mapa */
+      width: 90%;
       text-align: center;
     }
 
@@ -263,6 +271,8 @@
   <div id="redBarPart"></div>
   <div id="blueBarPart"></div>
 </div>
+
+<div id="turnIndicator">TORN -</div>
 
 <div class="main-layout">
   
@@ -463,6 +473,10 @@ async function updateHexColors(){
     if (Array.isArray(rowsList)) {
       let v_accions = "-", v_territoris = 0, baixes_vermell = 0;
       let b_accions = "-", b_territoris = 0, baixes_blaves = 0;
+      
+      // Variables per emmagatzemar el torn (O6) i dia (O8) llegits del JSON
+      let valorTorn = "";
+      let valorDia = "";
 
       vermellImpartit = false;
       blauImpartit = false;
@@ -497,7 +511,20 @@ async function updateHexColors(){
           baixes_vermell = row["L"] !== undefined ? parseInt(row["L"]) || 0 : baixes_vermell; 
           baixes_blaves = row["M"] !== undefined ? parseInt(row["M"]) || 0 : baixes_blaves;   
         }
+
+        // EXTRACCIÓ DE LES CEL·LES DE MÀNAGER (O6 i O8) MAPEJDADES AL PANEL DE CONTROL
+        if (kText.includes("num_torn")) {
+          valorTorn = row["O"] !== undefined ? row["O"].toString().trim() : "";
+        }
+        if (kText.includes("dia_torn")) {
+          valorDia = row["O"] !== undefined ? row["O"].toString().trim() : "";
+        }
       });
+
+      // ACTUALITZACIÓ DE LA CADENA TEXTUAL SOL·LICITADA
+      if(valorTorn && valorDia) {
+        document.getElementById("turnIndicator").textContent = `TORN ${valorTorn} - ${valorDia}`;
+      }
 
       document.getElementById("v_accions").textContent = v_accions;
       document.getElementById("v_territoris").textContent = v_territoris;
