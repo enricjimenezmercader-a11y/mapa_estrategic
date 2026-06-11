@@ -32,9 +32,11 @@
       font-size: 13px;
       color: #888;
       font-family: monospace;
+      min-height: 18px; /* Evita que el layout es mogui quan no hi ha text */
+      text-align: center;
     }
 
-    /* BARRA DE CONTROL TERRITORIAL */
+    /* BARRA DE CONTROL TERRITORIAL — FIXADA PERQUÈ NO DESAPAREGUI */
     .territory-bar-container {
       width: 85%;
       max-width: 1000px;
@@ -46,6 +48,7 @@
       overflow: hidden;
       margin-top: 5px;
       box-shadow: 0 0 10px rgba(0,0,0,0.3);
+      flex-shrink: 0; /* Impedeix que col·lapsi per culpa d'altres elements */
     }
 
     #redBarPart {
@@ -318,7 +321,6 @@ async function fetchJSONP(url){
   });
 }
 
-// CORREGIT: Amplada del contenidor del mapa per evitar compressions verticals estranyes
 function resizeMap(){
   const map=document.getElementById("mapContainer");
   const W=window.innerWidth; const H=window.innerHeight;
@@ -420,8 +422,8 @@ async function updateHexColors(){
   try {
     const rowsList = await fetchJSONP(COLORS_JSON_URL);
     if (Array.isArray(rowsList)) {
-      let v_accions = "-", v_territoris = 0, baixes_vermell = "-";
-      let b_accions = "-", b_territoris = 0, baixes_blaves = "-";
+      let v_accions = "-", v_territoris = 0, baixes_vermell = 0;
+      let b_accions = "-", b_territoris = 0, baixes_blaves = 0;
 
       rowsList.forEach(row => {
         const id = parseInt(row["A"]); 
@@ -442,24 +444,23 @@ async function updateHexColors(){
         if (kText.includes("territori vermell")) v_territoris = parseInt(row["L"]) || 0;
         if (kText.includes("territori blau")) b_territoris = parseInt(row["L"]) || 0;
 
-        // Lectura directa de les cel·les L12 i M12 del full
         if (kText.includes("baixes blave") || kText.includes("gastades v") || kText.includes("remanent vermell")) {
-          baixes_vermell = row["L"] !== undefined ? row["L"] : baixes_vermell; // L12
-          baixes_blaves = row["M"] !== undefined ? row["M"] : baixes_blaves;   // M12
+          baixes_vermell = row["L"] !== undefined ? parseInt(row["L"]) || 0 : baixes_vermell; 
+          baixes_blaves = row["M"] !== undefined ? parseInt(row["M"]) || 0 : baixes_blaves;   
         }
       });
 
-      // Assignació simètrica perfecta
       document.getElementById("v_accions").textContent = v_accions;
       document.getElementById("v_territoris").textContent = v_territoris;
-      document.getElementById("v_destruides").textContent = baixes_blaves;  // Vermell ha destruït el que el blau ha perdut
-      document.getElementById("v_perdudes").textContent = baixes_vermell;   // Vermell ha perdut les seves pròpies baixes
+      document.getElementById("v_destruides").textContent = baixes_blaves;  
+      document.getElementById("v_perdudes").textContent = baixes_vermell;   
 
       document.getElementById("b_accions").textContent = b_accions;
       document.getElementById("b_territoris").textContent = b_territoris;
-      document.getElementById("b_destruides").textContent = baixes_vermell; // Blau ha destruït el que el vermell ha perdut
-      document.getElementById("b_perdudes").textContent = baixes_blaves;    // Blau ha perdut les seves pròpies baixes
+      document.getElementById("b_destruides").textContent = baixes_vermell; 
+      document.getElementById("b_perdudes").textContent = baixes_blaves;    
 
+      // REFORÇAT: Càlcul segur i actualització constant de la barra
       const totalT = v_territoris + b_territoris;
       if (totalT > 0) {
         const redPct = (v_territoris / totalT) * 100;
@@ -511,7 +512,9 @@ async function updateActiveOrders(){
         if (!isResolved) placeInformativeArrow(order.originHex, order.targetHex);
       });
       buildTacticalInterface(contactBattles, Array.from(attackDefenseTargets));
-      const d = new Date(); document.getElementById("loadingIndicator").textContent = `Radar analitzat correctament: ${d.toLocaleTimeString()}`;
+      
+      const d = new Date(); 
+      document.getElementById("loadingIndicator").textContent = `Radar analitzat correctament: ${d.toLocaleTimeString()}`;
     }
   } catch(e) { document.getElementById("loadingIndicator").textContent = `⚠️ Error analitzador: ${e.message}`; }
 }
