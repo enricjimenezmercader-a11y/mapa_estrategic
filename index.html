@@ -34,7 +34,6 @@
       font-family: monospace;
     }
 
-    /* Contenidor principal per alinear els marcadors i el mapa horitzontalment */
     .main-layout {
       display: flex;
       align-items: center;
@@ -44,7 +43,6 @@
       gap: 20px;
     }
 
-    /* Estils dels quadres de resum */
     .team-panel {
       width: 220px;
       background: #101020;
@@ -489,51 +487,78 @@ function submitBattleResolution() {
   closeResolutionModal();
 }
 
-// ADAPTAT: processa la llista plana enviada per la teva Apps Script original
+// CORREGIT: Escaneig intel·ligent del JSON lliurat pel teu Apps Script original
 async function updateHexColors(){
   try {
     const rowsList = await fetchJSONP(COLORS_JSON_URL);
     
     if (Array.isArray(rowsList)) {
-      // 1. Processar els Hexàgons (es llegeixen fins que l'ID sigui numèric, per exemple línies 1 a 47)
+      
+      // Variables per acumular el recompte final dels marcadors laterals
+      let v_accions = "-", v_territoris = "-", v_destruides = "-", v_perdudes = "-";
+      let b_accions = "-", b_territoris = "-", b_destruides = "-", b_perdudes = "-";
+
       rowsList.forEach(row => {
+        // 1. Processar Cotes del mapa (Columna A numèrica, Columna B color)
         const id = parseInt(row["A"]); 
-        const color = (row["B"] || "MAR").toUpperCase();
         if (!isNaN(id)) {
+          const color = (row["B"] || "MAR").trim().toUpperCase();
           const hex = hexData.find(h => h.id === id);
           if(hex) {
-            hex.color = color; let cls = "hex hex-mar";
-            if(color.includes("RED")) cls = "hex hex-red"; else if(color.includes("BLUE")) cls = "hex hex-blue";
+            hex.color = color; 
+            let cls = "hex hex-mar";
+            if(color === "RED") cls = "hex hex-red"; 
+            else if(color === "BLUE") cls = "hex hex-blue";
             hex.element.setAttribute("class", cls);
           }
         }
+
+        // 2. Cercar marcadors i lletres de control utilitzant paraules clau directes
+        const kText = row["K"] ? row["K"].toString().toLowerCase() : "";
+        const gText = row["G"] ? row["G"].toString().toLowerCase() : "";
+
+        // -- EQUIP VERMELL --
+        if (kText.includes("inicials vermell")) {
+          v_accions = row["H"] !== undefined ? row["H"] : v_accions;
+        }
+        if (kText.includes("territori vermell")) {
+          v_territoris = row["L"] !== undefined ? row["L"] : v_territoris;
+        }
+        if (kText.includes("gastades v") || gText.includes("gastades v")) {
+          v_perdudes = row["L"] !== undefined ? row["L"] : v_perdudes;
+        }
+        if (kText.includes("baixes vermells") || kText.includes("baixes vermelles")) {
+          v_destruides = row["L"] !== undefined ? row["L"] : v_destruides;
+        }
+
+        // -- EQUIP BLAU --
+        if (kText.includes("inicials blau")) {
+          b_accions = row["H"] !== undefined ? row["H"] : b_accions;
+        }
+        if (kText.includes("territori blau")) {
+          b_territoris = row["L"] !== undefined ? row["L"] : b_territoris;
+        }
+        if (kText.includes("boti blau")) {
+          b_perdudes = row["L"] !== undefined ? row["L"] : b_perdudes;
+        }
+        if (kText.includes("baixes blaves") || kText.includes("baixes blaves")) {
+          b_destruides = row["L"] !== undefined ? row["L"] : b_destruides;
+        }
       });
 
-      // 2. Extreure manualment els valors de les cel·les dels marcadors
-      // Com que l'Apps Script omet la fila 1 (headers), la fila 2 de l'Excel és rowsList[0], la fila 3 és rowsList[1], etc.
-      
-      const row2 = rowsList[0] || {};  // Fila 2 de l'Excel
-      const row3 = rowsList[1] || {};  // Fila 3 de l'Excel
-      const row9 = rowsList[7] || {};  // Fila 9 de l'Excel
-      const row10 = rowsList[8] || {}; // Fila 10 de l'Excel
-      const row12 = rowsList[10] || {};// Fila 12 de l'Excel
+      // 3. Pintar resultats trobats als marcadors laterals
+      document.getElementById("v_accions").textContent = v_accions;
+      document.getElementById("v_territoris").textContent = v_territoris;
+      document.getElementById("v_destruides").textContent = v_destruides;
+      document.getElementById("v_perdudes").textContent = v_perdudes;
 
-      // Equip Vermell (Esquerra)
-      // Accions: H2, Territoris: L9, Unitats destruïdes: L12, Unitats perdudes: M12
-      document.getElementById("v_accions").textContent = row2["H"] !== undefined ? row2["H"] : "-";
-      document.getElementById("v_territoris").textContent = row9["L"] !== undefined ? row9["L"] : "-";
-      document.getElementById("v_destruides").textContent = row12["L"] !== undefined ? row12["L"] : "-";
-      document.getElementById("v_perdudes").textContent = row12["M"] !== undefined ? row12["M"] : "-";
-
-      // Equip Blau (Dreta)
-      // Accions: H3, Territoris: L10, Unitats destruïdes: M12, Unitats perdudes: L12
-      document.getElementById("b_accions").textContent = row3["H"] !== undefined ? row3["H"] : "-";
-      document.getElementById("b_territoris").textContent = row10["L"] !== undefined ? row10["L"] : "-";
-      document.getElementById("b_destruides").textContent = row12["M"] !== undefined ? row12["M"] : "-";
-      document.getElementById("b_perdudes").textContent = row12["L"] !== undefined ? row12["L"] : "-";
+      document.getElementById("b_accions").textContent = b_accions;
+      document.getElementById("b_territoris").textContent = b_territoris;
+      document.getElementById("b_destruides").textContent = b_destruides;
+      document.getElementById("b_perdudes").textContent = b_perdudes;
     }
 
-  } catch(e) { console.log("Error en processar colors o marcadors estructurals:", e.message); }
+  } catch(e) { console.log("Error en processar estructures de text/color:", e.message); }
 }
 
 async function updateActiveOrders(){
