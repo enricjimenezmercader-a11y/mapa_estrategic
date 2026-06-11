@@ -415,7 +415,7 @@ function submitBattleResolution() {
   closeResolutionModal();
 }
 
-// SINCRONITZACIÓ DE COLORS, MARCADORS I BARRA DE TERRITORI
+// CORREGIT: Mapejador súper flexible i immune a canvis de lletres, plurals o espais
 async function updateHexColors(){
   try {
     const rowsList = await fetchJSONP(COLORS_JSON_URL);
@@ -434,30 +434,52 @@ async function updateHexColors(){
             hex.element.setAttribute("class", cls);
           }
         }
-        const kText = row["K"] ? row["K"].toString().toLowerCase() : "";
-        const gText = row["G"] ? row["G"].toString().toLowerCase() : "";
+        
+        // Convertim el text del panell a minúscules i netegem espais per evitar trencaments
+        const kText = row["K"] ? row["K"].toString().toLowerCase().trim() : "";
+        const gText = row["G"] ? row["G"].toString().toLowerCase().trim() : "";
 
-        if (kText.includes("inicials vermell")) v_accions = row["H"] || v_accions;
-        if (kText.includes("territori vermell")) v_territoris = parseInt(row["L"]) || 0;
-        if (kText.includes("gastades v") || gText.includes("gastades v")) v_perdudes = row["L"] || v_perdudes;
-        if (kText.includes("baixes vermells") || kText.includes("baixes vermelles")) v_destruides = row["L"] || v_destruides;
+        // -- FILTRES ROBUSTOS EQUIP VERMELL --
+        if (kText.includes("inicials vermell")) {
+          v_accions = row["H"] !== undefined ? row["H"] : v_accions;
+        }
+        if (kText.includes("territori vermell")) {
+          v_territoris = parseInt(row["L"]) || 0;
+        }
+        if (kText.includes("gastades v") || gText.includes("gastades v")) {
+          v_perdudes = row["L"] !== undefined ? row["L"] : v_perdudes;
+        }
+        if (kText.includes("baixes vermell")) { // Detecta "baixes vermells" i "baixes vermelles"
+          v_destruides = row["L"] !== undefined ? row["L"] : v_destruides;
+        }
 
-        if (kText.includes("inicials blau")) b_accions = row["H"] || b_accions;
-        if (kText.includes("territori blau")) b_territoris = parseInt(row["L"]) || 0;
-        if (kText.includes("boti blau")) b_perdudes = row["L"] || b_perdudes;
-        if (kText.includes("baixes blaves")) b_destruides = row["L"] || b_destruides;
+        // -- FILTRES ROBUSTOS EQUIP BLAU --
+        if (kText.includes("inicials blau")) {
+          b_accions = row["H"] !== undefined ? row["H"] : b_accions;
+        }
+        if (kText.includes("territori blau")) {
+          b_territoris = parseInt(row["L"]) || 0;
+        }
+        if (kText.includes("boti blau") || kText.includes("gastades b") || gText.includes("gastades b")) {
+          b_perdudes = row["L"] !== undefined ? row["L"] : b_perdudes;
+        }
+        if (kText.includes("baixes blave")) { // Detecta "baixes blaves" sense importar la darrera lletra
+          b_destruides = row["L"] !== undefined ? row["L"] : b_destruides;
+        }
       });
 
+      // Assignació visual als marcadors de la interfície
       document.getElementById("v_accions").textContent = v_accions;
       document.getElementById("v_territoris").textContent = v_territoris;
       document.getElementById("v_destruides").textContent = v_destruides;
       document.getElementById("v_perdudes").textContent = v_perdudes;
+      
       document.getElementById("b_accions").textContent = b_accions;
       document.getElementById("b_territoris").textContent = b_territoris;
       document.getElementById("b_destruides").textContent = b_destruides;
       document.getElementById("b_perdudes").textContent = b_perdudes;
 
-      // ACTUALITZAR BARRA DE TERRITORI
+      // ACTUALITZACIÓ PROPORCIONAL DE LA BARRA DE TERRITORI
       const totalT = v_territoris + b_territoris;
       if (totalT > 0) {
         const redPct = (v_territoris / totalT) * 100;
@@ -468,7 +490,7 @@ async function updateHexColors(){
         document.getElementById("blueBarPart").style.width = "50%";
       }
     }
-  } catch(e) { console.log("Error sincronització:", e.message); }
+  } catch(e) { console.log("Error de sincronització de dades:", e.message); }
 }
 
 async function updateActiveOrders(){
