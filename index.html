@@ -32,11 +32,10 @@
       font-size: 13px;
       color: #888;
       font-family: monospace;
-      min-height: 18px; /* Evita que el layout es mogui quan no hi ha text */
+      min-height: 18px;
       text-align: center;
     }
 
-    /* BARRA DE CONTROL TERRITORIAL — FIXADA PERQUÈ NO DESAPAREGUI */
     .territory-bar-container {
       width: 85%;
       max-width: 1000px;
@@ -48,7 +47,7 @@
       overflow: hidden;
       margin-top: 5px;
       box-shadow: 0 0 10px rgba(0,0,0,0.3);
-      flex-shrink: 0; /* Impedeix que col·lapsi per culpa d'altres elements */
+      flex-shrink: 0;
     }
 
     #redBarPart {
@@ -165,6 +164,31 @@
       dominant-baseline: central; pointer-events: none;
     }
 
+    /* MARCA D'AIGUA CUAN ELS DOS EQUIPS NO HAN CONFIRMAT */
+    .watermark-overlay {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 25;
+      pointer-events: none;
+      background: rgba(0, 0, 0, 0.15);
+    }
+
+    .watermark-text {
+      font-size: 38px;
+      font-weight: 900;
+      color: rgba(255, 255, 255, 0.12);
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      white-space: nowrap;
+      transform: rotate(-45deg);
+      user-select: none;
+      border: 4px dashed rgba(255, 255, 255, 0.05);
+      padding: 10px 30px;
+    }
+
     #battleButtonsContainer {
       width: 85%; max-width: 1000px;
       display: flex; flex-direction: column; gap: 10px;
@@ -245,6 +269,7 @@
   </div>
 
   <div class="map-container" id="mapContainer">
+    <div id="watermarkLayer"></div>
     <img class="map-image"
          src="https://github.com/enricjimenezmercader-a11y/mapa_estrategic/blob/481d1cc0765b31581a6f050a7f68d53400172e48/map_hex.jpg?raw=true"
          alt="Mapa estratègic">
@@ -306,6 +331,10 @@ let hexData=[];
 let arrowElements=[]; 
 let activeBattleDetails = null;
 let resolvedBattlesLog = [];
+
+// Flags globals que controlen si el panell central pot dibuixar elements tàctics
+let vermellImpartit = false;
+let blauImpartit = false;
 
 async function fetchJSONP(url){
   return new Promise((resolve, reject) => {
@@ -425,6 +454,10 @@ async function updateHexColors(){
       let v_accions = "-", v_territoris = 0, baixes_vermell = 0;
       let b_accions = "-", b_territoris = 0, baixes_blaves = 0;
 
+      // Resetejar controls d'ordres abans d'analitzar les files cel·la per cel·la
+      vermellImpartit = false;
+      blauImpartit = false;
+
       rowsList.forEach(row => {
         const id = parseInt(row["A"]); 
         if (!isNaN(id)) {
@@ -439,8 +472,18 @@ async function updateHexColors(){
         
         const kText = row["K"] ? row["K"].toString().toLowerCase().trim() : "";
 
-        if (kText.includes("inicials vermell")) v_accions = row["H"] !== undefined ? row["H"] : v_accions;
-        if (kText.includes("inicials blau")) b_accions = row["H"] !== undefined ? row["H"] : b_accions;
+        // CONTROL RIGURÓS DE LES CEL·LES E2 i E3 DE CONTROL D'ORDRES IMPARTIDES
+        if (kText.includes("inicials vermell")) {
+          v_accions = row["H"] !== undefined ? row["H"] : v_accions;
+          // Comprova si la cel·la E2 (mapejada a la columna E de la fila corresponent) té un valor d'1
+          if(parseInt(row["E"]) === 1) { vermellImpartit = true; }
+        }
+        if (kText.includes("inicials blau")) {
+          b_accions = row["H"] !== undefined ? row["H"] : b_accions;
+          // Comprova si la cel·la E3 (mapejada a la columna E de la fila corresponent) té un valor d'1
+          if(parseInt(row["E"]) === 1) { blauImpartit = true; }
+        }
+
         if (kText.includes("territori vermell")) v_territoris = parseInt(row["L"]) || 0;
         if (kText.includes("territori blau")) b_territoris = parseInt(row["L"]) || 0;
 
@@ -460,7 +503,6 @@ async function updateHexColors(){
       document.getElementById("b_destruides").textContent = baixes_vermell; 
       document.getElementById("b_perdudes").textContent = baixes_blaves;    
 
-      // REFORÇAT: Càlcul segur i actualització constant de la barra
       const totalT = v_territoris + b_territoris;
       if (totalT > 0) {
         const redPct = (v_territoris / totalT) * 100;
@@ -476,9 +518,40 @@ async function updateHexColors(){
 
 async function updateActiveOrders(){
   try {
-    const orderStrings = await fetchJSONP(ORDERS_JSON_URL);
+    // Primer executem l'actualització de dades generals per saber l'estat de les cel·les E2 i E3
+    await updateHexColors();
+
+    const watermarkLayer = document.getElementById("watermarkLayer");
+    const btnContainer = document.getElementById("battleButtonsContainer"); 
+    const battleLayer = document.getElementById("battleLayer");
+
+    // Neteja absoluta preventiva d'elements previs d'ordres
     arrowElements.forEach(img => img.remove()); arrowElements = [];
-    const battleLayer = document.getElementById("battleLayer"); if(battleLayer) battleLayer.innerHTML = "";
+    if(battleLayer) battleLayer.innerHTML = "";
+    btnContainer.innerHTML = "";
+
+    // CONTROL DE DOBLE CONDICIÓ REQUERIDA (E2 == 1 i E3 == 1)
+    if (!vermellImpartit || !blauImpartit) {
+      // Si un dels dos o cap ha lliurat les ordres, bloquegem fletxes/batalles i muntem la marca d'aigua
+      if (watermarkLayer && watermarkLayer.children.length === 0) {
+        const overlay = document.createElement("div");
+        overlay.className = "watermark-overlay";
+        const textSpan = document.createElement("div");
+        textSpan.className = "watermark-text";
+        textSpan.textContent = "Esperant ordres dels equips";
+        overlay.appendChild(textSpan);
+        watermarkLayer.appendChild(overlay);
+      }
+      
+      const d = new Date();
+      document.getElementById("loadingIndicator").textContent = `Radar latent (esperant ordres creuades): ${d.toLocaleTimeString()}`;
+      return; // Atura l'execució de la funció aquí per evitar el dibuix de fletxes i botons
+    }
+
+    // Si es compleix la doble condició, esborrem la marca d'aigua i processem les ordres normalment
+    if (watermarkLayer) watermarkLayer.innerHTML = "";
+
+    const orderStrings = await fetchJSONP(ORDERS_JSON_URL);
     if (Array.isArray(orderStrings)) {
       let activeOrders = [];
       orderStrings.forEach(orderText => {
@@ -585,7 +658,7 @@ function placeInformativeArrow(origin,target){
   map.appendChild(img); arrowElements.push(img);
 }
 
-async function syncRadarData(){ await updateHexColors(); await updateActiveOrders(); }
+async function syncRadarData(){ await updateActiveOrders(); }
 function fullRedraw(){ resizeMap(); initHexGridStructure(); syncRadarData(); }
 window.addEventListener("resize", fullRedraw);
 populateSelectorOptions(); resizeMap(); initHexGridStructure();
