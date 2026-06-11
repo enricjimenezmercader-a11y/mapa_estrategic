@@ -225,7 +225,6 @@
     .btn-contact { border-left: 4px solid #ff5555; }
     .btn-atdef { border-left: 4px solid #ffcc00; }
 
-    /* Estils per al botó finalitzador i el seu efecte de brillantor */
     #endTurnContainer {
       width: 85%; max-width: 1000px;
       display: flex; justify-content: center;
@@ -386,6 +385,9 @@ const ORDERS_JSON_URL="https://script.google.com/macros/s/AKfycbzDdC4yHTVFzNdsSR
 const EXPLOSION_IMG_URL="https://github.com/enricjimenezmercader-a11y/mapa_estrategic/blob/894cd2a4b1d3605c654d4eaaa5862f5d90b6c2c4/explosion.png?raw=true";
 const WEB_APP_RESOLVE_URL = "https://script.google.com/macros/s/AKfycbwaUU2qtxNhaa3a-xPX7IuPcu-Kh4xtEu7CogJ6AUYkVxN_9ziF4yNglZCVzFutzIEQnQ/exec";
 
+// Nova URL de l'Script independent per a la finalització de torn (Opció B)
+const WEB_APP_END_TURN_URL = "https://script.google.com/macros/s/AKfycbywU92NsUQLgcGUuGiCCOQ48y4G9n-jxmFr-4GVJImOr36dcKZJJbpydfGVkDlE95r78w/exec";
+
 const REAL_R=41.78;
 const REAL_GRID_WIDTH=17*REAL_R;
 const IMAGE_RATIO=1.4;
@@ -400,6 +402,8 @@ let blauImpartit = false;
 
 let lastOrdersHash = "";
 let lastWatermarkState = null; 
+
+let proximTornValor = "";
 
 async function fetchJSONP(url){
   return new Promise((resolve, reject) => {
@@ -539,6 +543,7 @@ async function updateHexColors(){
       rowsList.forEach(row => {
         const rowIdAttr = parseInt(row["A"]);
         if (rowIdAttr === 6) valorTorn = row["O"] !== undefined ? row["O"].toString().trim() : "";
+        if (rowIdAttr === 7) proximTornValor = row["O"] !== undefined ? row["O"].toString().trim() : "";
         if (rowIdAttr === 8) valorDia = row["O"] !== undefined ? row["O"].toString().trim() : "";
 
         const id = parseInt(row["A"]); 
@@ -729,7 +734,6 @@ function buildTacticalInterface(contacts, atDefs) {
     }
   });
 
-  // VERIFICACIÓ FINAL: Si els dos equips han jugat i no queden botons de combat pendents de resoldre
   if (vermellImpartit && blauImpartit && btnContainer.children.length === 0) {
     const endTurnBtn = document.createElement("button");
     endTurnBtn.className = "btn-end-turn";
@@ -741,8 +745,24 @@ function buildTacticalInterface(contacts, atDefs) {
 }
 
 function handleEndTurnClick() {
-  console.log("Botó 'Finalitzar torn' polsat. Esperant definició de funcions...");
-  // Aquí aniran les teves noves funcions
+  document.getElementById("loadingIndicator").textContent = "Processant finalització de torn...";
+  
+  const callbackName = 'jsonp_end_turn_' + Date.now();
+  window[callbackName] = function(response) {
+    delete window[callbackName];
+    const scr = document.getElementById(callbackName);
+    if (scr) scr.remove();
+    document.getElementById("loadingIndicator").textContent = "Torn finalitzat correctament al full de control.";
+  };
+
+  const finalUrl = WEB_APP_END_TURN_URL + 
+                   "?nou_torn=" + encodeURIComponent(proximTornValor) + 
+                   "&callback=" + callbackName;
+
+  const scriptInject = document.createElement("script");
+  scriptInject.id = callbackName;
+  scriptInject.src = finalUrl;
+  document.head.appendChild(scriptInject);
 }
 
 function createSvgExplosionWithLetter(parent, x, y, size, letter) {
@@ -769,7 +789,7 @@ function arrowURL(dir){
     "NE":"https://raw.githubusercontent.com/enricjimenezmercader-a11y/mapa_estrategic/main/AT-NE.svg",
     "NO":"https://raw.githubusercontent.com/enricjimenezmercader-a11y/mapa_estrategic/main/AT-NO.svg",
     "S":"https://raw.githubusercontent.com/enricjimenezmercader-a11y/mapa_estrategic/main/AT-S.svg",
-    "SE":"https://raw.githubusercontent.com/enricjimenezmercader-a11y/mapa_estrategic/main/AT-SE.svg",
+    "SE":"https://raw.githubusercontent.com/enricjimenezmercader-a11y/mapa_estrategic/main/SE.svg",
     "SO":"https://raw.githubusercontent.com/enricjimenezmercader-a11y/mapa_estrategic/main/AT-SO.svg"
   }[dir];
 }
