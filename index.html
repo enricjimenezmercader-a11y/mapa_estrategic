@@ -51,7 +51,7 @@
     #redBarPart {
       height: 100%;
       background: #ff4444; /* Vermell */
-      width: 50%; /* Inicial */
+      width: 50%;
       transition: width 0.8s ease-in-out;
       border-right: 1px solid rgba(0,0,0,0.3);
     }
@@ -59,7 +59,7 @@
     #blueBarPart {
       height: 100%;
       background: #0078ff; /* Blau */
-      width: 50%; /* Inicial */
+      width: 50%;
       transition: width 0.8s ease-in-out;
     }
 
@@ -415,7 +415,7 @@ function submitBattleResolution() {
   closeResolutionModal();
 }
 
-// CORREGIT: Mapejador súper flexible i immune a canvis de lletres, plurals o espais
+// CORREGIT: Extracció creuada exacta basada en referències L12 i M12 del JSON
 async function updateHexColors(){
   try {
     const rowsList = await fetchJSONP(COLORS_JSON_URL);
@@ -424,6 +424,7 @@ async function updateHexColors(){
       let b_accions = "-", b_territoris = 0, b_destruides = "-", b_perdudes = "-";
 
       rowsList.forEach(row => {
+        // 1. Processar colors dels hexàgons del mapa
         const id = parseInt(row["A"]); 
         if (!isNaN(id)) {
           const color = (row["B"] || "MAR").trim().toUpperCase();
@@ -435,40 +436,38 @@ async function updateHexColors(){
           }
         }
         
-        // Convertim el text del panell a minúscules i netegem espais per evitar trencaments
+        // 2. Processar panells informatius usant referències de text netes
         const kText = row["K"] ? row["K"].toString().toLowerCase().trim() : "";
-        const gText = row["G"] ? row["G"].toString().toLowerCase().trim() : "";
 
-        // -- FILTRES ROBUSTOS EQUIP VERMELL --
+        // - Accions Inicials i dades generals
         if (kText.includes("inicials vermell")) {
           v_accions = row["H"] !== undefined ? row["H"] : v_accions;
+        }
+        if (kText.includes("inicials blau")) {
+          b_accions = row["H"] !== undefined ? row["H"] : b_accions;
         }
         if (kText.includes("territori vermell")) {
           v_territoris = parseInt(row["L"]) || 0;
         }
-        if (kText.includes("gastades v") || gText.includes("gastades v")) {
-          v_perdudes = row["L"] !== undefined ? row["L"] : v_perdudes;
-        }
-        if (kText.includes("baixes vermell")) { // Detecta "baixes vermells" i "baixes vermelles"
-          v_destruides = row["L"] !== undefined ? row["L"] : v_destruides;
-        }
-
-        // -- FILTRES ROBUSTOS EQUIP BLAU --
-        if (kText.includes("inicials blau")) {
-          b_accions = row["H"] !== undefined ? row["H"] : b_accions;
-        }
         if (kText.includes("territori blau")) {
           b_territoris = parseInt(row["L"]) || 0;
         }
-        if (kText.includes("boti blau") || kText.includes("gastades b") || gText.includes("gastades b")) {
-          b_perdudes = row["L"] !== undefined ? row["L"] : b_perdudes;
+
+        // - MAPEIG CREUAT EXACTE (Segons l'esquema de cel·les L12 i M12 vist a la captura):
+        // Fila de dades 11 del full: Baixes Vermells (Destruïdes Vermell) i Boti Blau (Perdudes Blau)
+        if (kText.includes("baixes vermell") || kText.includes("boti blau")) {
+          v_destruides = row["L"] !== undefined ? row["L"] : v_destruides; // L11 -> Vermell Destruïdes
+          b_perdudes = row["M"] !== undefined ? row["M"] : b_perdudes;     // M11 -> Blau Perdudes
         }
-        if (kText.includes("baixes blave")) { // Detecta "baixes blaves" sense importar la darrera lletra
-          b_destruides = row["L"] !== undefined ? row["L"] : b_destruides;
+
+        // Fila de dades 12 del full: Baixes Blaves (Destruïdes Blau) i Gastades V (Perdudes Vermell)
+        if (kText.includes("baixes blave") || kText.includes("gastades v") || kText.includes("remanent vermell")) {
+          b_destruides = row["M"] !== undefined ? row["M"] : b_destruides; // M12 -> Blau Destruïdes
+          v_perdudes = row["L"] !== undefined ? row["L"] : v_perdudes;     // L12 -> Vermell Perdudes
         }
       });
 
-      // Assignació visual als marcadors de la interfície
+      // Actualitzar visualment el panell HTML
       document.getElementById("v_accions").textContent = v_accions;
       document.getElementById("v_territoris").textContent = v_territoris;
       document.getElementById("v_destruides").textContent = v_destruides;
@@ -479,7 +478,7 @@ async function updateHexColors(){
       document.getElementById("b_destruides").textContent = b_destruides;
       document.getElementById("b_perdudes").textContent = b_perdudes;
 
-      // ACTUALITZACIÓ PROPORCIONAL DE LA BARRA DE TERRITORI
+      // Sincronitzar la barra de control territorial superior
       const totalT = v_territoris + b_territoris;
       if (totalT > 0) {
         const redPct = (v_territoris / totalT) * 100;
