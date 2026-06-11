@@ -65,7 +65,6 @@
       transition: width 0.8s ease-in-out;
     }
 
-    /* ESTIL DEL SUBTÍTOL DINÀMIC DEL TORN (75% del títol principal = 21px) */
     #turnIndicator {
       font-size: 21px;
       font-weight: bold;
@@ -474,7 +473,6 @@ async function updateHexColors(){
       let v_accions = "-", v_territoris = 0, baixes_vermell = 0;
       let b_accions = "-", b_territoris = 0, baixes_blaves = 0;
       
-      // Variables per emmagatzemar el torn (O6) i dia (O8) llegits del JSON
       let valorTorn = "";
       let valorDia = "";
 
@@ -482,6 +480,15 @@ async function updateHexColors(){
       blauImpartit = false;
 
       rowsList.forEach(row => {
+        // Correcció d'indexació directa per files O6 (A===6) i O8 (A===8) segons l'estructura de dades real
+        const rowIdAttr = parseInt(row["A"]);
+        if (rowIdAttr === 6) {
+          valorTorn = row["O"] !== undefined ? row["O"].toString().trim() : "";
+        }
+        if (rowIdAttr === 8) {
+          valorDia = row["O"] !== undefined ? row["O"].toString().trim() : "";
+        }
+
         const id = parseInt(row["A"]); 
         if (!isNaN(id)) {
           const color = (row["B"] || "MAR").trim().toUpperCase();
@@ -511,19 +518,12 @@ async function updateHexColors(){
           baixes_vermell = row["L"] !== undefined ? parseInt(row["L"]) || 0 : baixes_vermell; 
           baixes_blaves = row["M"] !== undefined ? parseInt(row["M"]) || 0 : baixes_blaves;   
         }
-
-        // EXTRACCIÓ DE LES CEL·LES DE MÀNAGER (O6 i O8) MAPEJDADES AL PANEL DE CONTROL
-        if (kText.includes("num_torn")) {
-          valorTorn = row["O"] !== undefined ? row["O"].toString().trim() : "";
-        }
-        if (kText.includes("dia_torn")) {
-          valorDia = row["O"] !== undefined ? row["O"].toString().trim() : "";
-        }
       });
 
-      // ACTUALITZACIÓ DE LA CADENA TEXTUAL SOL·LICITADA
-      if(valorTorn && valorDia) {
+      if(valorTorn || valorDia) {
         document.getElementById("turnIndicator").textContent = `TORN ${valorTorn} - ${valorDia}`;
+      } else {
+        document.getElementById("turnIndicator").textContent = `TORN -`;
       }
 
       document.getElementById("v_accions").textContent = v_accions;
