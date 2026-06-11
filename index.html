@@ -164,6 +164,7 @@
       dominant-baseline: central; pointer-events: none;
     }
 
+    /* CAPA I TEXT DE LA MARCA D'AIGUA CORREGIDA AMB L'ANGLE DE LA DIAGONAL ELECTA */
     .watermark-overlay {
       position: absolute;
       inset: 0;
@@ -172,20 +173,26 @@
       justify-content: center;
       z-index: 25;
       pointer-events: none;
-      background: rgba(0, 0, 0, 0.15);
+      background: rgba(0, 0, 0, 0.35); /* Una mica més fosc el fons per fer contrast */
     }
 
     .watermark-text {
-      font-size: 38px;
+      font-size: 34px;
       font-weight: 900;
-      color: rgba(255, 255, 255, 0.12);
+      color: rgba(255, 255, 255, 0.28); /* Menys transparent (abans era 0.12) */
       text-transform: uppercase;
       letter-spacing: 2px;
       white-space: nowrap;
-      transform: rotate(-45deg);
+      
+      /* Ajust geomètric exacte per a un aspect-ratio de 1.4: atan(1/1.4) = ~35.54 graus */
+      transform: rotate(-35.54deg);
+      
       user-select: none;
-      border: 4px dashed rgba(255, 255, 255, 0.05);
-      padding: 10px 30px;
+      border: 4px dashed rgba(255, 255, 255, 0.15);
+      padding: 12px 40px;
+      text-shadow: 0 0 15px rgba(0,0,0,0.6);
+      width: 90%; /* Força que ocupi l'amplada relativa del mapa */
+      text-align: center;
     }
 
     #battleButtonsContainer {
@@ -334,9 +341,8 @@ let resolvedBattlesLog = [];
 let vermellImpartit = false;
 let blauImpartit = false;
 
-// VARIABLES PER AL CONTROL DE FLUCTUACIONS (CACHE)
 let lastOrdersHash = "";
-let lastWatermarkState = null; // null, "waiting", "active"
+let lastWatermarkState = null; 
 
 async function fetchJSONP(url){
   return new Promise((resolve, reject) => {
@@ -434,7 +440,6 @@ function submitBattleResolution() {
   });
   if(activeBattleDetails.btnElement) activeBattleDetails.btnElement.remove();
 
-  // Forcem que el canvi es reflecteixi immediatament invalidant la cache
   lastOrdersHash = "";
 
   const callbackName = 'jsonp_save_' + Date.now();
@@ -525,7 +530,6 @@ async function updateActiveOrders(){
     const btnContainer = document.getElementById("battleButtonsContainer"); 
     const battleLayer = document.getElementById("battleLayer");
 
-    // CAS A: Un o cap dels dos equips ha lliurat les ordres
     if (!vermellImpartit || !blauImpartit) {
       if (lastWatermarkState !== "waiting") {
         arrowElements.forEach(img => img.remove()); arrowElements = [];
@@ -542,7 +546,7 @@ async function updateActiveOrders(){
         watermarkLayer.appendChild(overlay);
         
         lastWatermarkState = "waiting";
-        lastOrdersHash = ""; // Netegem la memòria d'ordres
+        lastOrdersHash = ""; 
       }
       
       const d = new Date();
@@ -550,25 +554,20 @@ async function updateActiveOrders(){
       return; 
     }
 
-    // CAS B: Els dos equips han impartit ordres (E2=1 i E3=1)
     const orderStrings = await fetchJSONP(ORDERS_JSON_URL);
     if (Array.isArray(orderStrings)) {
       
-      // GENEREM UN "HASH" (SIGNATURA) DE LES ORDRES REBUDES I LES BATALLES RESOLTES
       const currentHash = JSON.stringify(orderStrings) + "_" + JSON.stringify(resolvedBattlesLog);
 
-      // CRITICAL CONTRA FLUCTUACIONS: Si les ordres i logs són idèntics, NO RE-DIBUIXIS RES!
       if (currentHash === lastOrdersHash && lastWatermarkState === "active") {
         const d = new Date(); 
         document.getElementById("loadingIndicator").textContent = `Radar analitzat correctament (Sense canvis): ${d.toLocaleTimeString()}`;
         return; 
       }
 
-      // Només si el hash és diferent, actualitzem el panell i la pantalla sense parpellejos previs
       lastOrdersHash = currentHash;
       lastWatermarkState = "active";
 
-      // Neteja controlada i instantània just abans d'injectar les noves dades calculades
       watermarkLayer.innerHTML = "";
       arrowElements.forEach(img => img.remove()); arrowElements = [];
       if(battleLayer) battleLayer.innerHTML = "";
@@ -684,7 +683,7 @@ function placeInformativeArrow(origin,target){
 
 async function syncRadarData(){ await updateActiveOrders(); }
 function fullRedraw(){ 
-  lastOrdersHash = ""; // Forcem redibuix en canvis de pantalla físics
+  lastOrdersHash = ""; 
   resizeMap(); 
   initHexGridStructure(); 
   syncRadarData(); 
