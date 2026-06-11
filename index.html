@@ -50,7 +50,7 @@
 
     #redBarPart {
       height: 100%;
-      background: #ff4444; /* Vermell */
+      background: #ff4444;
       width: 50%;
       transition: width 0.8s ease-in-out;
       border-right: 1px solid rgba(0,0,0,0.3);
@@ -58,7 +58,7 @@
 
     #blueBarPart {
       height: 100%;
-      background: #0078ff; /* Blau */
+      background: #0078ff;
       width: 50%;
       transition: width 0.8s ease-in-out;
     }
@@ -249,6 +249,7 @@
   </div>
 
   <div class="team-panel panel-blue">
+    <div class="team-panel panel-blue">
     <div class="panel-title">EQUIP BLAU</div>
     <div class="stat-line">Accions: <span class="stat-value" id="b_accions">-</span></div>
     <div class="stat-line">Territoris: <span class="stat-value" id="b_territoris">-</span></div>
@@ -308,12 +309,12 @@ async function fetchJSONP(url){
   return new Promise((resolve, reject) => {
     const callbackName = 'jsonp_' + Date.now() + '_' + Math.random().toString(36).substring(2, 9);
     const script = document.createElement('script');
-    const timerId = setTimeout(() => { cleanup(); reject(new Error('Temps d\'espera esgotat amb Google')); }, 8000);
+    const timerId = setTimeout(() => { cleanup(); reject(new Error('Temps d\'espera esgotat')); }, 8000);
     function cleanup() { clearTimeout(timerId); if (window[callbackName]) delete window[callbackName]; if (script.parentNode) script.parentNode.removeChild(script); }
     window[callbackName] = function(data) { cleanup(); resolve(data); };
     const separator = url.includes('?') ? '&' : '?';
     script.src = url + separator + "callback=" + callbackName;
-    script.onerror = function() { cleanup(); reject(new Error('Error de connexió de xarxa')); };
+    script.onerror = function() { cleanup(); reject(new Error('Error de connexió')); };
     document.head.appendChild(script);
   });
 }
@@ -415,16 +416,15 @@ function submitBattleResolution() {
   closeResolutionModal();
 }
 
-// CORREGIT: Extracció creuada exacta basada en referències L12 i M12 del JSON
+// RETOCAT DEFINITIU: Només 2 variables de baixes, vinculades simètricament de forma directa
 async function updateHexColors(){
   try {
     const rowsList = await fetchJSONP(COLORS_JSON_URL);
     if (Array.isArray(rowsList)) {
-      let v_accions = "-", v_territoris = 0, v_destruides = "-", v_perdudes = "-";
-      let b_accions = "-", b_territoris = 0, b_destruides = "-", b_perdudes = "-";
+      let v_accions = "-", v_territoris = 0, baixes_vermell = "-";
+      let b_accions = "-", b_territoris = 0, baixes_blaves = "-";
 
       rowsList.forEach(row => {
-        // 1. Processar colors dels hexàgons del mapa
         const id = parseInt(row["A"]); 
         if (!isNaN(id)) {
           const color = (row["B"] || "MAR").trim().toUpperCase();
@@ -436,49 +436,34 @@ async function updateHexColors(){
           }
         }
         
-        // 2. Processar panells informatius usant referències de text netes
         const kText = row["K"] ? row["K"].toString().toLowerCase().trim() : "";
 
-        // - Accions Inicials i dades generals
-        if (kText.includes("inicials vermell")) {
-          v_accions = row["H"] !== undefined ? row["H"] : v_accions;
-        }
-        if (kText.includes("inicials blau")) {
-          b_accions = row["H"] !== undefined ? row["H"] : b_accions;
-        }
-        if (kText.includes("territori vermell")) {
-          v_territoris = parseInt(row["L"]) || 0;
-        }
-        if (kText.includes("territori blau")) {
-          b_territoris = parseInt(row["L"]) || 0;
-        }
+        // Extracció de dades estàndard de control
+        if (kText.includes("inicials vermell")) v_accions = row["H"] !== undefined ? row["H"] : v_accions;
+        if (kText.includes("inicials blau")) b_accions = row["H"] !== undefined ? row["H"] : b_accions;
+        if (kText.includes("territori vermell")) v_territoris = parseInt(row["L"]) || 0;
+        if (kText.includes("territori blau")) b_territoris = parseInt(row["L"]) || 0;
 
-        // - MAPEIG CREUAT EXACTE (Segons l'esquema de cel·les L12 i M12 vist a la captura):
-        // Fila de dades 11 del full: Baixes Vermells (Destruïdes Vermell) i Boti Blau (Perdudes Blau)
-        if (kText.includes("baixes vermell") || kText.includes("boti blau")) {
-          v_destruides = row["L"] !== undefined ? row["L"] : v_destruides; // L11 -> Vermell Destruïdes
-          b_perdudes = row["M"] !== undefined ? row["M"] : b_perdudes;     // M11 -> Blau Perdudes
-        }
-
-        // Fila de dades 12 del full: Baixes Blaves (Destruïdes Blau) i Gastades V (Perdudes Vermell)
+        // ESTRATEGIA SIMPLICITAT MÀXIMA (Directe a les files de les cel·les clau):
+        // Fila 12 del JSON (indexada o detectada per text): Extreu els dos valors reals directament
         if (kText.includes("baixes blave") || kText.includes("gastades v") || kText.includes("remanent vermell")) {
-          b_destruides = row["M"] !== undefined ? row["M"] : b_destruides; // M12 -> Blau Destruïdes
-          v_perdudes = row["L"] !== undefined ? row["L"] : v_perdudes;     // L12 -> Vermell Perdudes
+          baixes_vermell = row["L"] !== undefined ? row["L"] : baixes_vermell; // Cel·la L12 (Baixes del Vermell)
+          baixes_blaves = row["M"] !== undefined ? row["M"] : baixes_blaves;   // Cel·la M12 (Baixes del Blau)
         }
       });
 
-      // Actualitzar visualment el panell HTML
+      // LÒGICA MIRALL: Les destruïdes d'un són les perdudes de l'altre i viceversa!
       document.getElementById("v_accions").textContent = v_accions;
       document.getElementById("v_territoris").textContent = v_territoris;
-      document.getElementById("v_destruides").textContent = v_destruides;
-      document.getElementById("v_perdudes").textContent = v_perdudes;
-      
+      document.getElementById("v_destruides").textContent = baixes_blaves; // El vermell destrueix el que el blau perd
+      document.getElementById("v_perdudes").textContent = baixes_vermell;   // El vermell perd el que s'apunta a les seves baixes
+
       document.getElementById("b_accions").textContent = b_accions;
       document.getElementById("b_territoris").textContent = b_territoris;
-      document.getElementById("b_destruides").textContent = b_destruides;
-      document.getElementById("b_perdudes").textContent = b_perdudes;
+      document.getElementById("b_destruides").textContent = baixes_vermell; // El blau destrueix el que el vermell perd
+      document.getElementById("b_perdudes").textContent = baixes_blaves;   // El blau perd el que s'apunta a les seves baixes
 
-      // Sincronitzar la barra de control territorial superior
+      // Actualització de la barra dinàmica superior
       const totalT = v_territoris + b_territoris;
       if (totalT > 0) {
         const redPct = (v_territoris / totalT) * 100;
