@@ -34,7 +34,7 @@
       font-family: monospace;
     }
 
-    /* Contenidor principal que alinea els marcadors i el mapa horitzontalment */
+    /* Contenidor principal per alinear els marcadors i el mapa horitzontalment */
     .main-layout {
       display: flex;
       align-items: center;
@@ -44,7 +44,7 @@
       gap: 20px;
     }
 
-    /* Estils compartits per als quadres de resum */
+    /* Estils dels quadres de resum */
     .team-panel {
       width: 220px;
       background: #101020;
@@ -329,9 +329,7 @@
 <script>
 const PATTERN=[5,4,5,4,5,4,5,4,5,4,5];
 
-// URL ACTUALITZADA AMB EL TEU NOU DESPLEGAMENT DELS HEXÀGONS I MARCADORS
 const COLORS_JSON_URL="https://script.google.com/macros/s/AKfycbz0tCe6dKOavv4xVhvZoaVgv8TIkymvoj8NCYpE7U9jbqLGtmxw0eATLA2DXx50Cuk/exec";
-
 const ORDERS_JSON_URL="https://script.google.com/macros/s/AKfycbzDdC4yHTVFzNdsSRJE7yfiRRvOiCPssSyVBEDPV92gSksgOnwfIVSUVVRkGSbzy_EBDw/exec";
 const EXPLOSION_IMG_URL="https://github.com/enricjimenezmercader-a11y/mapa_estrategic/blob/894cd2a4b1d3605c654d4eaaa5862f5d90b6c2c4/explosion.png?raw=true";
 
@@ -491,41 +489,51 @@ function submitBattleResolution() {
   closeResolutionModal();
 }
 
+// ADAPTAT: processa la llista plana enviada per la teva Apps Script original
 async function updateHexColors(){
   try {
-    const dataObj = await fetchJSONP(COLORS_JSON_URL);
+    const rowsList = await fetchJSONP(COLORS_JSON_URL);
     
-    // 1. Processar Hexàgons
-    if (dataObj && Array.isArray(dataObj.hexagons)) {
-      dataObj.hexagons.forEach(row => {
-        const id = parseInt(row["A"]); const color = (row["B"] || "MAR").toUpperCase();
-        const hex = hexData.find(h => h.id === id);
-        if(hex) {
-          hex.color = color; let cls = "hex hex-mar";
-          if(color.includes("RED")) cls = "hex hex-red"; else if(color.includes("BLUE")) cls = "hex hex-blue";
-          hex.element.setAttribute("class", cls);
+    if (Array.isArray(rowsList)) {
+      // 1. Processar els Hexàgons (es llegeixen fins que l'ID sigui numèric, per exemple línies 1 a 47)
+      rowsList.forEach(row => {
+        const id = parseInt(row["A"]); 
+        const color = (row["B"] || "MAR").toUpperCase();
+        if (!isNaN(id)) {
+          const hex = hexData.find(h => h.id === id);
+          if(hex) {
+            hex.color = color; let cls = "hex hex-mar";
+            if(color.includes("RED")) cls = "hex hex-red"; else if(color.includes("BLUE")) cls = "hex hex-blue";
+            hex.element.setAttribute("class", cls);
+          }
         }
       });
-    }
 
-    // 2. Injectar dades dinàmiques als marcadors laterals (Vermell esquerra, Blau dreta)
-    if (dataObj && dataObj.marcadors) {
-      const m = dataObj.marcadors;
+      // 2. Extreure manualment els valors de les cel·les dels marcadors
+      // Com que l'Apps Script omet la fila 1 (headers), la fila 2 de l'Excel és rowsList[0], la fila 3 és rowsList[1], etc.
       
+      const row2 = rowsList[0] || {};  // Fila 2 de l'Excel
+      const row3 = rowsList[1] || {};  // Fila 3 de l'Excel
+      const row9 = rowsList[7] || {};  // Fila 9 de l'Excel
+      const row10 = rowsList[8] || {}; // Fila 10 de l'Excel
+      const row12 = rowsList[10] || {};// Fila 12 de l'Excel
+
       // Equip Vermell (Esquerra)
-      document.getElementById("v_accions").textContent = m.vermell_accions !== undefined ? m.vermell_accions : "-";
-      document.getElementById("v_territoris").textContent = m.vermell_territoris !== undefined ? m.vermell_territoris : "-";
-      document.getElementById("v_destruides").textContent = m.vermell_destruides !== undefined ? m.vermell_destruides : "-";
-      document.getElementById("v_perdudes").textContent = m.vermell_perdudes !== undefined ? m.vermell_perdudes : "-";
+      // Accions: H2, Territoris: L9, Unitats destruïdes: L12, Unitats perdudes: M12
+      document.getElementById("v_accions").textContent = row2["H"] !== undefined ? row2["H"] : "-";
+      document.getElementById("v_territoris").textContent = row9["L"] !== undefined ? row9["L"] : "-";
+      document.getElementById("v_destruides").textContent = row12["L"] !== undefined ? row12["L"] : "-";
+      document.getElementById("v_perdudes").textContent = row12["M"] !== undefined ? row12["M"] : "-";
 
       // Equip Blau (Dreta)
-      document.getElementById("b_accions").textContent = m.blau_accions !== undefined ? m.blau_accions : "-";
-      document.getElementById("b_territoris").textContent = m.blau_territoris !== undefined ? m.blau_territoris : "-";
-      document.getElementById("b_destruides").textContent = m.blau_destruides !== undefined ? m.blau_destruides : "-";
-      document.getElementById("b_perdudes").textContent = m.blau_perdudes !== undefined ? m.blau_perdudes : "-";
+      // Accions: H3, Territoris: L10, Unitats destruïdes: M12, Unitats perdudes: L12
+      document.getElementById("b_accions").textContent = row3["H"] !== undefined ? row3["H"] : "-";
+      document.getElementById("b_territoris").textContent = row10["L"] !== undefined ? row10["L"] : "-";
+      document.getElementById("b_destruides").textContent = row12["M"] !== undefined ? row12["M"] : "-";
+      document.getElementById("b_perdudes").textContent = row12["L"] !== undefined ? row12["L"] : "-";
     }
 
-  } catch(e) { console.log("Error sincronització marcadors/colors:", e.message); }
+  } catch(e) { console.log("Error en processar colors o marcadors estructurals:", e.message); }
 }
 
 async function updateActiveOrders(){
