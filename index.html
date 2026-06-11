@@ -164,7 +164,6 @@
       dominant-baseline: central; pointer-events: none;
     }
 
-    /* MARCA D'AIGUA CUAN ELS DOS EQUIPS NO HAN CONFIRMAT */
     .watermark-overlay {
       position: absolute;
       inset: 0;
@@ -332,9 +331,12 @@ let arrowElements=[];
 let activeBattleDetails = null;
 let resolvedBattlesLog = [];
 
-// Flags globals que controlen si el panell central pot dibuixar elements tàctics
 let vermellImpartit = false;
 let blauImpartit = false;
+
+// VARIABLES PER AL CONTROL DE FLUCTUACIONS (CACHE)
+let lastOrdersHash = "";
+let lastWatermarkState = null; // null, "waiting", "active"
 
 async function fetchJSONP(url){
   return new Promise((resolve, reject) => {
@@ -432,6 +434,9 @@ function submitBattleResolution() {
   });
   if(activeBattleDetails.btnElement) activeBattleDetails.btnElement.remove();
 
+  // Forcem que el canvi es reflecteixi immediatament invalidant la cache
+  lastOrdersHash = "";
+
   const callbackName = 'jsonp_save_' + Date.now();
   window[callbackName] = function(response) { delete window[callbackName]; const scr = document.getElementById(callbackName); if (scr) scr.remove(); };
   const finalUrl = WEB_APP_RESOLVE_URL + 
@@ -454,7 +459,6 @@ async function updateHexColors(){
       let v_accions = "-", v_territoris = 0, baixes_vermell = 0;
       let b_accions = "-", b_territoris = 0, baixes_blaves = 0;
 
-      // Resetejar controls d'ordres abans d'analitzar les files cel·la per cel·la
       vermellImpartit = false;
       blauImpartit = false;
 
@@ -472,15 +476,12 @@ async function updateHexColors(){
         
         const kText = row["K"] ? row["K"].toString().toLowerCase().trim() : "";
 
-        // CONTROL RIGURÓS DE LES CEL·LES E2 i E3 DE CONTROL D'ORDRES IMPARTIDES
         if (kText.includes("inicials vermell")) {
           v_accions = row["H"] !== undefined ? row["H"] : v_accions;
-          // Comprova si la cel·la E2 (mapejada a la columna E de la fila corresponent) té un valor d'1
           if(parseInt(row["E"]) === 1) { vermellImpartit = true; }
         }
         if (kText.includes("inicials blau")) {
           b_accions = row["H"] !== undefined ? row["H"] : b_accions;
-          // Comprova si la cel·la E3 (mapejada a la columna E de la fila corresponent) té un valor d'1
           if(parseInt(row["E"]) === 1) { blauImpartit = true; }
         }
 
@@ -518,22 +519,20 @@ async function updateHexColors(){
 
 async function updateActiveOrders(){
   try {
-    // Primer executem l'actualització de dades generals per saber l'estat de les cel·les E2 i E3
     await updateHexColors();
 
     const watermarkLayer = document.getElementById("watermarkLayer");
     const btnContainer = document.getElementById("battleButtonsContainer"); 
     const battleLayer = document.getElementById("battleLayer");
 
-    // Neteja absoluta preventiva d'elements previs d'ordres
-    arrowElements.forEach(img => img.remove()); arrowElements = [];
-    if(battleLayer) battleLayer.innerHTML = "";
-    btnContainer.innerHTML = "";
-
-    // CONTROL DE DOBLE CONDICIÓ REQUERIDA (E2 == 1 i E3 == 1)
+    // CAS A: Un o cap dels dos equips ha lliurat les ordres
     if (!vermellImpartit || !blauImpartit) {
-      // Si un dels dos o cap ha lliurat les ordres, bloquegem fletxes/batalles i muntem la marca d'aigua
-      if (watermarkLayer && watermarkLayer.children.length === 0) {
+      if (lastWatermarkState !== "waiting") {
+        arrowElements.forEach(img => img.remove()); arrowElements = [];
+        if(battleLayer) battleLayer.innerHTML = "";
+        btnContainer.innerHTML = "";
+        
+        watermarkLayer.innerHTML = "";
         const overlay = document.createElement("div");
         overlay.className = "watermark-overlay";
         const textSpan = document.createElement("div");
@@ -541,18 +540,40 @@ async function updateActiveOrders(){
         textSpan.textContent = "Esperant ordres dels equips";
         overlay.appendChild(textSpan);
         watermarkLayer.appendChild(overlay);
+        
+        lastWatermarkState = "waiting";
+        lastOrdersHash = ""; // Netegem la memòria d'ordres
       }
       
       const d = new Date();
       document.getElementById("loadingIndicator").textContent = `Radar latent (esperant ordres creuades): ${d.toLocaleTimeString()}`;
-      return; // Atura l'execució de la funció aquí per evitar el dibuix de fletxes i botons
+      return; 
     }
 
-    // Si es compleix la doble condició, esborrem la marca d'aigua i processem les ordres normalment
-    if (watermarkLayer) watermarkLayer.innerHTML = "";
-
+    // CAS B: Els dos equips han impartit ordres (E2=1 i E3=1)
     const orderStrings = await fetchJSONP(ORDERS_JSON_URL);
     if (Array.isArray(orderStrings)) {
+      
+      // GENEREM UN "HASH" (SIGNATURA) DE LES ORDRES REBUDES I LES BATALLES RESOLTES
+      const currentHash = JSON.stringify(orderStrings) + "_" + JSON.stringify(resolvedBattlesLog);
+
+      // CRITICAL CONTRA FLUCTUACIONS: Si les ordres i logs són idèntics, NO RE-DIBUIXIS RES!
+      if (currentHash === lastOrdersHash && lastWatermarkState === "active") {
+        const d = new Date(); 
+        document.getElementById("loadingIndicator").textContent = `Radar analitzat correctament (Sense canvis): ${d.toLocaleTimeString()}`;
+        return; 
+      }
+
+      // Només si el hash és diferent, actualitzem el panell i la pantalla sense parpellejos previs
+      lastOrdersHash = currentHash;
+      lastWatermarkState = "active";
+
+      // Neteja controlada i instantània just abans d'injectar les noves dades calculades
+      watermarkLayer.innerHTML = "";
+      arrowElements.forEach(img => img.remove()); arrowElements = [];
+      if(battleLayer) battleLayer.innerHTML = "";
+      btnContainer.innerHTML = "";
+
       let activeOrders = [];
       orderStrings.forEach(orderText => {
         const match = orderText.match(/territori\s+(\d+)\s+a\s+territori\s+(\d+)/i);
@@ -562,6 +583,7 @@ async function updateActiveOrders(){
           if (originHex && targetHex) activeOrders.push({ originID, targetID, originHex, targetHex, processed: false });
         }
       });
+
       let contactBattles = []; let attackDefenseTargets = new Set();
       for (let i = 0; i < activeOrders.length; i++) {
         if (activeOrders[i].processed) continue;
@@ -578,12 +600,14 @@ async function updateActiveOrders(){
           }
         }
       }
+
       activeOrders.forEach(order => { if (!order.processed) { const key = `atdef-${order.targetID}`; if (!resolvedBattlesLog.includes(key)) attackDefenseTargets.add(order.targetID); } });
       activeOrders.forEach(order => {
         const contactKey = `contact-${order.originID}-${order.targetID}`; const contactKeyInverse = `contact-${order.targetID}-${order.originID}`; const atdefKey = `atdef-${order.targetID}`;
         let isResolved = resolvedBattlesLog.includes(atdefKey) || resolvedBattlesLog.includes(contactKey) || resolvedBattlesLog.includes(contactKeyInverse);
         if (!isResolved) placeInformativeArrow(order.originHex, order.targetHex);
       });
+
       buildTacticalInterface(contactBattles, Array.from(attackDefenseTargets));
       
       const d = new Date(); 
@@ -659,7 +683,12 @@ function placeInformativeArrow(origin,target){
 }
 
 async function syncRadarData(){ await updateActiveOrders(); }
-function fullRedraw(){ resizeMap(); initHexGridStructure(); syncRadarData(); }
+function fullRedraw(){ 
+  lastOrdersHash = ""; // Forcem redibuix en canvis de pantalla físics
+  resizeMap(); 
+  initHexGridStructure(); 
+  syncRadarData(); 
+}
 window.addEventListener("resize", fullRedraw);
 populateSelectorOptions(); resizeMap(); initHexGridStructure();
 setTimeout(syncRadarData, 500); setInterval(syncRadarData, 5000);
