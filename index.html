@@ -381,9 +381,11 @@
 const PATTERN=[5,4,5,4,5,4,5,4,5,4,5];
 
 const COLORS_JSON_URL="https://script.google.com/macros/s/AKfycbz0tCe6dKOavv4xVhvZoaVgv8TIkymvoj8NCYpE7U9jbqLGtmxw0eATLA2DXx50Cuk/exec";
-const ORDERS_JSON_URL="https://script.google.com/macros/s/AKfycbDdC4yHTVFzNdsSRJE7yfiRRvOiCPssSyVBEDPV92gSksgOnwfIVSUVVRkGSbzy_EBDw/exec";
+const ORDERS_JSON_URL="https://script.google.com/macros/s/AKfycbzDdC4yHTVFzNdsSRJE7yfiRRvOiCPssSyVBEDPV92gSksgOnwfIVSUVVRkGSbzy_EBDw/exec";
 const EXPLOSION_IMG_URL="https://github.com/enricjimenezmercader-a11y/mapa_estrategic/blob/894cd2a4b1d3605c654d4eaaa5862f5d90b6c2c4/explosion.png?raw=true";
 const WEB_APP_RESOLVE_URL = "https://script.google.com/macros/s/AKfycbwaUU2qtxNhaa3a-xPX7IuPcu-Kh4xtEu7CogJ6AUYkVxN_9ziF4yNglZCVzFutzIEQnQ/exec";
+
+// Nova URL de l'Script independent per a la finalització de torn (Opció B)
 const WEB_APP_END_TURN_URL = "https://script.google.com/macros/s/AKfycbywU92NsUQLgcGUuGiCCOQ48y4G9n-jxmFr-4GVJImOr36dcKZJJbpydfGVkDlE95r78w/exec";
 
 const REAL_R=41.78;
@@ -516,26 +518,15 @@ function submitBattleResolution() {
   closeResolutionModal();
 }
 
-// CORRECCIÓ: Valida i formata correctament qualsevol string o data lletja de Sheets
 function formatToCustomDate(rawString) {
   if (!rawString) return "";
-  let cleanStr = rawString.toString().split("T")[0].trim();
-  if (cleanStr.includes("#VALUE!")) return "";
-  
+  let cleanStr = rawString.split("T")[0]; 
   const parts = cleanStr.split("-");
   if (parts.length === 3 && parts[0].length === 4) {
-    return `${parts[2]}/${parts[1]}/${parts[0]}`;
-  }
-  
-  const slashParts = cleanStr.split("/");
-  if (slashParts.length === 3) {
-    let day = slashParts[0].padStart(2, '0');
-    let month = slashParts[1].padStart(2, '0');
-    let year = slashParts[2];
-    if (year.length === 2) year = "19" + year; 
+    const year = parts[0]; const month = parts[1]; const day = parts[2];
     return `${day}/${month}/${year}`;
   }
-  return cleanStr;
+  return rawString;
 }
 
 async function updateHexColors(){
@@ -551,18 +542,9 @@ async function updateHexColors(){
 
       rowsList.forEach(row => {
         const rowIdAttr = parseInt(row["A"]);
-        if (rowIdAttr === 6) {
-          let tVal = row["O"] !== undefined ? row["O"].toString().trim() : "";
-          valorTorn = tVal.includes("#VALUE!") ? "" : tVal;
-        }
-        if (rowIdAttr === 7) {
-          let pVal = row["O"] !== undefined ? row["O"].toString().trim() : "";
-          proximTornValor = pVal.includes("#VALUE!") ? "" : pVal;
-        }
-        if (rowIdAttr === 8) {
-          let dVal = row["O"] !== undefined ? row["O"].toString().trim() : "";
-          valorDia = dVal.includes("#VALUE!") ? "" : dVal;
-        }
+        if (rowIdAttr === 6) valorTorn = row["O"] !== undefined ? row["O"].toString().trim() : "";
+        if (rowIdAttr === 7) proximTornValor = row["O"] !== undefined ? row["O"].toString().trim() : "";
+        if (rowIdAttr === 8) valorDia = row["O"] !== undefined ? row["O"].toString().trim() : "";
 
         const id = parseInt(row["A"]); 
         if (!isNaN(id)) {
@@ -589,22 +571,22 @@ async function updateHexColors(){
         if (kText.includes("territori vermell")) v_territoris = parseInt(row["L"]) || 0;
         if (kText.includes("territori blau")) b_territoris = parseInt(row["L"]) || 0;
 
-        // CORRECCIÓ: Enllaç de baixes segons la teva estructura de columnes (L=Vermell perdudes, M=Blau perdudes)
-        if (kText.includes("baixes b") || kText.includes("gastades v") || kText.includes("remanent")) {
+        if (kText.includes("baixes blave") || kText.includes("gastades v") || kText.includes("remanent vermell")) {
           baixes_vermell = row["L"] !== undefined ? parseInt(row["L"]) || 0 : baixes_vermell; 
           baixes_blaves = row["M"] !== undefined ? parseInt(row["M"]) || 0 : baixes_blaves;   
         }
       });
 
-      if(valorTorn && !valorTorn.includes("#VALUE!")) {
-        document.getElementById("turnIndicator").innerHTML = `TORN ${valorTorn} - <span id="turnDate">${formatToCustomDate(valorDia)}</span>`;
+      if(valorTorn) {
+        document.getElementById("turnIndicator").firstChild.textContent = `TORN ${valorTorn} - `;
+        document.getElementById("turnDate").textContent = formatToCustomDate(valorDia);
       } else {
-        document.getElementById("turnIndicator").innerHTML = `TORN - <span id="turnDate"></span>`;
+        document.getElementById("turnIndicator").firstChild.textContent = `TORN - `;
+        document.getElementById("turnDate").textContent = "";
       }
 
       document.getElementById("v_accions").textContent = v_accions;
       document.getElementById("v_territoris").textContent = v_territoris;
-      // CORRECCIÓ CREUADA: Vermell destrueix el que el Blau perd, i Vermell perd el que s'anota a les seves perdudes (L)
       document.getElementById("v_destruides").textContent = baixes_blaves;  
       document.getElementById("v_perdudes").textContent = baixes_vermell;   
 
@@ -771,8 +753,6 @@ function handleEndTurnClick() {
     const scr = document.getElementById(callbackName);
     if (scr) scr.remove();
     document.getElementById("loadingIndicator").textContent = "Torn finalitzat correctament al full de control.";
-    lastOrdersHash = "";
-    updateActiveOrders();
   };
 
   const finalUrl = WEB_APP_END_TURN_URL + 
