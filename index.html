@@ -76,7 +76,6 @@
       text-shadow: 0 0 8px rgba(255,255,255,0.15);
     }
 
-    /* Estil en cursiva per a la data dinàmica del torn */
     #turnDate {
       font-style: italic;
       font-weight: normal;
@@ -212,7 +211,7 @@
     #battleButtonsContainer {
       width: 85%; max-width: 1000px;
       display: flex; flex-direction: column; gap: 10px;
-      margin-top: 10px; padding-bottom: 30px;
+      margin-top: 10px; padding-bottom: 5px;
     }
 
     .battle-btn {
@@ -225,6 +224,47 @@
     .battle-btn:hover { background: #202035; border-color: #556; }
     .btn-contact { border-left: 4px solid #ff5555; }
     .btn-atdef { border-left: 4px solid #ffcc00; }
+
+    /* Estils per al botó finalitzador i el seu efecte de brillantor */
+    #endTurnContainer {
+      width: 85%; max-width: 1000px;
+      display: flex; justify-content: center;
+      margin-top: 10px; padding-bottom: 40px;
+    }
+
+    .btn-end-turn {
+      background: #008f44;
+      color: #ffffff;
+      border: 1px solid #00c853;
+      padding: 12px 28px;
+      font-size: 15px;
+      font-weight: bold;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      border-radius: 6px;
+      cursor: pointer;
+      box-shadow: 0 0 10px rgba(0, 200, 83, 0.2);
+      animation: greenGlow 2s infinite alternate;
+      transition: background 0.2s, transform 0.1s;
+    }
+
+    .btn-end-turn:hover {
+      background: #00aa51;
+      transform: scale(1.02);
+    }
+
+    .btn-end-turn:active {
+      transform: scale(0.98);
+    }
+
+    @keyframes greenGlow {
+      0% {
+        box-shadow: 0 0 12px rgba(0, 200, 83, 0.3), inset 0 0 6px rgba(0, 200, 83, 0.2);
+      }
+      100% {
+        box-shadow: 0 0 24px rgba(0, 200, 83, 0.7), inset 0 0 12px rgba(0, 200, 83, 0.4);
+      }
+    }
 
     .modal-overlay {
       position: fixed; inset: 0; background: rgba(0, 0, 0, 0.75);
@@ -309,6 +349,7 @@
 </div>
 
 <div id="battleButtonsContainer"></div>
+<div id="endTurnContainer"></div>
 
 <div class="modal-overlay" id="resolutionModal">
   <div class="modal-box">
@@ -473,23 +514,15 @@ function submitBattleResolution() {
   closeResolutionModal();
 }
 
-/**
- * Funció auxiliar per netejar cadenes ISO de data i convertir-les a DD/MM/AAAA
- */
 function formatToCustomDate(rawString) {
   if (!rawString) return "";
-  // Si té format ISO com "1942-03-18T23:00:00.000Z", extreurem només la part de la data "1942-03-18"
   let cleanStr = rawString.split("T")[0]; 
-  
-  // Validar si compleix l'estructura AAAA-MM-DD
   const parts = cleanStr.split("-");
   if (parts.length === 3 && parts[0].length === 4) {
-    const year = parts[0];
-    const month = parts[1];
-    const day = parts[2];
+    const year = parts[0]; const month = parts[1]; const day = parts[2];
     return `${day}/${month}/${year}`;
   }
-  return rawString; // Si ja està net o té un altre format, es retorna tal qual
+  return rawString;
 }
 
 async function updateHexColors(){
@@ -498,21 +531,15 @@ async function updateHexColors(){
     if (Array.isArray(rowsList)) {
       let v_accions = "-", v_territoris = 0, baixes_vermell = 0;
       let b_accions = "-", b_territoris = 0, baixes_blaves = 0;
-      
-      let valorTorn = "";
-      let valorDia = "";
+      let valorTorn = ""; let valorDia = "";
 
       vermellImpartit = false;
       blauImpartit = false;
 
       rowsList.forEach(row => {
         const rowIdAttr = parseInt(row["A"]);
-        if (rowIdAttr === 6) {
-          valorTorn = row["O"] !== undefined ? row["O"].toString().trim() : "";
-        }
-        if (rowIdAttr === 8) {
-          valorDia = row["O"] !== undefined ? row["O"].toString().trim() : "";
-        }
+        if (rowIdAttr === 6) valorTorn = row["O"] !== undefined ? row["O"].toString().trim() : "";
+        if (rowIdAttr === 8) valorDia = row["O"] !== undefined ? row["O"].toString().trim() : "";
 
         const id = parseInt(row["A"]); 
         if (!isNaN(id)) {
@@ -529,11 +556,11 @@ async function updateHexColors(){
 
         if (kText.includes("inicials vermell")) {
           v_accions = row["H"] !== undefined ? row["H"] : v_accions;
-          if(parseInt(row["E"]) === 1) { vermellImpartit = true; }
+          if(parseInt(row["E"]) === 1) vermellImpartit = true;
         }
         if (kText.includes("inicials blau")) {
           b_accions = row["H"] !== undefined ? row["H"] : b_accions;
-          if(parseInt(row["E"]) === 1) { blauImpartit = true; }
+          if(parseInt(row["E"]) === 1) blauImpartit = true;
         }
 
         if (kText.includes("territori vermell")) v_territoris = parseInt(row["L"]) || 0;
@@ -582,6 +609,7 @@ async function updateActiveOrders(){
 
     const watermarkLayer = document.getElementById("watermarkLayer");
     const btnContainer = document.getElementById("battleButtonsContainer"); 
+    const endTurnContainer = document.getElementById("endTurnContainer");
     const battleLayer = document.getElementById("battleLayer");
 
     if (!vermellImpartit || !blauImpartit) {
@@ -589,6 +617,7 @@ async function updateActiveOrders(){
         arrowElements.forEach(img => img.remove()); arrowElements = [];
         if(battleLayer) battleLayer.innerHTML = "";
         btnContainer.innerHTML = "";
+        endTurnContainer.innerHTML = "";
         
         watermarkLayer.innerHTML = "";
         const overlay = document.createElement("div");
@@ -626,6 +655,7 @@ async function updateActiveOrders(){
       arrowElements.forEach(img => img.remove()); arrowElements = [];
       if(battleLayer) battleLayer.innerHTML = "";
       btnContainer.innerHTML = "";
+      endTurnContainer.innerHTML = "";
 
       let activeOrders = [];
       orderStrings.forEach(orderText => {
@@ -671,9 +701,14 @@ async function updateActiveOrders(){
 
 function buildTacticalInterface(contacts, atDefs) {
   const btnContainer = document.getElementById("battleButtonsContainer"); const layer = document.getElementById("battleLayer");
+  const endTurnContainer = document.getElementById("endTurnContainer");
+  
   btnContainer.innerHTML = ""; if(layer) layer.innerHTML = "";
+  endTurnContainer.innerHTML = "";
+
   const map = document.getElementById("mapContainer"); const scale = map.clientWidth / REAL_GRID_WIDTH; const R = REAL_R * scale; const explosionSize = R * 1.5; 
   let letterIndex = 0; function getLetter(index) { return String.fromCharCode(65 + index); }
+  
   contacts.forEach(c => {
     const letter = getLetter(letterIndex++); const mx = (c.hexA.cx + c.hexB.cx) / 2; const my = (c.hexA.cy + c.hexB.cy) / 2;
     createSvgExplosionWithLetter(layer, mx, my, explosionSize, letter);
@@ -682,6 +717,7 @@ function buildTacticalInterface(contacts, atDefs) {
     btn.onclick = () => openResolutionModal(btnText, { type: "contact", info: c, letter: letter, btnElement: btn });
     btnContainer.appendChild(btn);
   });
+  
   atDefs.forEach(targetId => {
     const hex = hexData.find(h => h.id === targetId);
     if(hex) {
@@ -692,6 +728,21 @@ function buildTacticalInterface(contacts, atDefs) {
       btnContainer.appendChild(btn);
     }
   });
+
+  // VERIFICACIÓ FINAL: Si els dos equips han jugat i no queden botons de combat pendents de resoldre
+  if (vermellImpartit && blauImpartit && btnContainer.children.length === 0) {
+    const endTurnBtn = document.createElement("button");
+    endTurnBtn.className = "btn-end-turn";
+    endTurnBtn.id = "btnEndTurn";
+    endTurnBtn.textContent = "Finalitzar torn";
+    endTurnBtn.onclick = () => handleEndTurnClick();
+    endTurnContainer.appendChild(endTurnBtn);
+  }
+}
+
+function handleEndTurnClick() {
+  console.log("Botó 'Finalitzar torn' polsat. Esperant definició de funcions...");
+  // Aquí aniran les teves noves funcions
 }
 
 function createSvgExplosionWithLetter(parent, x, y, size, letter) {
