@@ -329,7 +329,9 @@
 <script>
 const PATTERN=[5,4,5,4,5,4,5,4,5,4,5];
 
-const COLORS_JSON_URL="https://script.google.com/macros/s/AKfycbyM44gMczZ9XQvIJhAcKaBx9CPbMNAXEgVze1ClXJIZ6VOkZJxSxPKwrmQj57_KjLyX/exec";
+// URL ACTUALITZADA AMB EL TEU NOU DESPLEGAMENT DELS HEXÀGONS I MARCADORS
+const COLORS_JSON_URL="https://script.google.com/macros/s/AKfycbz0tCe6dKOavv4xVhvZoaVgv8TIkymvoj8NCYpE7U9jbqLGtmxw0eATLA2DXx50Cuk/exec";
+
 const ORDERS_JSON_URL="https://script.google.com/macros/s/AKfycbzDdC4yHTVFzNdsSRJE7yfiRRvOiCPssSyVBEDPV92gSksgOnwfIVSUVVRkGSbzy_EBDw/exec";
 const EXPLOSION_IMG_URL="https://github.com/enricjimenezmercader-a11y/mapa_estrategic/blob/894cd2a4b1d3605c654d4eaaa5862f5d90b6c2c4/explosion.png?raw=true";
 
@@ -377,7 +379,7 @@ async function fetchJSONP(url){
 function resizeMap(){
   const map=document.getElementById("mapContainer");
   const W=window.innerWidth; const H=window.innerHeight;
-  const maxW=W*(0.60); const maxH=H*(0.65); // Reduït el maxW al 60% per deixar espai als marges per als quadres
+  const maxW=W*(0.60); const maxH=H*(0.65);
   let width=maxW; let height=width/IMAGE_RATIO;
   if(height>maxH){ height=maxH; width=height*IMAGE_RATIO; }
   map.style.width=width+"px"; map.style.height=height+"px";
@@ -489,12 +491,11 @@ function submitBattleResolution() {
   closeResolutionModal();
 }
 
-// ACTUALITZACIÓ SIMULTÀNIA DE COLORS I QUADRES DE RESUM DE FORMA DINÀMICA
 async function updateHexColors(){
   try {
     const dataObj = await fetchJSONP(COLORS_JSON_URL);
     
-    // 1. Processar Hexàgons si l'estructura és correcta
+    // 1. Processar Hexàgons
     if (dataObj && Array.isArray(dataObj.hexagons)) {
       dataObj.hexagons.forEach(row => {
         const id = parseInt(row["A"]); const color = (row["B"] || "MAR").toUpperCase();
@@ -507,7 +508,7 @@ async function updateHexColors(){
       });
     }
 
-    // 2. Injectar dades dinàmiques als marcadors laterals (sense icones)
+    // 2. Injectar dades dinàmiques als marcadors laterals (Vermell esquerra, Blau dreta)
     if (dataObj && dataObj.marcadors) {
       const m = dataObj.marcadors;
       
