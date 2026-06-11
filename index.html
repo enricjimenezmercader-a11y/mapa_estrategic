@@ -76,6 +76,13 @@
       text-shadow: 0 0 8px rgba(255,255,255,0.15);
     }
 
+    /* Estil en cursiva per a la data dinàmica del torn */
+    #turnDate {
+      font-style: italic;
+      font-weight: normal;
+      color: #ddd;
+    }
+
     .main-layout {
       display: flex;
       align-items: center;
@@ -271,7 +278,7 @@
   <div id="blueBarPart"></div>
 </div>
 
-<div id="turnIndicator">TORN -</div>
+<div id="turnIndicator">TORN - <span id="turnDate"></span></div>
 
 <div class="main-layout">
   
@@ -466,6 +473,25 @@ function submitBattleResolution() {
   closeResolutionModal();
 }
 
+/**
+ * Funció auxiliar per netejar cadenes ISO de data i convertir-les a DD/MM/AAAA
+ */
+function formatToCustomDate(rawString) {
+  if (!rawString) return "";
+  // Si té format ISO com "1942-03-18T23:00:00.000Z", extreurem només la part de la data "1942-03-18"
+  let cleanStr = rawString.split("T")[0]; 
+  
+  // Validar si compleix l'estructura AAAA-MM-DD
+  const parts = cleanStr.split("-");
+  if (parts.length === 3 && parts[0].length === 4) {
+    const year = parts[0];
+    const month = parts[1];
+    const day = parts[2];
+    return `${day}/${month}/${year}`;
+  }
+  return rawString; // Si ja està net o té un altre format, es retorna tal qual
+}
+
 async function updateHexColors(){
   try {
     const rowsList = await fetchJSONP(COLORS_JSON_URL);
@@ -480,7 +506,6 @@ async function updateHexColors(){
       blauImpartit = false;
 
       rowsList.forEach(row => {
-        // Correcció d'indexació directa per files O6 (A===6) i O8 (A===8) segons l'estructura de dades real
         const rowIdAttr = parseInt(row["A"]);
         if (rowIdAttr === 6) {
           valorTorn = row["O"] !== undefined ? row["O"].toString().trim() : "";
@@ -520,10 +545,12 @@ async function updateHexColors(){
         }
       });
 
-      if(valorTorn || valorDia) {
-        document.getElementById("turnIndicator").textContent = `TORN ${valorTorn} - ${valorDia}`;
+      if(valorTorn) {
+        document.getElementById("turnIndicator").firstChild.textContent = `TORN ${valorTorn} - `;
+        document.getElementById("turnDate").textContent = formatToCustomDate(valorDia);
       } else {
-        document.getElementById("turnIndicator").textContent = `TORN -`;
+        document.getElementById("turnIndicator").firstChild.textContent = `TORN - `;
+        document.getElementById("turnDate").textContent = "";
       }
 
       document.getElementById("v_accions").textContent = v_accions;
