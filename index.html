@@ -249,7 +249,6 @@
   </div>
 
   <div class="team-panel panel-blue">
-    <div class="team-panel panel-blue">
     <div class="panel-title">EQUIP BLAU</div>
     <div class="stat-line">Accions: <span class="stat-value" id="b_accions">-</span></div>
     <div class="stat-line">Territoris: <span class="stat-value" id="b_territoris">-</span></div>
@@ -319,10 +318,11 @@ async function fetchJSONP(url){
   });
 }
 
+// CORREGIT: Amplada del contenidor del mapa per evitar compressions verticals estranyes
 function resizeMap(){
   const map=document.getElementById("mapContainer");
   const W=window.innerWidth; const H=window.innerHeight;
-  const maxW=W*(0.60); const maxH=H*(0.65);
+  const maxW=W*(0.65); const maxH=H*(0.70);
   let width=maxW; let height=width/IMAGE_RATIO;
   if(height>maxH){ height=maxH; width=height*IMAGE_RATIO; }
   map.style.width=width+"px"; map.style.height=height+"px";
@@ -416,7 +416,6 @@ function submitBattleResolution() {
   closeResolutionModal();
 }
 
-// RETOCAT DEFINITIU: Només 2 variables de baixes, vinculades simètricament de forma directa
 async function updateHexColors(){
   try {
     const rowsList = await fetchJSONP(COLORS_JSON_URL);
@@ -438,32 +437,29 @@ async function updateHexColors(){
         
         const kText = row["K"] ? row["K"].toString().toLowerCase().trim() : "";
 
-        // Extracció de dades estàndard de control
         if (kText.includes("inicials vermell")) v_accions = row["H"] !== undefined ? row["H"] : v_accions;
         if (kText.includes("inicials blau")) b_accions = row["H"] !== undefined ? row["H"] : b_accions;
         if (kText.includes("territori vermell")) v_territoris = parseInt(row["L"]) || 0;
         if (kText.includes("territori blau")) b_territoris = parseInt(row["L"]) || 0;
 
-        // ESTRATEGIA SIMPLICITAT MÀXIMA (Directe a les files de les cel·les clau):
-        // Fila 12 del JSON (indexada o detectada per text): Extreu els dos valors reals directament
+        // Lectura directa de les cel·les L12 i M12 del full
         if (kText.includes("baixes blave") || kText.includes("gastades v") || kText.includes("remanent vermell")) {
-          baixes_vermell = row["L"] !== undefined ? row["L"] : baixes_vermell; // Cel·la L12 (Baixes del Vermell)
-          baixes_blaves = row["M"] !== undefined ? row["M"] : baixes_blaves;   // Cel·la M12 (Baixes del Blau)
+          baixes_vermell = row["L"] !== undefined ? row["L"] : baixes_vermell; // L12
+          baixes_blaves = row["M"] !== undefined ? row["M"] : baixes_blaves;   // M12
         }
       });
 
-      // LÒGICA MIRALL: Les destruïdes d'un són les perdudes de l'altre i viceversa!
+      // Assignació simètrica perfecta
       document.getElementById("v_accions").textContent = v_accions;
       document.getElementById("v_territoris").textContent = v_territoris;
-      document.getElementById("v_destruides").textContent = baixes_blaves; // El vermell destrueix el que el blau perd
-      document.getElementById("v_perdudes").textContent = baixes_vermell;   // El vermell perd el que s'apunta a les seves baixes
+      document.getElementById("v_destruides").textContent = baixes_blaves;  // Vermell ha destruït el que el blau ha perdut
+      document.getElementById("v_perdudes").textContent = baixes_vermell;   // Vermell ha perdut les seves pròpies baixes
 
       document.getElementById("b_accions").textContent = b_accions;
       document.getElementById("b_territoris").textContent = b_territoris;
-      document.getElementById("b_destruides").textContent = baixes_vermell; // El blau destrueix el que el vermell perd
-      document.getElementById("b_perdudes").textContent = baixes_blaves;   // El blau perd el que s'apunta a les seves baixes
+      document.getElementById("b_destruides").textContent = baixes_vermell; // Blau ha destruït el que el vermell ha perdut
+      document.getElementById("b_perdudes").textContent = baixes_blaves;    // Blau ha perdut les seves pròpies baixes
 
-      // Actualització de la barra dinàmica superior
       const totalT = v_territoris + b_territoris;
       if (totalT > 0) {
         const redPct = (v_territoris / totalT) * 100;
