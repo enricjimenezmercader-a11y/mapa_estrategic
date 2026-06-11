@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Mapa Informatiu Global — Radar i Anàlisi de Batalles</title>
+  <title>MAPA ESTRATÈGIC — Radar i Anàlisi</title>
 
   <style>
     *{box-sizing:border-box;margin:0;padding:0}
@@ -32,6 +32,35 @@
       font-size: 13px;
       color: #888;
       font-family: monospace;
+    }
+
+    /* BARRA DE CONTROL TERRITORIAL */
+    .territory-bar-container {
+      width: 85%;
+      max-width: 1000px;
+      height: 20px;
+      background: #111;
+      border: 1px solid #334;
+      border-radius: 10px;
+      display: flex;
+      overflow: hidden;
+      margin-top: 5px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.3);
+    }
+
+    #redBarPart {
+      height: 100%;
+      background: #ff4444; /* Vermell */
+      width: 50%; /* Inicial */
+      transition: width 0.8s ease-in-out;
+      border-right: 1px solid rgba(0,0,0,0.3);
+    }
+
+    #blueBarPart {
+      height: 100%;
+      background: #0078ff; /* Blau */
+      width: 50%; /* Inicial */
+      transition: width 0.8s ease-in-out;
     }
 
     .main-layout {
@@ -111,65 +140,38 @@
       pointer-events:none;
     }
 
-    .hex{
-      stroke:#000;
-      stroke-width:2;
-    }
-
+    .hex{ stroke:#000; stroke-width:2; }
     .hex-red{ fill:rgba(255,0,0,0.3); }
     .hex-blue{ fill:rgba(0,120,255,0.3); }
     .hex-mar{ fill:rgba(120,120,120,0.25); }
 
     .hex-label{
-      fill:#fff;
-      font-weight:bold;
-      text-anchor:middle;
-      stroke:#000;
-      stroke-width:0.8;
-      font-size:12px;
+      fill:#fff; font-weight:bold; text-anchor:middle;
+      stroke:#000; stroke-width:0.8; font-size:12px;
     }
 
     .attack-arrow{
-      position:absolute;
-      pointer-events:none;
-      z-index:20;
-      transform-origin:center center;
-      opacity: 0.5;
+      position:absolute; pointer-events:none; z-index:20;
+      transform-origin:center center; opacity: 0.5;
     }
 
-    .explosion-static {
-      filter: drop-shadow(0 0 4px #ff5500);
-    }
-
+    .explosion-static { filter: drop-shadow(0 0 4px #ff5500); }
     .explosion-letter {
-      fill: #000000;
-      font-family: Arial, Helvetica, sans-serif;
-      font-weight: 900;
-      text-anchor: middle;
-      dominant-baseline: central;
-      pointer-events: none;
+      fill: #000000; font-family: Arial, Helvetica, sans-serif;
+      font-weight: 900; text-anchor: middle;
+      dominant-baseline: central; pointer-events: none;
     }
 
     #battleButtonsContainer {
-      width: 85%;
-      max-width: 1000px;
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-      margin-top: 10px;
-      padding-bottom: 30px;
+      width: 85%; max-width: 1000px;
+      display: flex; flex-direction: column; gap: 10px;
+      margin-top: 10px; padding-bottom: 30px;
     }
 
     .battle-btn {
-      background: #151525;
-      color: #fff;
-      border: 1px solid #334;
-      padding: 8px 14px;
-      font-size: 12px;
-      font-weight: bold;
-      text-align: left;
-      border-radius: 4px;
-      cursor: pointer;
+      background: #151525; color: #fff; border: 1px solid #334;
+      padding: 8px 14px; font-size: 12px; font-weight: bold;
+      text-align: left; border-radius: 4px; cursor: pointer;
       transition: background 0.2s, border-color 0.2s;
     }
 
@@ -178,86 +180,42 @@
     .btn-atdef { border-left: 4px solid #ffcc00; }
 
     .modal-overlay {
-      position: fixed;
-      inset: 0;
-      background: rgba(0, 0, 0, 0.75);
-      backdrop-filter: blur(3px);
-      z-index: 100;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      opacity: 0;
-      pointer-events: none;
-      transition: opacity 0.2s ease;
+      position: fixed; inset: 0; background: rgba(0, 0, 0, 0.75);
+      backdrop-filter: blur(3px); z-index: 100;
+      display: flex; align-items: center; justify-content: center;
+      opacity: 0; pointer-events: none; transition: opacity 0.2s ease;
     }
 
     .modal-overlay.active { opacity: 1; pointer-events: auto; }
 
     .modal-box {
-      background: #101020;
-      border: 2px solid #445;
-      box-shadow: 0 0 25px rgba(0,0,0,0.7);
-      width: 90%;
-      max-width: 420px;
-      border-radius: 6px;
-      padding: 20px;
-      position: relative;
+      background: #101020; border: 2px solid #445; box-shadow: 0 0 25px rgba(0,0,0,0.7);
+      width: 90%; max-width: 420px; border-radius: 6px; padding: 20px; position: relative;
     }
 
     .modal-title {
-      font-size: 16px;
-      font-weight: bold;
-      margin-bottom: 15px;
-      padding-bottom: 8px;
-      border-bottom: 1px solid #334;
-      color: #ffcc00;
+      font-size: 16px; font-weight: bold; margin-bottom: 15px;
+      padding-bottom: 8px; border-bottom: 1px solid #334; color: #ffcc00;
     }
 
     .modal-close {
-      position: absolute;
-      top: 12px;
-      right: 15px;
-      background: none;
-      border: none;
-      color: #888;
-      font-size: 18px;
-      font-weight: bold;
-      cursor: pointer;
+      position: absolute; top: 12px; right: 15px;
+      background: none; border: none; color: #888;
+      font-size: 18px; font-weight: bold; cursor: pointer;
     }
     .modal-close:hover { color: #fff; }
 
-    .form-group {
-      margin-bottom: 14px;
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-    }
-
+    .form-group { margin-bottom: 14px; display: flex; flex-direction: column; gap: 6px; }
     .form-group label { font-size: 13px; color: #ccc; }
-
     .form-group select {
-      background: #1c1c30;
-      color: #fff;
-      border: 1px solid #445;
-      padding: 8px;
-      border-radius: 4px;
-      font-size: 14px;
-      outline: none;
-      cursor: pointer;
+      background: #1c1c30; color: #fff; border: 1px solid #445;
+      padding: 8px; border-radius: 4px; font-size: 14px; outline: none; cursor: pointer;
     }
 
     .btn-resolve {
-      background: #00aa55;
-      color: #fff;
-      border: none;
-      padding: 10px;
-      width: 100%;
-      border-radius: 4px;
-      font-weight: bold;
-      font-size: 14px;
-      cursor: pointer;
-      margin-top: 10px;
-      transition: background 0.2s;
+      background: #00aa55; color: #fff; border: none; padding: 10px;
+      width: 100%; border-radius: 4px; font-weight: bold; font-size: 14px;
+      cursor: pointer; margin-top: 10px; transition: background 0.2s;
     }
     .btn-resolve:hover { background: #00cc66; }
   </style>
@@ -265,8 +223,13 @@
 
 <body>
 
-<div id="titleBar">PANEL INFORMATIU GLOBAL — RADAR TÀCTIC</div>
+<div id="titleBar">MAPA ESTRATÈGIC</div>
 <div id="loadingIndicator">Sincronitzant dades amb el quarter general...</div>
+
+<div class="territory-bar-container">
+  <div id="redBarPart"></div>
+  <div id="blueBarPart"></div>
+</div>
 
 <div class="main-layout">
   
@@ -330,7 +293,6 @@ const PATTERN=[5,4,5,4,5,4,5,4,5,4,5];
 const COLORS_JSON_URL="https://script.google.com/macros/s/AKfycbz0tCe6dKOavv4xVhvZoaVgv8TIkymvoj8NCYpE7U9jbqLGtmxw0eATLA2DXx50Cuk/exec";
 const ORDERS_JSON_URL="https://script.google.com/macros/s/AKfycbzDdC4yHTVFzNdsSRJE7yfiRRvOiCPssSyVBEDPV92gSksgOnwfIVSUVVRkGSbzy_EBDw/exec";
 const EXPLOSION_IMG_URL="https://github.com/enricjimenezmercader-a11y/mapa_estrategic/blob/894cd2a4b1d3605c654d4eaaa5862f5d90b6c2c4/explosion.png?raw=true";
-
 const WEB_APP_RESOLVE_URL = "https://script.google.com/macros/s/AKfycbwaUU2qtxNhaa3a-xPX7IuPcu-Kh4xtEu7CogJ6AUYkVxN_9ziF4yNglZCVzFutzIEQnQ/exec";
 
 const REAL_R=41.78;
@@ -346,27 +308,11 @@ async function fetchJSONP(url){
   return new Promise((resolve, reject) => {
     const callbackName = 'jsonp_' + Date.now() + '_' + Math.random().toString(36).substring(2, 9);
     const script = document.createElement('script');
-    
-    const timerId = setTimeout(() => {
-      cleanup();
-      reject(new Error('Temps d\'espera esgotat amb Google'));
-    }, 8000);
-
-    function cleanup() {
-      clearTimeout(timerId);
-      if (window[callbackName]) delete window[callbackName];
-      if (script.parentNode) script.parentNode.removeChild(script);
-    }
-
-    window[callbackName] = function(data) {
-      cleanup();
-      resolve(data);
-    };
-
+    const timerId = setTimeout(() => { cleanup(); reject(new Error('Temps d\'espera esgotat amb Google')); }, 8000);
+    function cleanup() { clearTimeout(timerId); if (window[callbackName]) delete window[callbackName]; if (script.parentNode) script.parentNode.removeChild(script); }
+    window[callbackName] = function(data) { cleanup(); resolve(data); };
     const separator = url.includes('?') ? '&' : '?';
     script.src = url + separator + "callback=" + callbackName;
-    script.type = 'text/javascript';
-
     script.onerror = function() { cleanup(); reject(new Error('Error de connexió de xarxa')); };
     document.head.appendChild(script);
   });
@@ -430,15 +376,12 @@ function closeResolutionModal() { document.getElementById("resolutionModal").cla
 
 function submitBattleResolution() {
   if (!activeBattleDetails) return;
-
   const rLoss = document.getElementById("lossesRed").value;
   const bLoss = document.getElementById("lossesBlue").value;
   const winner = document.getElementById("winnerSide").value;
   const battleLetter = activeBattleDetails.letter;
-
   let cotesImplicades = [];
   let uniqueBattleKey = "";
-
   if (activeBattleDetails.type === "contact") {
     cotesImplicades.push(activeBattleDetails.info.idA.toString(), activeBattleDetails.info.idB.toString());
     uniqueBattleKey = `contact-${activeBattleDetails.info.idA}-${activeBattleDetails.info.idB}`;
@@ -446,29 +389,19 @@ function submitBattleResolution() {
     cotesImplicades.push(activeBattleDetails.targetId.toString());
     uniqueBattleKey = `atdef-${activeBattleDetails.targetId}`;
   }
-
   resolvedBattlesLog.push(uniqueBattleKey);
-
   const explosionGroup = document.getElementById(`expGroup-${battleLetter}`);
   if (explosionGroup) explosionGroup.remove();
-
   arrowElements = arrowElements.filter(arrow => {
     const origin = arrow.dataset.origin; const target = arrow.dataset.target;
     if (activeBattleDetails.type === "contact" && cotesImplicades.includes(origin) && cotesImplicades.includes(target)) { arrow.remove(); return false; }
     if (activeBattleDetails.type === "atdef" && target === activeBattleDetails.targetId.toString()) { arrow.remove(); return false; }
     return true; 
   });
-
   if(activeBattleDetails.btnElement) activeBattleDetails.btnElement.remove();
 
   const callbackName = 'jsonp_save_' + Date.now();
-  window[callbackName] = function(response) {
-    console.log("Ordre processada per Google:", response);
-    delete window[callbackName];
-    const scr = document.getElementById(callbackName);
-    if (scr) scr.remove();
-  };
-
+  window[callbackName] = function(response) { delete window[callbackName]; const scr = document.getElementById(callbackName); if (scr) scr.remove(); };
   const finalUrl = WEB_APP_RESOLVE_URL + 
                    "?tipus=" + encodeURIComponent(activeBattleDetails.type) +
                    "&lletra=" + encodeURIComponent(battleLetter) +
@@ -478,87 +411,64 @@ function submitBattleResolution() {
                    "&vencedor=" + encodeURIComponent(winner) +
                    "&cotes=" + encodeURIComponent(cotesImplicades.join("-")) +
                    "&callback=" + callbackName;
-
-  const scriptInject = document.createElement("script");
-  scriptInject.id = callbackName;
-  scriptInject.src = finalUrl;
-  document.head.appendChild(scriptInject);
-
+  const scriptInject = document.createElement("script"); scriptInject.id = callbackName; scriptInject.src = finalUrl; document.head.appendChild(scriptInject);
   closeResolutionModal();
 }
 
-// CORREGIT: Escaneig intel·ligent del JSON lliurat pel teu Apps Script original
+// SINCRONITZACIÓ DE COLORS, MARCADORS I BARRA DE TERRITORI
 async function updateHexColors(){
   try {
     const rowsList = await fetchJSONP(COLORS_JSON_URL);
-    
     if (Array.isArray(rowsList)) {
-      
-      // Variables per acumular el recompte final dels marcadors laterals
-      let v_accions = "-", v_territoris = "-", v_destruides = "-", v_perdudes = "-";
-      let b_accions = "-", b_territoris = "-", b_destruides = "-", b_perdudes = "-";
+      let v_accions = "-", v_territoris = 0, v_destruides = "-", v_perdudes = "-";
+      let b_accions = "-", b_territoris = 0, b_destruides = "-", b_perdudes = "-";
 
       rowsList.forEach(row => {
-        // 1. Processar Cotes del mapa (Columna A numèrica, Columna B color)
         const id = parseInt(row["A"]); 
         if (!isNaN(id)) {
           const color = (row["B"] || "MAR").trim().toUpperCase();
           const hex = hexData.find(h => h.id === id);
           if(hex) {
-            hex.color = color; 
-            let cls = "hex hex-mar";
-            if(color === "RED") cls = "hex hex-red"; 
-            else if(color === "BLUE") cls = "hex hex-blue";
+            hex.color = color; let cls = "hex hex-mar";
+            if(color === "RED") cls = "hex hex-red"; else if(color === "BLUE") cls = "hex hex-blue";
             hex.element.setAttribute("class", cls);
           }
         }
-
-        // 2. Cercar marcadors i lletres de control utilitzant paraules clau directes
         const kText = row["K"] ? row["K"].toString().toLowerCase() : "";
         const gText = row["G"] ? row["G"].toString().toLowerCase() : "";
 
-        // -- EQUIP VERMELL --
-        if (kText.includes("inicials vermell")) {
-          v_accions = row["H"] !== undefined ? row["H"] : v_accions;
-        }
-        if (kText.includes("territori vermell")) {
-          v_territoris = row["L"] !== undefined ? row["L"] : v_territoris;
-        }
-        if (kText.includes("gastades v") || gText.includes("gastades v")) {
-          v_perdudes = row["L"] !== undefined ? row["L"] : v_perdudes;
-        }
-        if (kText.includes("baixes vermells") || kText.includes("baixes vermelles")) {
-          v_destruides = row["L"] !== undefined ? row["L"] : v_destruides;
-        }
+        if (kText.includes("inicials vermell")) v_accions = row["H"] || v_accions;
+        if (kText.includes("territori vermell")) v_territoris = parseInt(row["L"]) || 0;
+        if (kText.includes("gastades v") || gText.includes("gastades v")) v_perdudes = row["L"] || v_perdudes;
+        if (kText.includes("baixes vermells") || kText.includes("baixes vermelles")) v_destruides = row["L"] || v_destruides;
 
-        // -- EQUIP BLAU --
-        if (kText.includes("inicials blau")) {
-          b_accions = row["H"] !== undefined ? row["H"] : b_accions;
-        }
-        if (kText.includes("territori blau")) {
-          b_territoris = row["L"] !== undefined ? row["L"] : b_territoris;
-        }
-        if (kText.includes("boti blau")) {
-          b_perdudes = row["L"] !== undefined ? row["L"] : b_perdudes;
-        }
-        if (kText.includes("baixes blaves") || kText.includes("baixes blaves")) {
-          b_destruides = row["L"] !== undefined ? row["L"] : b_destruides;
-        }
+        if (kText.includes("inicials blau")) b_accions = row["H"] || b_accions;
+        if (kText.includes("territori blau")) b_territoris = parseInt(row["L"]) || 0;
+        if (kText.includes("boti blau")) b_perdudes = row["L"] || b_perdudes;
+        if (kText.includes("baixes blaves")) b_destruides = row["L"] || b_destruides;
       });
 
-      // 3. Pintar resultats trobats als marcadors laterals
       document.getElementById("v_accions").textContent = v_accions;
       document.getElementById("v_territoris").textContent = v_territoris;
       document.getElementById("v_destruides").textContent = v_destruides;
       document.getElementById("v_perdudes").textContent = v_perdudes;
-
       document.getElementById("b_accions").textContent = b_accions;
       document.getElementById("b_territoris").textContent = b_territoris;
       document.getElementById("b_destruides").textContent = b_destruides;
       document.getElementById("b_perdudes").textContent = b_perdudes;
-    }
 
-  } catch(e) { console.log("Error en processar estructures de text/color:", e.message); }
+      // ACTUALITZAR BARRA DE TERRITORI
+      const totalT = v_territoris + b_territoris;
+      if (totalT > 0) {
+        const redPct = (v_territoris / totalT) * 100;
+        document.getElementById("redBarPart").style.width = redPct + "%";
+        document.getElementById("blueBarPart").style.width = (100 - redPct) + "%";
+      } else {
+        document.getElementById("redBarPart").style.width = "50%";
+        document.getElementById("blueBarPart").style.width = "50%";
+      }
+    }
+  } catch(e) { console.log("Error sincronització:", e.message); }
 }
 
 async function updateActiveOrders(){
@@ -566,7 +476,6 @@ async function updateActiveOrders(){
     const orderStrings = await fetchJSONP(ORDERS_JSON_URL);
     arrowElements.forEach(img => img.remove()); arrowElements = [];
     const battleLayer = document.getElementById("battleLayer"); if(battleLayer) battleLayer.innerHTML = "";
-
     if (Array.isArray(orderStrings)) {
       let activeOrders = [];
       orderStrings.forEach(orderText => {
@@ -577,7 +486,6 @@ async function updateActiveOrders(){
           if (originHex && targetHex) activeOrders.push({ originID, targetID, originHex, targetHex, processed: false });
         }
       });
-
       let contactBattles = []; let attackDefenseTargets = new Set();
       for (let i = 0; i < activeOrders.length; i++) {
         if (activeOrders[i].processed) continue;
@@ -594,20 +502,12 @@ async function updateActiveOrders(){
           }
         }
       }
-
-      activeOrders.forEach(order => { 
-        if (!order.processed) {
-          const key = `atdef-${order.targetID}`;
-          if (!resolvedBattlesLog.includes(key)) attackDefenseTargets.add(order.targetID);
-        } 
-      });
-
+      activeOrders.forEach(order => { if (!order.processed) { const key = `atdef-${order.targetID}`; if (!resolvedBattlesLog.includes(key)) attackDefenseTargets.add(order.targetID); } });
       activeOrders.forEach(order => {
         const contactKey = `contact-${order.originID}-${order.targetID}`; const contactKeyInverse = `contact-${order.targetID}-${order.originID}`; const atdefKey = `atdef-${order.targetID}`;
         let isResolved = resolvedBattlesLog.includes(atdefKey) || resolvedBattlesLog.includes(contactKey) || resolvedBattlesLog.includes(contactKeyInverse);
         if (!isResolved) placeInformativeArrow(order.originHex, order.targetHex);
       });
-
       buildTacticalInterface(contactBattles, Array.from(attackDefenseTargets));
       const d = new Date(); document.getElementById("loadingIndicator").textContent = `Radar analitzat correctament: ${d.toLocaleTimeString()}`;
     }
@@ -619,7 +519,6 @@ function buildTacticalInterface(contacts, atDefs) {
   btnContainer.innerHTML = ""; if(layer) layer.innerHTML = "";
   const map = document.getElementById("mapContainer"); const scale = map.clientWidth / REAL_GRID_WIDTH; const R = REAL_R * scale; const explosionSize = R * 1.5; 
   let letterIndex = 0; function getLetter(index) { return String.fromCharCode(65 + index); }
-
   contacts.forEach(c => {
     const letter = getLetter(letterIndex++); const mx = (c.hexA.cx + c.hexB.cx) / 2; const my = (c.hexA.cy + c.hexB.cy) / 2;
     createSvgExplosionWithLetter(layer, mx, my, explosionSize, letter);
@@ -628,7 +527,6 @@ function buildTacticalInterface(contacts, atDefs) {
     btn.onclick = () => openResolutionModal(btnText, { type: "contact", info: c, letter: letter, btnElement: btn });
     btnContainer.appendChild(btn);
   });
-
   atDefs.forEach(targetId => {
     const hex = hexData.find(h => h.id === targetId);
     if(hex) {
@@ -685,7 +583,6 @@ function placeInformativeArrow(origin,target){
 async function syncRadarData(){ await updateHexColors(); await updateActiveOrders(); }
 function fullRedraw(){ resizeMap(); initHexGridStructure(); syncRadarData(); }
 window.addEventListener("resize", fullRedraw);
-
 populateSelectorOptions(); resizeMap(); initHexGridStructure();
 setTimeout(syncRadarData, 500); setInterval(syncRadarData, 5000);
 </script>
