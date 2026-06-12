@@ -798,17 +798,14 @@ populateSelectorOptions(); resizeMap(); initHexGridStructure();
 setTimeout(syncRadarData, 500); setInterval(syncRadarData, 5000);
 </script>
 
-
-<video id="videoTorn" style="display:none; position:absolute; z-index:9999; object-fit:cover; pointer-events:none;">
+<video id="videoTorn" style="display:none; position:absolute; z-index:9999; object-fit:cover; pointer-events:none;" playsinline>
   <source src="https://github.com/enricjimenezmercader-a11y/mapa_estrategic/raw/da9bb425ad5b7da5145c894aa270a99b708c0978/Torn.mp4" type="video/mp4">
 </video>
 
 <script>
 let reproduccioEnCurs = false;
 
-// Emboliquem la funció syncRadarData
 const originalSyncRadarData = syncRadarData;
-
 syncRadarData = async function() {
     await originalSyncRadarData();
     
@@ -816,14 +813,13 @@ syncRadarData = async function() {
         const data = await fetchJSONP(COLORS_JSON_URL);
         const fila28 = data.find(r => parseInt(r["A"]) === 28);
         const valorL28 = fila28 ? parseInt(fila28["L"]) : 0;
-
         const video = document.getElementById("videoTorn");
         const mapa = document.getElementById("mapContainer");
 
         if (valorL28 === 1 && !reproduccioEnCurs && mapa) {
             reproduccioEnCurs = true;
             
-            // Ajustem mida i posició del vídeo segons el mapa
+            // Forcem l'actualització de la mida just abans de mostrar
             const rect = mapa.getBoundingClientRect();
             video.style.width = mapa.offsetWidth + "px";
             video.style.height = mapa.offsetHeight + "px";
@@ -831,7 +827,18 @@ syncRadarData = async function() {
             video.style.left = mapa.offsetLeft + "px";
             
             video.style.display = "block";
-            video.play().catch(e => console.log("Interacció prèvia necessària per al so"));
+            
+            // Carreguem i reproduïm explícitament
+            video.load(); 
+            const playPromise = video.play();
+            
+            if (playPromise !== undefined) {
+                playPromise.then(_ => {
+                    console.log("Reproducció iniciada correctament");
+                }).catch(error => {
+                    console.log("Reproducció bloquejada pel navegador, cal interactuar primer");
+                });
+            }
             
             video.onended = () => {
                 video.style.display = "none";
