@@ -798,58 +798,59 @@ populateSelectorOptions(); resizeMap(); initHexGridStructure();
 setTimeout(syncRadarData, 500); setInterval(syncRadarData, 5000);
 </script>
 
-<video id="videoTorn" style="display:none; position:absolute; z-index:9999; object-fit:cover; pointer-events:none;" playsinline>
-  <source src="https://github.com/enricjimenezmercader-a11y/mapa_estrategic/raw/da9bb425ad5b7da5145c894aa270a99b708c0978/Torn.mp4" type="video/mp4">
+
+<video id="videoTorn" muted playsinline style="display:none; position:absolute; z-index:2147483647; object-fit:cover; pointer-events:none;">
+  <source src="https://github.com/enricjimenezmercader-a11y/mapa_estrategic/raw/fc740b0c79e2816840d4211f49a45e4188d0d0a4/Torn%20(video).mp4" type="video/mp4">
 </video>
+
+<audio id="audioTorn">
+  <source src="https://github.com/enricjimenezmercader-a11y/mapa_estrategic/raw/fc740b0c79e2816840d4211f49a45e4188d0d0a4/Torn%20(audio).mp3" type="audio/mpeg">
+</audio>
 
 <script>
 let reproduccioEnCurs = false;
 
-const originalSyncRadarData = syncRadarData;
-syncRadarData = async function() {
-    await originalSyncRadarData();
-    
-    try {
-        const data = await fetchJSONP(COLORS_JSON_URL);
-        const fila28 = data.find(r => parseInt(r["A"]) === 28);
-        const valorL28 = fila28 ? parseInt(fila28["L"]) : 0;
-        const video = document.getElementById("videoTorn");
-        const mapa = document.getElementById("mapContainer");
+// Emboliquem la funció syncRadarData
+syncRadarData = (async (originalFn) => {
+    return async function() {
+        await originalFn.apply(this, arguments);
+        
+        try {
+            const data = await fetchJSONP(COLORS_JSON_URL);
+            const fila28 = data.find(r => parseInt(r["A"]) === 28);
+            const valorL28 = fila28 ? parseInt(fila28["L"]) : 0;
+            
+            const video = document.getElementById("videoTorn");
+            const audio = document.getElementById("audioTorn");
+            const mapa = document.getElementById("mapContainer");
 
-        if (valorL28 === 1 && !reproduccioEnCurs && mapa) {
-            reproduccioEnCurs = true;
-            
-            // Forcem l'actualització de la mida just abans de mostrar
-            const rect = mapa.getBoundingClientRect();
-            video.style.width = mapa.offsetWidth + "px";
-            video.style.height = mapa.offsetHeight + "px";
-            video.style.top = mapa.offsetTop + "px";
-            video.style.left = mapa.offsetLeft + "px";
-            
-            video.style.display = "block";
-            
-            // Carreguem i reproduïm explícitament
-            video.load(); 
-            const playPromise = video.play();
-            
-            if (playPromise !== undefined) {
-                playPromise.then(_ => {
-                    console.log("Reproducció iniciada correctament");
-                }).catch(error => {
-                    console.log("Reproducció bloquejada pel navegador, cal interactuar primer");
-                });
+            if (valorL28 === 1 && !reproduccioEnCurs && mapa) {
+                reproduccioEnCurs = true;
+                
+                // Ajust de mida i posició basat en el mapa
+                video.style.width = mapa.offsetWidth + "px";
+                video.style.height = mapa.offsetHeight + "px";
+                video.style.top = mapa.offsetTop + "px";
+                video.style.left = mapa.offsetLeft + "px";
+                video.style.display = "block";
+                
+                // Reproducció simultània
+                video.play();
+                audio.play().catch(e => console.log("Àudio bloquejat pel navegador, cal clic previ."));
+                
+                // Reset quan acaba el vídeo
+                video.onended = () => {
+                    video.style.display = "none";
+                    audio.pause();
+                    audio.currentTime = 0;
+                    reproduccioEnCurs = false;
+                };
             }
-            
-            video.onended = () => {
-                video.style.display = "none";
-                reproduccioEnCurs = false;
-            };
-        }
-    } catch(e) {
-        console.error("Error supervisant el valor L28:", e);
-    }
-};
+        } catch(e) { console.error("Error en la sincronització:", e); }
+    };
+})(syncRadarData);
 </script>
+
   
 </body>
 </html>
