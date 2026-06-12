@@ -799,46 +799,40 @@ setTimeout(syncRadarData, 500); setInterval(syncRadarData, 5000);
 </script>
 
 
-<video id="videoTorn" muted playsinline style="display:none; position:absolute; z-index:2147483647; object-fit:cover; pointer-events:none;">
-  <source src="https://github.com/enricjimenezmercader-a11y/mapa_estrategic/raw/fc740b0c79e2816840d4211f49a45e4188d0d0a4/Torn%20(video).mp4" type="video/mp4">
-</video>
-
-<audio id="audioTorn">
-  <source src="https://github.com/enricjimenezmercader-a11y/mapa_estrategic/raw/fc740b0c79e2816840d4211f49a45e4188d0d0a4/Torn%20(audio).mp3" type="audio/mpeg">
-</audio>
+<video id="videoTorn" muted playsinline style="display:none; position:absolute; z-index:9999; object-fit:cover; pointer-events:none;"></video>
+<audio id="audioTorn"></audio>
 
 <script>
-let reproduccioEnCurs = false;
+(function() {
+    let reproduccioEnCurs = false;
+    const video = document.getElementById("videoTorn");
+    const audio = document.getElementById("audioTorn");
+    
+    // Configurem les fonts
+    video.src = "https://github.com/enricjimenezmercader-a11y/mapa_estrategic/raw/fc740b0c79e2816840d4211f49a45e4188d0d0a4/Torn%20(video).mp4";
+    audio.src = "https://github.com/enricjimenezmercader-a11y/mapa_estrategic/raw/fc740b0c79e2816840d4211f49a45e4188d0d0a4/Torn%20(audio).mp3";
 
-// Emboliquem la funció syncRadarData
-syncRadarData = (async (originalFn) => {
-    return async function() {
-        await originalFn.apply(this, arguments);
-        
+    // Interval de vigilància propi (cada 2 segons)
+    setInterval(async () => {
         try {
             const data = await fetchJSONP(COLORS_JSON_URL);
             const fila28 = data.find(r => parseInt(r["A"]) === 28);
             const valorL28 = fila28 ? parseInt(fila28["L"]) : 0;
-            
-            const video = document.getElementById("videoTorn");
-            const audio = document.getElementById("audioTorn");
             const mapa = document.getElementById("mapContainer");
 
             if (valorL28 === 1 && !reproduccioEnCurs && mapa) {
                 reproduccioEnCurs = true;
                 
-                // Ajust de mida i posició basat en el mapa
+                // Mida i posició
                 video.style.width = mapa.offsetWidth + "px";
                 video.style.height = mapa.offsetHeight + "px";
                 video.style.top = mapa.offsetTop + "px";
                 video.style.left = mapa.offsetLeft + "px";
                 video.style.display = "block";
                 
-                // Reproducció simultània
                 video.play();
-                audio.play().catch(e => console.log("Àudio bloquejat pel navegador, cal clic previ."));
+                audio.play().catch(e => console.log("Àudio bloquejat pel navegador"));
                 
-                // Reset quan acaba el vídeo
                 video.onended = () => {
                     video.style.display = "none";
                     audio.pause();
@@ -846,9 +840,11 @@ syncRadarData = (async (originalFn) => {
                     reproduccioEnCurs = false;
                 };
             }
-        } catch(e) { console.error("Error en la sincronització:", e); }
-    };
-})(syncRadarData);
+        } catch(e) {
+            // Silenciem errors de càrrega per no embrutar la consola
+        }
+    }, 2000);
+})();
 </script>
 
   
