@@ -799,15 +799,14 @@ setTimeout(syncRadarData, 500); setInterval(syncRadarData, 5000);
 </script>
 
 
-<video id="videoTorn" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; z-index:9999; background:black;" controls>
+<video id="videoTorn" style="display:none; position:absolute; z-index:9999; object-fit:cover; pointer-events:none;">
   <source src="https://github.com/enricjimenezmercader-a11y/mapa_estrategic/raw/da9bb425ad5b7da5145c894aa270a99b708c0978/Torn.mp4" type="video/mp4">
 </video>
 
 <script>
-// Variable per controlar que només es llanci una vegada
 let reproduccioEnCurs = false;
 
-// Emboliquem la funció syncRadarData original
+// Emboliquem la funció syncRadarData
 const originalSyncRadarData = syncRadarData;
 
 syncRadarData = async function() {
@@ -819,28 +818,31 @@ syncRadarData = async function() {
         const valorL28 = fila28 ? parseInt(fila28["L"]) : 0;
 
         const video = document.getElementById("videoTorn");
+        const mapa = document.getElementById("mapContainer");
 
-        // Si el valor és 1 i encara no s'ha reproduït
-        if (valorL28 === 1 && !reproduccioEnCurs) {
+        if (valorL28 === 1 && !reproduccioEnCurs && mapa) {
             reproduccioEnCurs = true;
-            video.style.display = "block";
             
+            // Ajustem mida i posició del vídeo segons el mapa
+            const rect = mapa.getBoundingClientRect();
+            video.style.width = mapa.offsetWidth + "px";
+            video.style.height = mapa.offsetHeight + "px";
+            video.style.top = mapa.offsetTop + "px";
+            video.style.left = mapa.offsetLeft + "px";
+            
+            video.style.display = "block";
             video.play().catch(e => console.log("Interacció prèvia necessària per al so"));
             
-            // Quan acabi el vídeo, resetegem el control
             video.onended = () => {
                 video.style.display = "none";
                 reproduccioEnCurs = false;
             };
         }
-        // Nota: Ja no hi ha cap lògica que faci video.pause() si L28 torna a 0.
-        
     } catch(e) {
         console.error("Error supervisant el valor L28:", e);
     }
 };
 </script>
-
   
 </body>
 </html>
