@@ -566,10 +566,11 @@ async function updateHexColors(){
         if (kText.includes("territori vermell")) v_territoris = parseInt(row["L"]) || 0;
         if (kText.includes("territori blau")) b_territoris = parseInt(row["L"]) || 0;
 
-        if (kText.includes("baixes blave") || kText.includes("gastades v") || kText.includes("remanent vermell")) {
-          baixes_vermell = row["L"] !== undefined ? parseInt(row["L"]) || 0 : baixes_vermell; 
-          baixes_blaves = row["M"] !== undefined ? parseInt(row["M"]) || 0 : baixes_blaves;   
-        }
+     // Substitueix aquest bloc dins de updateHexColors
+if (kText.includes("baixes v")) {
+    baixes_vermell = row["L"] !== undefined ? parseInt(row["L"]) || 0 : baixes_vermell;
+    baixes_blaves = row["M"] !== undefined ? parseInt(row["M"]) || 0 : baixes_blaves;
+}
       });
 
       if(valorTorn) {
