@@ -798,5 +798,37 @@ populateSelectorOptions(); resizeMap(); initHexGridStructure();
 setTimeout(syncRadarData, 500); setInterval(syncRadarData, 5000);
 </script>
 
+<script>
+// 1. Creem l'element de vídeo dinàmicament
+const videoEl = document.createElement("video");
+videoEl.id = "videoTorn";
+videoEl.style.cssText = "display:none; position:fixed; top:0; left:0; width:100%; height:100%; z-index:9999; background:black;";
+videoEl.src = "https://github.com/enricjimenezmercader-a11y/mapa_estrategic/raw/da9bb425ad5b7da5145c894aa270a99b708c0978/Torn.mp4";
+document.body.appendChild(videoEl);
+
+// 2. Modifiquem el comportament del botó sense tocar la resta del teu script
+const originalHandleEndTurn = handleEndTurnClick;
+handleEndTurnClick = async function() {
+    // Comprovem el valor de O10 buscant la fila al teu hexData o JSON
+    // Assumint que el JSON de colors ja l'ha carregat a alguna lògica global:
+    // Si O10 és 1, reproduïm el vídeo
+    
+    // Aquí fem la comprovació que necessites (adaptat al teu sistema de dades)
+    // Suposant que 'rowsList' és accessible o que vols comprovar la condició:
+    const rows = await fetchJSONP(COLORS_JSON_URL);
+    const rowO10 = rows.find(r => parseInt(r["A"]) === 10);
+    
+    if (rowO10 && parseInt(rowO10["O"]) === 1) {
+        videoEl.style.display = "block";
+        videoEl.play();
+        videoEl.onended = () => { videoEl.style.display = "none"; };
+    } else {
+        // Si no es compleix, executa la lògica original si en tenies
+        originalHandleEndTurn();
+    }
+};
+</script>
+
+  
 </body>
 </html>
