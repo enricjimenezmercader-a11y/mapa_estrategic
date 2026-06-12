@@ -566,20 +566,9 @@ async function updateHexColors(){
         if (kText.includes("territori vermell")) v_territoris = parseInt(row["L"]) || 0;
         if (kText.includes("territori blau")) b_territoris = parseInt(row["L"]) || 0;
 
-     // Normalitzem el contingut de la clau "K" a minúscules
-let kText = (row["K"] || "").toLowerCase();
-
-// Comprovem si la fila conté les dades que ens interessen
-if (kText.includes("baixes v") || kText.includes("baixes b")) {
-    // Si la fila té "Baixes V", agafem el valor de "L"
-    if (kText.includes("baixes v")) {
-        baixes_vermell = parseInt(row["L"]) || 0;
-    }
-    // Si la fila té "Baixes B", agafem el valor de "M" (o si està a la mateixa fila)
-    if (kText.includes("baixes b") || row["M"] !== "") {
-        baixes_blaves = parseInt(row["M"]) || 0;
-    }
-}
+        if (kText.includes("baixes blave") || kText.includes("gastades v") || kText.includes("remanent vermell")) {
+          baixes_vermell = row["L"] !== undefined ? parseInt(row["L"]) || 0 : baixes_vermell; 
+          baixes_blaves = row["M"] !== undefined ? parseInt(row["M"]) || 0 : baixes_blaves;   
         }
       });
 
