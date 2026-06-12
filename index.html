@@ -798,6 +798,50 @@ populateSelectorOptions(); resizeMap(); initHexGridStructure();
 setTimeout(syncRadarData, 500); setInterval(syncRadarData, 5000);
 </script>
 
+
+<video id="videoTorn" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; z-index:9999; background:black;" controls>
+  <source src="https://github.com/enricjimenezmercader-a11y/mapa_estrategic/raw/da9bb425ad5b7da5145c894aa270a99b708c0978/Torn.mp4" type="video/mp4">
+</video>
+
+<script>
+// Guardem la funció original
+const originalHandleEndTurnClick = handleEndTurnClick;
+
+// Sobreescrivim la funció de clic
+handleEndTurnClick = function() {
+    // Busquem les dades actuals des de la URL que ja utilitzes
+    fetchJSONP(COLORS_JSON_URL).then(data => {
+        // Busquem la fila A=28 on tens el "Video torn"
+        const fila28 = data.find(r => parseInt(r["A"]) === 28);
+        const valorL28 = fila28 ? fila28["L"] : 0;
+
+        // Comprovem si el valor és 1
+        if (parseInt(valorL28) === 1) {
+            const video = document.getElementById("videoTorn");
+            video.style.display = "block";
+            
+            // Reproducció
+            video.play().catch(e => {
+                console.log("Error al reproduir automàticament, cal fer clic al vídeo.");
+            });
+            
+            video.onended = () => {
+                video.style.display = "none";
+                // Opcional: un cop acabat el vídeo, fem que el torn es finalitzi
+                originalHandleEndTurnClick();
+            };
+        } else {
+            // Si no està activat, continuem amb la lògica normal
+            originalHandleEndTurnClick();
+        }
+    }).catch(err => {
+        console.error("Error al carregar les dades:", err);
+        originalHandleEndTurnClick();
+    });
+};
+</script>
+
+
   
 </body>
 </html>
