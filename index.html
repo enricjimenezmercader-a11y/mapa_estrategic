@@ -798,56 +798,6 @@ populateSelectorOptions(); resizeMap(); initHexGridStructure();
 setTimeout(syncRadarData, 500); setInterval(syncRadarData, 5000);
 </script>
 
-<script>
-
-
-<video id="videoTorn" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; z-index:9999; background:black;">
-  <source src="https://github.com/enricjimenezmercader-a11y/mapa_estrategic/raw/da9bb425ad5b7da5145c894aa270a99b708c0978/Torn.mp4" type="video/mp4">
-</video>
-
-<script>
-// 2. Modificació per capturar O10 i gestionar la reproducció
-// Declarem la variable global per emmagatzemar l'estat de O10
-let valorVideoTorn = 0;
-
-// Sobreescrivim la lògica de handleEndTurnClick per incloure el vídeo
-const originalHandleEndTurn = handleEndTurnClick;
-handleEndTurnClick = function() {
-    const video = document.getElementById("videoTorn");
-    
-    if (parseInt(valorVideoTorn) === 1) {
-        video.style.display = "block";
-        video.play();
-        video.onended = () => { 
-            video.style.display = "none"; 
-            // Opcional: cridar a l'acció original després del vídeo
-            // originalHandleEndTurn(); 
-        };
-    } else {
-        // Si no està activat, executa la funció original
-        originalHandleEndTurn();
-    }
-};
-
-// 3. Actualitzem el bucle de dades per capturar O10 del teu JSON
-// Aprofitant que ja tens la funció updateHexColors, hem d'assegurar que llegeix O10
-const originalUpdateHexColors = updateHexColors;
-updateHexColors = async function() {
-    await originalUpdateHexColors();
-    // Re-busquem a l'array de dades (si ja està carregat a la memòria del navegador)
-    // Com que els valors arriben via fetchJSONP, aprofitem la resposta dins del teu flux:
-    try {
-        const rowsList = await fetchJSONP(COLORS_JSON_URL);
-        const fila10 = rowsList.find(r => parseInt(r["A"]) === 10);
-        if (fila10) {
-            valorVideoTorn = fila10["O"];
-            console.log("Estat vídeo torn:", valorVideoTorn);
-        }
-    } catch(e) {}
-};
-</script>
-
-  
   
 </body>
 </html>
